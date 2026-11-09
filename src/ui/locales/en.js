@@ -301,5 +301,13 @@ I18N.add('en', {
   "Leertaste oder Klick zum Starten": "Press Space or click to start",
   "Neuer Rekord!": "New high score!",
   "Leertaste für eine neue Runde": "Press Space to play again",
+  "Passkey erstellen?": "Create a passkey?",
+  "Mit Passkey anmelden?": "Sign in with a passkey?",
+  "{host} möchte einen Passkey für dich erstellen.": "{host} wants to create a passkey for you.",
+  "{host} möchte, dass du dich mit einem Passkey anmeldest.": "{host} wants you to sign in with a passkey.",
+  "Passkey verwenden": "Use passkey",
+  "Mit Passkey bestätigen": "Confirm with passkey",
+  "Bild kopiert": "Image copied",
+  "Bild konnte nicht kopiert werden": "Couldn’t copy the image",
   "Öffnen": "Open"
 });

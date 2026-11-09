@@ -2,6 +2,15 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.5.0] – 2026-11-09
+
+### Changed
+- **Passkeys ask first**: when a website or Falcon itself wants to use a passkey, a small prompt appears. The Windows passkey dialog only opens after you click **Use passkey**.
+- New logo and app icon, with sharp small sizes for the taskbar and Explorer.
+
+### Fixed
+- **Copy image** in the right-click menu didn't put anything on the clipboard. It now works for PNG, JPEG, WebP, GIF, AVIF and SVG images.
+
 ## [1.4.0] – 2026-11-09
 
 ### Added
@@ -41,6 +50,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.5.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.0
 [1.4.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.4.0
 [1.3.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.3.0
 [1.2.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.2.0

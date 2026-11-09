@@ -301,5 +301,13 @@ I18N.add('es', {
   "Leertaste oder Klick zum Starten": "Pulsa Espacio o haz clic para empezar",
   "Neuer Rekord!": "¡Nuevo récord!",
   "Leertaste für eine neue Runde": "Pulsa Espacio para jugar otra vez",
+  "Passkey erstellen?": "¿Crear una llave de acceso?",
+  "Mit Passkey anmelden?": "¿Iniciar sesión con una llave de acceso?",
+  "{host} möchte einen Passkey für dich erstellen.": "{host} quiere crear una llave de acceso para ti.",
+  "{host} möchte, dass du dich mit einem Passkey anmeldest.": "{host} quiere que inicies sesión con una llave de acceso.",
+  "Passkey verwenden": "Usar llave de acceso",
+  "Mit Passkey bestätigen": "Confirmar con llave de acceso",
+  "Bild kopiert": "Imagen copiada",
+  "Bild konnte nicht kopiert werden": "No se ha podido copiar la imagen",
   "Öffnen": "Abrir"
 });

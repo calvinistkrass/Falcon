@@ -354,6 +354,31 @@ function webviewByContentsId(id) {
   return null;
 }
 
+/** Lädt ein Bild, wandelt es in PNG um (auch WebP, AVIF, SVG, GIF) und legt es in die Zwischenablage. */
+async function copyImage(src) {
+  let objectUrl = null;
+  try {
+    const r = await F.fetchImage(src);
+    if (!r) throw new Error('fetch');
+    objectUrl = URL.createObjectURL(new Blob([r.bytes], { type: r.type }));
+    const img = new Image();
+    img.src = objectUrl;
+    await img.decode();
+    // SVGs ohne feste Größe bekommen eine sinnvolle Standardgröße
+    const w = img.naturalWidth || 512;
+    const hgt = img.naturalHeight || Math.round(w * 0.75);
+    const canvas = h('canvas', { width: w, height: hgt });
+    canvas.getContext('2d').drawImage(img, 0, 0, w, hgt);
+    const png = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!png || !(await F.writeImage(new Uint8Array(await png.arrayBuffer())))) throw new Error('write');
+    toast($t('Bild kopiert'), 'copy');
+  } catch {
+    toast($t('Bild konnte nicht kopiert werden'), 'warning');
+  } finally {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
 function openPageMenu(p) {
   const wv = webviewByContentsId(p.webContentsId);
   if (!wv) return;
@@ -379,7 +404,7 @@ function openPageMenu(p) {
     items.push(
       { label: $t('Bild in neuem Tab öffnen'), icon: 'image', onClick: () => Tabs.create(p.srcURL, { background: true }) },
       { label: $t('Bild speichern unter …'), icon: 'download', onClick: () => wv.downloadURL(p.srcURL) },
-      { label: $t('Bild kopieren'), icon: 'copy', onClick: act(() => wv.copyImageAt(p.x, p.y)) },
+      { label: $t('Bild kopieren'), icon: 'copy', onClick: () => copyImage(p.srcURL) },
       { label: $t('Bildadresse kopieren'), icon: 'link', onClick: () => F.copy(p.srcURL) },
       '-');
   }

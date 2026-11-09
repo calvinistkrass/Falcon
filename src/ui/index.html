@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src * data: file:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src * data: file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
   <title>Falcon</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -140,6 +140,20 @@
   </section>
 
   <!-- Popover: Passwort speichern -->
+  <section id="pkPrompt" class="pop pk-prompt hidden" data-sticky role="dialog">
+    <div class="pk-prompt-body">
+      <span class="pk-prompt-icon" data-icon="key"></span>
+      <div>
+        <h3 id="pkPromptTitle" data-no-i18n></h3>
+        <p id="pkPromptText" data-no-i18n></p>
+      </div>
+    </div>
+    <footer class="pop-foot">
+      <button class="btn ghost" id="pkPromptCancel">Abbrechen</button>
+      <button class="btn primary" id="pkPromptUse">Passkey verwenden</button>
+    </footer>
+  </section>
+
   <section id="pwOffer" class="pop pw-offer hidden" data-sticky>
     <header class="pop-head">
       <h3 id="pwOfferTitle">Passwort speichern?</h3>
@@ -339,6 +353,7 @@
   <script src="js/bookmarks.js"></script>
   <script src="js/game.js"></script>
   <script src="js/panels.js"></script>
+  <script src="js/passkey-prompt.js"></script>
   <script src="js/sidebar.js"></script>
   <script src="js/passwords.js"></script>
   <script src="js/settings.js"></script>

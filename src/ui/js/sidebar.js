@@ -35,6 +35,7 @@ const Sidebar = (() => {
       wv.setAttribute('allowpopups', '');
       wv.setAttribute('src', app.url);
       views.set(app.id, wv);
+      PasskeyPrompt.attach(wv, null);
       body.append(wv);
     }
     return wv;

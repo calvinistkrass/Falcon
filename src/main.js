@@ -88,12 +88,32 @@ function passkeyStrings() {
  * Bestätigung vor heiklen Aktionen: mit einem eingerichteten Passkey (iPhone, Android,
  * Sicherheitsschlüssel), sonst mit Windows Hello bzw. Touch ID.
  */
+// Erst ein kleiner Hinweis in Falcon; der Windows-Passkey-Dialog kommt nur nach einem Klick
+const pendingPrompts = new Map();
+ipcMain.on('passkey-prompt:answer', (e, id, ok) => {
+  if (!win || e.sender !== win.webContents) return;
+  pendingPrompts.get(id)?.(!!ok);
+  pendingPrompts.delete(id);
+});
+function askPasskeyPrompt(reason) {
+  if (!win || win.isDestroyed()) return Promise.resolve(false);
+  const id = crypto.randomUUID();
+  return new Promise((resolve) => {
+    pendingPrompts.set(id, resolve);
+    send('passkey-prompt', { id, reason });
+  });
+}
+
 async function confirmUser(reason, { force = false } = {}) {
   if (!force && !settings.pwRequireAuth) return true;
   if (Date.now() - lastConfirmed < AUTH_GRACE_MS) return true;
-  const r = passkeys.count()
-    ? await passkeys.verify({ parent: win, strings: passkeyStrings(), reason: tr(reason) })
-    : await verifyUser(tr(reason));
+  let r;
+  if (passkeys.count()) {
+    if (!(await askPasskeyPrompt(tr(reason)))) return false;
+    r = await passkeys.verify({ parent: win, strings: passkeyStrings(), reason: tr(reason) });
+  } else {
+    r = await verifyUser(tr(reason));
+  }
   if (r.ok) lastConfirmed = Date.now();
   return r.ok;
 }
@@ -412,6 +432,29 @@ ipcMain.handle('pw:export', async () => {
   return { count: pw.count(), filePath };
 });
 ipcMain.handle('copy', (_e, text) => { clipboard.writeText(String(text)); return true; });
+
+// „Bild kopieren“: copyImageAt funktioniert in Webviews nicht zuverlässig. Deshalb lädt Falcon das
+// Bild selbst (mit den Cookies der Sitzung), die Oberfläche wandelt es in PNG um und schreibt es hier.
+const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
+ipcMain.handle('image:fetch', async (e, url) => {
+  if (!win || e.sender !== win.webContents || !/^(https?|data):/i.test(String(url))) return null;
+  try {
+    const res = await session.defaultSession.fetch(url);
+    if (!res.ok) return null;
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (bytes.length > MAX_IMAGE_BYTES) return null;
+    return { bytes, type: res.headers.get('content-type') || '' };
+  } catch {
+    return null;
+  }
+});
+ipcMain.handle('image:write', (e, png) => {
+  if (!win || e.sender !== win.webContents) return false;
+  const img = nativeImage.createFromBuffer(Buffer.from(png));
+  if (img.isEmpty()) return false;
+  clipboard.writeImage(img);
+  return true;
+});
 ipcMain.handle('auth:available', () => isAvailable());
 ipcMain.handle('update:status', () => updater.getStatus());
 ipcMain.handle('update:check', () => updater.check());
