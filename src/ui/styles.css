@@ -602,9 +602,9 @@ body.gamemode .spinner { animation-duration: .7s !important; }
 /* Offline-Spiel */
 .pe-game { margin-top: 36px; width: min(640px, 100%); }
 .pe-game-hint { margin: 0 0 10px !important; font-size: 12.5px !important; color: var(--text-3) !important; }
-.game { width: 100%; aspect-ratio: 640 / 220; border-radius: var(--r-lg); background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); outline: none; cursor: pointer; overflow: hidden; }
-.game:focus-visible { box-shadow: inset 0 0 0 1px var(--accent-ring), 0 0 0 3px var(--accent-soft); }
-.game canvas { display: block; width: 100%; height: 100%; }
+.falcon-game { width: 100%; aspect-ratio: 640 / 220; border-radius: var(--r-lg); background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); outline: none; cursor: pointer; overflow: hidden; }
+.falcon-game:focus-visible { box-shadow: inset 0 0 0 1px var(--accent-ring), 0 0 0 3px var(--accent-soft); }
+.falcon-game canvas { display: block; width: 100%; height: 100%; }
 
 /* Passkey-Hinweis */
 .pk-prompt { width: 360px; }

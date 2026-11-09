@@ -229,7 +229,7 @@ const FalconGame = (() => {
   // Einbinden
   // -------------------------------------------------------------------------
   function mount(container) {
-    wrap = h('div', { class: 'game', tabindex: '0', 'aria-label': 'Falcon Flight' });
+    wrap = h('div', { class: 'falcon-game', tabindex: '0', 'aria-label': 'Falcon Flight' });
     canvas = h('canvas', { width: W * (devicePixelRatio || 1), height: H * (devicePixelRatio || 1) });
     wrap.append(canvas);
     container.append(wrap);

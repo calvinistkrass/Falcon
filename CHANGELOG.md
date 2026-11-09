@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.5.1] – 2026-11-09
+
+### Fixed
+- Turning on Game Mode stretched the performance meter across the whole toolbar.
+
 ## [1.5.0] – 2026-11-09
 
 ### Changed
@@ -50,6 +55,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.5.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.1
 [1.5.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.0
 [1.4.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.4.0
 [1.3.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.3.0
