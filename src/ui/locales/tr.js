@@ -385,5 +385,15 @@ I18N.add('tr', {
   "Hell": "Açık",
   "{n} Min. Lesezeit": "{n} dk okuma",
   "Leseansicht ist für diese Seite nicht verfügbar": "Bu sayfa için okuma görünümü kullanılamıyor",
+  "Als Overlay öffnen": "Katman olarak aç",
+  "Neues Inkognito-Fenster": "Yeni gizli pencere",
+  "Link in Inkognito-Fenster öffnen": "Bağlantıyı gizli pencerede aç",
+  "Link als Overlay öffnen": "Bağlantıyı katman olarak aç",
+  "Inkognito – Falcon": "Gizli – Falcon",
+  "Inkognito": "Gizli",
+  "Inkognito: Verlauf, Cookies und Website-Daten werden beim Schließen gelöscht": "Gizli: kapatıldığında geçmiş, çerezler ve site verileri silinir",
+  "Pausiert": "Duraklatıldı",
+  "Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.": "Arka plan sekmelerini 30 saniye sonra duraklatır, {n} dk sonra uyutur ve animasyonları kapatır.",
+  "Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.": "Oyunlar için CPU ve bellek boşaltır: arka plan sekmeleri 30 saniye sonra duraklatılır ve sonra uyutulur, animasyonlar kapatılır. Ses çalan sekmeler etkin kalır.",
   "Öffnen": "Aç"
 });

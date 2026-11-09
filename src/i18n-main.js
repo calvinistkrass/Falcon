@@ -5,6 +5,9 @@ const { app } = require('electron');
 
 const STRINGS = {
   en: {
+    'Deckkraft': 'Opacity',
+    'In Tab öffnen': 'Open in tab',
+    'Schließen': 'Close',
     'Bilder': 'Images',
     'Passkey hinzufügen': 'Add passkey',
     'Mit Passkey bestätigen': 'Confirm with passkey',
@@ -38,6 +41,9 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon wants to show a saved password.'
   },
   fr: {
+    'Deckkraft': 'Opacité',
+    'In Tab öffnen': 'Ouvrir dans un onglet',
+    'Schließen': 'Fermer',
     'Bilder': 'Images',
     'Passkey hinzufügen': 'Ajouter une clé d’accès',
     'Mit Passkey bestätigen': 'Confirmer avec une clé d’accès',
@@ -71,6 +77,9 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon souhaite afficher un mot de passe enregistré.'
   },
   es: {
+    'Deckkraft': 'Opacidad',
+    'In Tab öffnen': 'Abrir en pestaña',
+    'Schließen': 'Cerrar',
     'Bilder': 'Imágenes',
     'Passkey hinzufügen': 'Añadir llave de acceso',
     'Mit Passkey bestätigen': 'Confirmar con llave de acceso',
@@ -104,6 +113,9 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon quiere mostrar una contraseña guardada.'
   },
   tr: {
+    'Deckkraft': 'Opaklık',
+    'In Tab öffnen': 'Sekmede aç',
+    'Schließen': 'Kapat',
     'Bilder': 'Resimler',
     'Passkey hinzufügen': 'Geçiş anahtarı ekle',
     'Mit Passkey bestätigen': 'Geçiş anahtarıyla onayla',

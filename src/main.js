@@ -17,6 +17,7 @@ const { translator } = require('./i18n-main');
 const IS_MAC = process.platform === 'darwin';
 const ICON = path.join(__dirname, '..', 'assets', process.platform === 'win32' ? 'falcon.ico' : 'falcon.png');
 const CHROME_BG = '#0e0f11';
+const INCOGNITO_BG = '#14101c';
 
 // Viele Seiten (Discord, Twitch, Google) behandeln unbekannte Browser schlechter – daher Chrome-UA ohne Electron-Token.
 app.userAgentFallback = app.userAgentFallback
@@ -97,16 +98,17 @@ function passkeyStrings() {
 // Erst ein kleiner Hinweis in Falcon; der Windows-Passkey-Dialog kommt nur nach einem Klick
 const pendingPrompts = new Map();
 ipcMain.on('passkey-prompt:answer', (e, id, ok) => {
-  if (!win || e.sender !== win.webContents) return;
+  if (!isUi(e)) return;
   pendingPrompts.get(id)?.(!!ok);
   pendingPrompts.delete(id);
 });
 function askPasskeyPrompt(reason) {
-  if (!win || win.isDestroyed()) return Promise.resolve(false);
+  const target = focusedUi();
+  if (!alive(target)) return Promise.resolve(false);
   const id = crypto.randomUUID();
   return new Promise((resolve) => {
     pendingPrompts.set(id, resolve);
-    send('passkey-prompt', { id, reason });
+    target.webContents.send('passkey-prompt', { id, reason });
   });
 }
 
@@ -116,7 +118,7 @@ async function confirmUser(reason, { force = false } = {}) {
   let r;
   if (passkeys.count()) {
     if (!(await askPasskeyPrompt(tr(reason)))) return false;
-    r = await passkeys.verify({ parent: win, strings: passkeyStrings(), reason: tr(reason) });
+    r = await passkeys.verify({ parent: focusedUi(), strings: passkeyStrings(), reason: tr(reason) });
   } else {
     r = await verifyUser(tr(reason));
   }
@@ -142,8 +144,28 @@ function writeSettingsNow() {
 // ---------------------------------------------------------------------------
 // Fenster
 // ---------------------------------------------------------------------------
-let win;
-const send = (channel, data) => { if (win && !win.isDestroyed()) win.webContents.send(channel, data); };
+let win;                       // Hauptfenster (für Dialoge ohne eigenes Fenster)
+const uiWindows = new Set();   // alle Falcon-Fenster, auch Inkognito
+const INCOGNITO_PARTITION = 'incognito'; // ohne „persist:“ → nur im Arbeitsspeicher
+const incognitoSession = () => session.fromPartition(INCOGNITO_PARTITION);
+
+const alive = (w) => w && !w.isDestroyed();
+const isUi = (e) => uiWindows.has(BrowserWindow.fromWebContents(e.sender));
+const parentFor = (e) => (e && BrowserWindow.fromWebContents(e.sender)) || win;
+const focusedUi = () => { const f = BrowserWindow.getFocusedWindow(); return uiWindows.has(f) ? f : win; };
+/** An alle Falcon-Fenster (optional nur normale oder nur Inkognito) */
+function broadcast(channel, data, { incognito } = {}) {
+  for (const w of uiWindows) {
+    if (!alive(w) || (incognito !== undefined && !!w.falconIncognito !== incognito)) continue;
+    w.webContents.send(channel, data);
+  }
+}
+const send = (channel, data) => { if (alive(win)) win.webContents.send(channel, data); };
+/** Nachricht an das Fenster, in dem ein Webview liegt */
+function toHost(contents, channel, data) {
+  const host = contents.hostWebContents;
+  if (host && !host.isDestroyed()) host.send(channel, data);
+}
 
 function restoredBounds() {
   const w = settings.window;
@@ -154,19 +176,24 @@ function restoredBounds() {
   return visible ? { x: w.x, y: w.y, width: w.width, height: w.height } : { width: Math.min(w.width, area.width), height: Math.min(w.height, area.height) };
 }
 
-function createWindow() {
-  win = new BrowserWindow({
-    ...restoredBounds(),
+function createWindow({ incognito = false } = {}) {
+  const bounds = restoredBounds();
+  if (incognito && alive(win)) {
+    const b = win.getBounds();
+    Object.assign(bounds, { x: b.x + 40, y: b.y + 40, width: Math.min(b.width, 1280), height: Math.min(b.height, 820) });
+  }
+  const w = new BrowserWindow({
+    ...bounds,
     minWidth: 640,
     minHeight: 420,
-    title: 'Falcon',
+    title: incognito ? 'Falcon – Inkognito' : 'Falcon',
     icon: nativeImage.createFromPath(ICON),
-    backgroundColor: CHROME_BG,
+    backgroundColor: incognito ? INCOGNITO_BG : CHROME_BG,
     show: false,
     titleBarStyle: 'hidden',
     ...(IS_MAC
       ? { trafficLightPosition: { x: 14, y: 13 } }
-      : { titleBarOverlay: { color: CHROME_BG, symbolColor: '#9a9aa3', height: 40 } }),
+      : { titleBarOverlay: { color: incognito ? INCOGNITO_BG : CHROME_BG, symbolColor: '#9a9aa3', height: 40 } }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -177,25 +204,102 @@ function createWindow() {
     }
   });
 
-  if (settings.window && settings.window.maximized) win.maximize();
-  win.loadFile(path.join(__dirname, 'ui', 'index.html'));
-  win.once('ready-to-show', () => win.show());
+  w.falconIncognito = incognito;
+  uiWindows.add(w);
+  if (!incognito && !alive(win)) win = w;
 
-  const state = () => (win.isFullScreen() ? 'fullscreen' : win.isMaximized() ? 'max' : 'normal');
-  for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, () => send('win-state', state()));
+  if (!incognito && settings.window && settings.window.maximized) w.maximize();
+  w.loadFile(path.join(__dirname, 'ui', 'index.html'), incognito ? { query: { incognito: '1' } } : undefined);
+  w.once('ready-to-show', () => w.show());
+
+  const sendHere = (channel, data) => { if (alive(w)) w.webContents.send(channel, data); };
+  const state = () => (w.isFullScreen() ? 'fullscreen' : w.isMaximized() ? 'max' : 'normal');
+  for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) w.on(ev, () => sendHere('win-state', state()));
 
   // Seitentasten der Maus (Windows meldet sie als App-Befehl – auch wenn eine Webseite den Fokus hat)
-  win.on('app-command', (_e, cmd) => {
-    if (cmd === 'browser-backward') send('shortcut', { key: 'mouse-back' });
-    if (cmd === 'browser-forward') send('shortcut', { key: 'mouse-forward' });
+  w.on('app-command', (_e, cmd) => {
+    if (cmd === 'browser-backward') sendHere('shortcut', { key: 'mouse-back' });
+    if (cmd === 'browser-forward') sendHere('shortcut', { key: 'mouse-forward' });
   });
 
-  win.on('close', () => {
-    const b = win.getNormalBounds();
-    settings.window = { ...b, maximized: win.isMaximized() };
+  w.on('close', () => {
+    if (incognito) return;
+    const b = w.getNormalBounds();
+    settings.window = { ...b, maximized: w.isMaximized() };
     writeSettingsNow();
   });
+  w.on('closed', () => {
+    uiWindows.delete(w);
+    if (win === w) win = [...uiWindows].find((x) => alive(x) && !x.falconIncognito) || [...uiWindows].find(alive) || null;
+    // Letztes Inkognito-Fenster zu → alle Inkognito-Daten verwerfen
+    if (incognito && ![...uiWindows].some((x) => x.falconIncognito)) incognitoSession().clearStorageData().catch(() => {});
+  });
+  return w;
 }
+ipcMain.on('win:new-incognito', (_e, url) => {
+  const w = createWindow({ incognito: true });
+  if (typeof url === 'string' && /^https?:/i.test(url)) w.webContents.once('did-finish-load', () => w.webContents.send('open-tab', { url }));
+});
+
+// ---------------------------------------------------------------------------
+// Overlay: kleines Fenster, das immer im Vordergrund bleibt (z. B. Stream oder Guide neben dem Spiel)
+// ---------------------------------------------------------------------------
+const overlays = new Map(); // webContents.id → { url }
+ipcMain.on('overlay:open', (e, url) => {
+  if (!isUi(e) || !/^https?:/i.test(String(url))) return;
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+  const o = new BrowserWindow({
+    width: 480, height: 300, minWidth: 240, minHeight: 150,
+    x: area.x + area.width - 500, y: area.y + area.height - 320,
+    frame: false, alwaysOnTop: true, backgroundColor: '#000000', title: 'Falcon Overlay',
+    icon: nativeImage.createFromPath(ICON), show: false,
+    webPreferences: { preload: path.join(__dirname, 'overlay', 'preload.js'), contextIsolation: true, nodeIntegration: false, webviewTag: true, sandbox: false }
+  });
+  // Ebene über Vollbild-Fenstern (randlose Spiele); exklusiver Vollbildmodus lässt sich nicht überlagern
+  o.setAlwaysOnTop(true, 'screen-saver');
+  o.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  overlays.set(o.webContents.id, { url });
+  o.on('closed', () => overlays.delete(o.webContents?.id));
+  o.loadFile(path.join(__dirname, 'overlay', 'overlay.html'));
+  o.once('ready-to-show', () => o.showInactive());
+});
+const overlayOf = (e) => (overlays.has(e.sender.id) ? BrowserWindow.fromWebContents(e.sender) : null);
+ipcMain.on('overlay:info', (e) => {
+  e.returnValue = {
+    url: overlays.get(e.sender.id)?.url || 'about:blank',
+    logo: require('url').pathToFileURL(path.join(__dirname, '..', 'assets', 'falcon.png')).href,
+    strings: { opacity: tr('Deckkraft'), toTab: tr('In Tab öffnen'), close: tr('Schließen') }
+  };
+});
+ipcMain.on('overlay:opacity', (e, v) => overlayOf(e)?.setOpacity(Math.max(0.3, Math.min(1, Number(v) || 1))));
+ipcMain.on('overlay:close', (e) => overlayOf(e)?.close());
+ipcMain.on('overlay:to-tab', (e, url) => {
+  const o = overlayOf(e);
+  if (!o) return;
+  if (alive(win) && /^https?:/i.test(String(url))) { win.webContents.send('open-tab', { url }); win.focus(); }
+  o.close();
+});
+
+// ---------------------------------------------------------------------------
+// Game Mode: Hintergrund-Tabs einfrieren (Seite bleibt geladen, verbraucht aber keine CPU)
+// ---------------------------------------------------------------------------
+ipcMain.handle('tab:set-frozen', async (e, id, frozen) => {
+  if (!isUi(e)) return false;
+  const wc = require('electron').webContents.fromId(id);
+  if (!wc || wc.isDestroyed() || wc.getType() !== 'webview') return false;
+  try {
+    if (frozen) {
+      if (!wc.debugger.isAttached()) wc.debugger.attach('1.3');
+      await wc.debugger.sendCommand('Page.setWebLifecycleState', { state: 'frozen' });
+    } else if (wc.debugger.isAttached()) {
+      await wc.debugger.sendCommand('Page.setWebLifecycleState', { state: 'active' });
+      wc.debugger.detach();
+    }
+    return true;
+  } catch {
+    return false; // z. B. wenn die Entwicklertools offen sind
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Werbeblocker
@@ -207,7 +311,7 @@ function setupAdblock(ses) {
     notify: (webContentsId, stats) => {
       const host = require('electron').webContents.fromId(webContentsId)?.hostWebContents;
       if (host && !host.isDestroyed()) host.send('adblock-stats', { webContentsId, ...stats });
-      send('blocked-count', stats.total);
+      broadcast('blocked-count', stats.total);
     }
   });
 }
@@ -239,10 +343,11 @@ function setupDownloads(ses) {
     else item.setSavePath(uniquePath(downloadDir(), item.getFilename()));
     const id = crypto.randomUUID();
     downloadItems.set(id, item);
-    const report = (state, extra = {}) => send('download', {
+    const incognito = ses === incognitoSession();
+    const report = (state, extra = {}) => broadcast('download', {
       id, state, name: item.getFilename(), url: item.getURL(),
       received: item.getReceivedBytes(), total: item.getTotalBytes(), paused: item.isPaused(), ...extra
-    });
+    }, { incognito });
     report('started');
     item.on('updated', (_ev, state) => report(state));
     item.once('done', (_ev, state) => {
@@ -253,8 +358,8 @@ function setupDownloads(ses) {
 }
 ipcMain.handle('download:cancel', (_e, id) => { downloadItems.get(id)?.cancel(); return true; });
 ipcMain.handle('downloads:dir', () => downloadDir());
-ipcMain.handle('downloads:choose-dir', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, { defaultPath: downloadDir(), properties: ['openDirectory', 'createDirectory'] });
+ipcMain.handle('downloads:choose-dir', async (e) => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(parentFor(e), { defaultPath: downloadDir(), properties: ['openDirectory', 'createDirectory'] });
   if (canceled || !filePaths[0]) return null;
   settings.downloadDir = filePaths[0];
   saveSettings();
@@ -277,13 +382,13 @@ app.on('web-contents-created', (_e, contents) => {
   contents.once('destroyed', () => adblock.resetTab(contents.id, ''));
 
   contents.setWindowOpenHandler(({ url, disposition }) => {
-    send('open-tab', { url, background: disposition === 'background-tab' });
+    toHost(contents, 'open-tab', { url, background: disposition === 'background-tab' });
     return { action: 'deny' };
   });
 
   // Kontextmenü wird in der Falcon-Oberfläche gezeichnet, damit es zum Design passt
   contents.on('context-menu', (_ev, p) => {
-    send('page-context-menu', {
+    toHost(contents, 'page-context-menu', {
       webContentsId: contents.id,
       x: p.x, y: p.y,
       linkURL: p.linkURL, linkText: p.linkText,
@@ -303,12 +408,12 @@ app.on('web-contents-created', (_e, contents) => {
       (ctrl && SHORTCUT_KEYS_CTRL.includes(key)) ||
       ['f5', 'f6', 'f9', 'f11', 'f12'].includes(key) ||
       (input.alt && ['arrowleft', 'arrowright', 'home'].includes(key)) ||
-      (ctrl && input.shift && ['g', 'b', 'delete'].includes(key));
+      (ctrl && input.shift && ['g', 'b', 'n', 'delete'].includes(key));
     const payload = { key, ctrl, shift: input.shift, alt: input.alt };
-    if (key === 'escape') return send('shortcut', payload); // Seite bekommt Escape trotzdem
+    if (key === 'escape') return toHost(contents, 'shortcut', payload); // Seite bekommt Escape trotzdem
     if (!hit) return;
     event.preventDefault();
-    send('shortcut', payload);
+    toHost(contents, 'shortcut', payload);
   });
 });
 
@@ -321,20 +426,23 @@ ipcMain.handle('webview:add-to-dictionary', (_e, word) => session.defaultSession
 // ---------------------------------------------------------------------------
 // IPC: Fenster & Einstellungen
 // ---------------------------------------------------------------------------
-ipcMain.on('win', (_e, action) => {
-  if (!win) return;
-  if (action === 'min') win.minimize();
-  else if (action === 'max') win.isMaximized() ? win.unmaximize() : win.maximize();
-  else if (action === 'close') win.close();
-  else if (action === 'fullscreen') win.setFullScreen(!win.isFullScreen());
+ipcMain.on('win', (e, action) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (!alive(w)) return;
+  if (action === 'min') w.minimize();
+  else if (action === 'max') w.isMaximized() ? w.unmaximize() : w.maximize();
+  else if (action === 'close') w.close();
+  else if (action === 'fullscreen') w.setFullScreen(!w.isFullScreen());
 });
-ipcMain.on('overlay-dim', (_e, dim) => {
-  if (!win || IS_MAC || !win.setTitleBarOverlay) return;
-  try { win.setTitleBarOverlay({ color: dim ? '#08090a' : CHROME_BG, symbolColor: dim ? '#55555c' : '#9a9aa3' }); } catch {}
+ipcMain.on('overlay-dim', (e, dim) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (!alive(w) || IS_MAC || !w.setTitleBarOverlay) return;
+  const base = w.falconIncognito ? INCOGNITO_BG : CHROME_BG;
+  try { w.setTitleBarOverlay({ color: dim ? '#08090a' : base, symbolColor: dim ? '#55555c' : '#9a9aa3' }); } catch {}
 });
 
 ipcMain.handle('settings:get', () => settings);
-ipcMain.handle('settings:set', async (_e, patch) => {
+ipcMain.handle('settings:set', async (e, patch) => {
   const { window: _ignored, ...safe } = patch || {};
   if (safe.pwRequireAuth === false && settings.pwRequireAuth && !(await confirmUser('Falcon möchte den Passwortschutz ausschalten.'))) {
     delete safe.pwRequireAuth;
@@ -344,6 +452,7 @@ ipcMain.handle('settings:set', async (_e, patch) => {
     adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
   }
   saveSettings();
+  for (const w of uiWindows) if (alive(w) && w.webContents !== e.sender) w.webContents.send('settings-changed', settings);
   return settings;
 });
 
@@ -366,8 +475,8 @@ ipcMain.handle('clear-data', async () => {
 });
 
 // ---------- Lesezeichen Import/Export ----------
-ipcMain.handle('bookmarks:export', async () => {
-  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+ipcMain.handle('bookmarks:export', async (e) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(parentFor(e), {
     title: tr('Lesezeichen exportieren'),
     defaultPath: path.join(app.getPath('documents'), tr('falcon-lesezeichen.html')),
     filters: [{ name: tr('Lesezeichen (HTML)'), extensions: ['html'] }, { name: 'JSON', extensions: ['json'] }]
@@ -378,8 +487,8 @@ ipcMain.handle('bookmarks:export', async () => {
   fs.writeFileSync(filePath, data, 'utf8');
   return { count: bookmarksIO.count(list), filePath };
 });
-ipcMain.handle('bookmarks:import', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+ipcMain.handle('bookmarks:import', async (e) => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(parentFor(e), {
     title: tr('Lesezeichen importieren'),
     properties: ['openFile'],
     filters: [{ name: tr('Lesezeichen (HTML, JSON)'), extensions: ['html', 'htm', 'json'] }]
@@ -405,7 +514,7 @@ ipcMain.handle('pw:accounts', (e) => {
   return pw.forUrl(frameUrl(e)).map(({ id, username }) => ({ id, username }));
 });
 ipcMain.handle('pw:fill', (e, webContentsId, id) => {
-  if (!win || e.sender !== win.webContents) return false;
+  if (!isUi(e)) return false;
   const wc = require('electron').webContents.fromId(webContentsId);
   if (!wc || wc.isDestroyed() || wc.getType() !== 'webview') return false;
   // Nur passend zur Seite, die gerade wirklich in diesem Webview geladen ist
@@ -416,7 +525,7 @@ ipcMain.handle('pw:fill', (e, webContentsId, id) => {
   return true;
 });
 ipcMain.on('pw:submitted', (e, data) => {
-  if (e.sender.getType() !== 'webview') return;
+  if (e.sender.getType() !== 'webview' || e.sender.session === incognitoSession()) return;
   const origin = pw.originOf(frameUrl(e));
   if (!origin || !data || typeof data.password !== 'string' || !data.password) return;
   if ((settings.pwNever || []).includes(origin)) return;
@@ -426,7 +535,7 @@ ipcMain.on('pw:submitted', (e, data) => {
   const id = crypto.randomUUID();
   pendingLogins.set(id, entry);
   setTimeout(() => pendingLogins.delete(id), 5 * 60 * 1000);
-  if (win && !win.isDestroyed()) win.webContents.send('pw-offer', { id, origin, username: entry.username, update: known });
+  toHost(e.sender, 'pw-offer', { id, origin, username: entry.username, update: known });
 });
 
 // Aus der Falcon-Oberfläche
@@ -457,9 +566,9 @@ ipcMain.handle('pw:never-remove', (_e, origin) => {
   saveSettings();
   return true;
 });
-ipcMain.handle('pw:import', async () => {
+ipcMain.handle('pw:import', async (e) => {
   if (!(await confirmUser('Falcon möchte Passwörter importieren.'))) return { error: 'auth' };
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+  const { canceled, filePaths } = await dialog.showOpenDialog(parentFor(e), {
     title: tr('Passwörter importieren (CSV aus Chrome, Edge, Opera, Firefox, Brave …)'),
     properties: ['openFile'],
     filters: [{ name: 'CSV', extensions: ['csv'] }]
@@ -468,8 +577,8 @@ ipcMain.handle('pw:import', async () => {
   try { return pw.importCsv(fs.readFileSync(filePaths[0], 'utf8')); }
   catch (err) { return { error: tr(err.message) }; }
 });
-ipcMain.handle('pw:export', async () => {
-  const { response } = await dialog.showMessageBox(win, {
+ipcMain.handle('pw:export', async (e) => {
+  const { response } = await dialog.showMessageBox(parentFor(e), {
     type: 'warning',
     title: tr('Passwörter exportieren'),
     message: tr('Passwörter als unverschlüsselte Datei exportieren?'),
@@ -480,7 +589,7 @@ ipcMain.handle('pw:export', async () => {
   });
   if (response !== 1) return null;
   if (!(await confirmUser('Falcon möchte deine gespeicherten Passwörter exportieren.'))) return { error: 'auth' };
-  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+  const { canceled, filePath } = await dialog.showSaveDialog(parentFor(e), {
     title: tr('Passwörter exportieren'),
     defaultPath: path.join(app.getPath('documents'), tr('falcon-passwoerter.csv')),
     filters: [{ name: 'CSV', extensions: ['csv'] }]
@@ -495,7 +604,7 @@ ipcMain.handle('copy', (_e, text) => { clipboard.writeText(String(text)); return
 // Bild selbst (mit den Cookies der Sitzung), die Oberfläche wandelt es in PNG um und schreibt es hier.
 const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
 ipcMain.handle('image:fetch', async (e, url) => {
-  if (!win || e.sender !== win.webContents || !/^(https?|data):/i.test(String(url))) return null;
+  if (!isUi(e) || !/^(https?|data):/i.test(String(url))) return null;
   try {
     const res = await session.defaultSession.fetch(url);
     if (!res.ok) return null;
@@ -507,7 +616,7 @@ ipcMain.handle('image:fetch', async (e, url) => {
   }
 });
 ipcMain.handle('image:write', (e, png) => {
-  if (!win || e.sender !== win.webContents) return false;
+  if (!isUi(e)) return false;
   const img = nativeImage.createFromBuffer(Buffer.from(png));
   if (img.isEmpty()) return false;
   clipboard.writeImage(img);
@@ -530,7 +639,7 @@ function readerSource() {
   return readerScripts;
 }
 function readerTarget(e, id) {
-  if (!win || e.sender !== win.webContents) return null;
+  if (!isUi(e)) return null;
   const wc = require('electron').webContents.fromId(id);
   return wc && !wc.isDestroyed() && wc.getType() === 'webview' ? wc : null;
 }
@@ -560,8 +669,8 @@ ipcMain.on('newtab:config', (e) => {
   const url = e.senderFrame?.url || '';
   e.returnValue = /^file:.*\/ui\/newtab\.html/.test(url) ? newtabConfig() : null;
 });
-ipcMain.handle('newtab:choose-image', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+ipcMain.handle('newtab:choose-image', async (e) => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(parentFor(e), {
     properties: ['openFile'],
     filters: [{ name: tr('Bilder'), extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'] }]
   });
@@ -590,7 +699,7 @@ ipcMain.handle('passkey:list', () => passkeys.list());
 ipcMain.handle('passkey:register', async () => {
   // Wer schon einen Passkey hat, muss neue Passkeys bestätigen – sonst ließe sich der Schutz umgehen
   if (passkeys.count() && !(await confirmUser('Falcon möchte einen neuen Passkey hinzufügen.', { force: true }))) return { ok: false, error: 'auth' };
-  const r = await passkeys.register({ parent: win, strings: passkeyStrings(), reason: tr('Falcon möchte einen neuen Passkey hinzufügen.') });
+  const r = await passkeys.register({ parent: focusedUi(), strings: passkeyStrings(), reason: tr('Falcon möchte einen neuen Passkey hinzufügen.') });
   if (r.ok) lastConfirmed = Date.now();
   return { ok: r.ok, error: r.error };
 });
@@ -617,16 +726,19 @@ if (!gotLock) {
     loadSettings();
     Menu.setApplicationMenu(null);
     setupAdblock(session.defaultSession);
-    googleSignin.setup(session.defaultSession);
-    setupDownloads(session.defaultSession);
-    // Berechtigungen (Kamera/Mikro für Discord etc.) erlauben
-    session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
-      cb(['media', 'fullscreen', 'notifications', 'clipboard-sanitized-write', 'pointerLock', 'display-capture'].includes(permission));
-    });
+    for (const ses of [session.defaultSession, incognitoSession()]) {
+      if (ses !== session.defaultSession) adblock.attach(ses);
+      googleSignin.setup(ses);
+      setupDownloads(ses);
+      // Berechtigungen (Kamera/Mikro für Discord etc.) erlauben
+      ses.setPermissionRequestHandler((_wc, permission, cb) => {
+        cb(['media', 'fullscreen', 'notifications', 'clipboard-sanitized-write', 'pointerLock', 'display-capture'].includes(permission));
+      });
+    }
     createWindow();
-    updater.init(send);
+    updater.init((channel, data) => broadcast(channel, data));
   });
 
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  app.on('activate', () => { if (uiWindows.size === 0) createWindow(); });
 }

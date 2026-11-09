@@ -22,7 +22,7 @@ const Zoom = (() => {
     if (!host) return;
     if (Math.abs(factor - 1) < 0.001) delete perHost[host];
     else perHost[host] = factor;
-    store.set(KEY, perHost);
+    if (!INCOGNITO) store.set(KEY, perHost);
     for (const t of state.tabs) if (hostOf(t.url) === host) apply(t);
     updateChip();
   }
@@ -186,9 +186,9 @@ const Perf = (() => {
     $('#pMem').textContent = fmtMem(last.memMB);
     $('#pProc').textContent = last.processes;
     $('#pTabs').textContent = state.tabs.filter((t) => !t.sleeping).length;
-    $('#pSleep').textContent = state.tabs.filter((t) => t.sleeping).length;
+    $('#pSleep').textContent = state.tabs.filter((t) => t.sleeping || t.frozen).length;
     $('#pBlocked').textContent = last.blocked.toLocaleString(I18N.locale);
-    $('#pGameDesc').textContent = $t('Legt Hintergrund-Tabs nach {n} Min. schlafen und schaltet Animationen ab.', { n: state.settings.sleepMinutes || 10 });
+    $('#pGameDesc').textContent = $t('Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.', { n: state.settings.sleepMinutes || 10 });
     $('#pGame').checked = !!state.settings.gameMode;
     draw($('#cpuGraph'), cpu, Math.max(100, ...cpu));
     draw($('#memGraph'), mem, Math.max(...mem) * 1.25 || 1);
@@ -324,6 +324,7 @@ function openAppMenu() {
 
   showMenu([
     { label: $t('Neuer Tab'), icon: 'plus', shortcut: kb('Strg+T'), onClick: () => Tabs.create() },
+    { label: $t('Neues Inkognito-Fenster'), icon: 'incognito', shortcut: kb('Strg+Umschalt+N'), onClick: () => F.newIncognitoWindow() },
     { label: $t('Geschlossenen Tab öffnen'), icon: 'restore', shortcut: kb('Strg+Umschalt+T'), disabled: !Tabs.closedCount, onClick: () => Tabs.reopen() },
     '-',
     { label: $t('Verlauf'), icon: 'clock', shortcut: kb('Strg+H'), onClick: () => Settings.open('history') },
@@ -333,6 +334,7 @@ function openAppMenu() {
     '-',
     { element: zoomRow },
     '-',
+    { label: $t('Als Overlay öffnen'), icon: 'pip', disabled: !t || !/^https?:/.test(t.url), onClick: () => F.openOverlay(t.url) },
     { label: $t('Auf Seite suchen …'), icon: 'search', shortcut: kb('Strg+F'), disabled: !ready, onClick: () => Find.open() },
     { label: $t('Drucken …'), icon: 'printer', shortcut: kb('Strg+P'), disabled: !ready, onClick: () => t.webview.print() },
     { label: $t('Entwicklertools'), icon: 'code', shortcut: kb('F12'), disabled: !ready, onClick: () => t.webview.openDevTools() },
@@ -398,6 +400,8 @@ function openPageMenu(p) {
     items.push(
       { label: $t('Link in neuem Tab öffnen'), icon: 'tab', onClick: () => Tabs.create(p.linkURL, { background: true, index: state.tabs.indexOf(Tabs.active()) + 1 }) },
       { label: $t('Link in Seitenleiste öffnen'), icon: 'pip', onClick: () => Sidebar.openUrl(p.linkURL) },
+      { label: $t('Link in Inkognito-Fenster öffnen'), icon: 'incognito', onClick: () => F.newIncognitoWindow(p.linkURL) },
+      { label: $t('Link als Overlay öffnen'), icon: 'pip', onClick: () => F.openOverlay(p.linkURL) },
       { label: $t('Linkadresse kopieren'), icon: 'link', onClick: () => F.copy(p.linkURL) },
       '-');
   }

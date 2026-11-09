@@ -385,5 +385,15 @@ I18N.add('fr', {
   "Hell": "Clair",
   "{n} Min. Lesezeit": "{n} min de lecture",
   "Leseansicht ist für diese Seite nicht verfügbar": "Le mode lecture n’est pas disponible pour cette page",
+  "Als Overlay öffnen": "Ouvrir en superposition",
+  "Neues Inkognito-Fenster": "Nouvelle fenêtre de navigation privée",
+  "Link in Inkognito-Fenster öffnen": "Ouvrir le lien en navigation privée",
+  "Link als Overlay öffnen": "Ouvrir le lien en superposition",
+  "Inkognito – Falcon": "Navigation privée – Falcon",
+  "Inkognito": "Privé",
+  "Inkognito: Verlauf, Cookies und Website-Daten werden beim Schließen gelöscht": "Navigation privée : l’historique, les cookies et les données des sites sont supprimés à la fermeture",
+  "Pausiert": "En pause",
+  "Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.": "Met en pause les onglets en arrière-plan après 30 secondes, les met en veille après {n} min et désactive les animations.",
+  "Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.": "Libère du processeur et de la mémoire pour vos jeux : les onglets en arrière-plan sont mis en pause après 30 secondes puis en veille, les animations sont désactivées. Les onglets qui diffusent du son restent actifs.",
   "Öffnen": "Ouvrir"
 });

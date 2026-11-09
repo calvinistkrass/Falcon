@@ -7,9 +7,10 @@ const { pathToFileURL } = require('url');
 const pkg = require('../package.json');
 
 const fileUrl = (...p) => pathToFileURL(path.join(__dirname, ...p)).href;
-const CHANNELS = ['open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats'];
+const CHANNELS = ['open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed'];
 
 contextBridge.exposeInMainWorld('falcon', {
+  incognito: new URLSearchParams(location.search).has('incognito'),
   platform: process.platform,
   version: pkg.version,
   versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
@@ -19,6 +20,9 @@ contextBridge.exposeInMainWorld('falcon', {
 
   win: (action) => ipcRenderer.send('win', action),
   overlayDim: (dim) => ipcRenderer.send('overlay-dim', !!dim),
+  newIncognitoWindow: (url) => ipcRenderer.send('win:new-incognito', url),
+  openOverlay: (url) => ipcRenderer.send('overlay:open', url),
+  setTabFrozen: (webContentsId, frozen) => ipcRenderer.invoke('tab:set-frozen', webContentsId, frozen),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
   metrics: () => ipcRenderer.invoke('metrics'),

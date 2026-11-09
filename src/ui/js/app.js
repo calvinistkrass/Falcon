@@ -49,6 +49,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
     return;
   }
   if (ctrl && shift && key === 't') return Tabs.reopen();
+  if (ctrl && shift && key === 'n') return F.newIncognitoWindow();
   if (ctrl && shift && key === 'g') return Perf.setGameMode(!state.settings.gameMode);
   if (ctrl && shift && key === 'b') return updateSettings({ showBookmarksBar: !state.settings.showBookmarksBar });
   if (ctrl && shift && key === 'delete') return Settings.open('privacy');
@@ -81,7 +82,7 @@ window.addEventListener('keydown', (e) => {
   const inField = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
   const global =
     (ctrl && ['t', 'w', 'l', 'f', 'd', 'j', 'h', 'r', 'p', 'tab', '+', '=', '-', '0', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(key)) ||
-    (ctrl && e.shiftKey && ['g', 'b', 'delete'].includes(key)) ||
+    (ctrl && e.shiftKey && ['g', 'b', 'n', 'delete'].includes(key)) ||
     ['f5', 'f6', 'f9', 'f11', 'f12', 'escape'].includes(key) ||
     (e.altKey && ['arrowleft', 'arrowright', 'home', 'd'].includes(key));
   if (!global) return;
@@ -96,6 +97,9 @@ F.on('shortcut', handleShortcut);
 // ---------------------------------------------------------------------------
 F.on('open-tab', (data) => {
   const { url, background } = typeof data === 'string' ? { url: data, background: false } : data;
+  // Einziger Tab ist ein leerer neuer Tab (z. B. frisches Inkognito-Fenster) → dort öffnen
+  const only = state.tabs.length === 1 ? state.tabs[0] : null;
+  if (only && isNewTab(only.url) && !background) return Tabs.navigate(url, only);
   const index = state.tabs.indexOf(Tabs.active()) + 1;
   Tabs.create(url, { background, index });
 });
@@ -103,6 +107,8 @@ F.on('search-tab', (q) => Tabs.create(searchUrl(q)));
 F.on('download', (d) => Downloads.update(d));
 F.on('pw-offer', (o) => Passwords.receive(o));
 F.on('page-context-menu', openPageMenu);
+// Einstellungen, die ein anderes Falcon-Fenster geändert hat
+F.on('settings-changed', (s) => { state.settings = s; emit('settings', s); });
 F.on('win-state', (s) => {
   document.body.classList.toggle('fullscreen', s === 'fullscreen');
   document.body.classList.toggle('maximized', s === 'max');
@@ -160,5 +166,6 @@ F.on('win-state', (s) => {
   document.body.classList.add(`platform-${F.platform}`);
   state.settings = await F.getSettings();
   emit('settings', state.settings);
+  if (INCOGNITO) { document.body.classList.add('incognito'); document.title = 'Falcon Inkognito'; }
   if (!(state.settings.restoreSession && Tabs.restoreSession())) Tabs.create();
 })();
