@@ -39,7 +39,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 
 ### 🔐 Passwords & security
 - **Password manager**: saves logins encrypted with your Windows account (DPAPI) and fills them in automatically.
-- **Unlock with passkeys**: confirm with your **iPhone, Android phone or a security key** before passwords are shown, copied, imported or exported. Falcon falls back to Windows Hello.
+- **Unlock with passkeys**: confirm with your **iPhone, Android phone or a security key** before passwords are shown, copied, imported or exported. Falcon asks with a small prompt first and falls back to Windows Hello.
 - **Import & export** passwords as CSV from Chrome, Edge, Opera, Brave, Firefox or Bitwarden.
 - **Google sign-in works**, unlike in most Electron-based browsers.
 

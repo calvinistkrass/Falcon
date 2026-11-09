@@ -17,6 +17,51 @@ if (location.hostname === 'accounts.google.com' || location.hostname === 'accoun
   })();`);
 }
 
+// Passkeys: Die Seite darf den Windows-Dialog nicht sofort öffnen. navigator.credentials wird im
+// Hauptkontext so umgeleitet, dass Falcon zuerst einen Hinweis zeigt und erst nach dem Klick auf
+// „Passkey verwenden“ die eigentliche Anfrage weitergibt. (Reine Bedienhilfe, keine Sicherheitsgrenze.)
+if (/^https?:$/.test(location.protocol) && window.top === window) {
+  const ORIGIN = location.origin;
+  window.addEventListener('message', (e) => {
+    if (e.source !== window || !e.data || typeof e.data !== 'object') return;
+    if (e.data.__falconPasskey === 'ask') ipcRenderer.sendToHost('passkey-ask', { id: e.data.id, kind: e.data.kind === 'create' ? 'create' : 'get' });
+    if (e.data.__falconPasskey === 'cancel') ipcRenderer.sendToHost('passkey-cancel', e.data.id);
+  });
+  ipcRenderer.on('passkey-answer', (_e, id, ok) => window.postMessage({ __falconPasskey: 'answer', id, ok: !!ok }, ORIGIN));
+
+  webFrame.executeJavaScript(`(() => {
+    const creds = navigator.credentials;
+    if (!creds || !window.PublicKeyCredential) return;
+    const origGet = creds.get.bind(creds);
+    const origCreate = creds.create.bind(creds);
+    let seq = 0;
+    const notAllowed = () => new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError');
+
+    function gate(kind, options, original) {
+      // Nur echte Passkey-Abfragen; „conditional“ (Vorschläge im Eingabefeld) läuft ohne Dialog
+      if (!options || !options.publicKey || options.mediation === 'conditional' || options.mediation === 'silent') return original(options);
+      const id = ++seq;
+      return new Promise((resolve, reject) => {
+        const signal = options.signal;
+        const onAbort = () => { cleanup(); window.postMessage({ __falconPasskey: 'cancel', id }, location.origin); reject(signal.reason || new DOMException('Aborted', 'AbortError')); };
+        const onMessage = (e) => {
+          if (e.source !== window || !e.data || e.data.__falconPasskey !== 'answer' || e.data.id !== id) return;
+          cleanup();
+          if (e.data.ok) original(options).then(resolve, reject); else reject(notAllowed());
+        };
+        const cleanup = () => { window.removeEventListener('message', onMessage); if (signal) signal.removeEventListener('abort', onAbort); };
+        if (signal && signal.aborted) return reject(signal.reason || new DOMException('Aborted', 'AbortError'));
+        if (signal) signal.addEventListener('abort', onAbort);
+        window.addEventListener('message', onMessage);
+        window.postMessage({ __falconPasskey: 'ask', id, kind }, location.origin);
+      });
+    }
+
+    Object.defineProperty(creds, 'get', { configurable: true, value: (options) => gate('get', options, origGet) });
+    Object.defineProperty(creds, 'create', { configurable: true, value: (options) => gate('create', options, origCreate) });
+  })();`);
+}
+
 if (/^https?:$/.test(location.protocol)) {
   const visible = (el) => {
     if (!el || el.disabled || el.readOnly) return false;

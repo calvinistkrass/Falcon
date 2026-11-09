@@ -301,5 +301,13 @@ I18N.add('tr', {
   "Leertaste oder Klick zum Starten": "Başlamak için Boşluk tuşuna basın veya tıklayın",
   "Neuer Rekord!": "Yeni rekor!",
   "Leertaste für eine neue Runde": "Yeniden oynamak için Boşluk tuşuna basın",
+  "Passkey erstellen?": "Geçiş anahtarı oluşturulsun mu?",
+  "Mit Passkey anmelden?": "Geçiş anahtarıyla oturum açılsın mı?",
+  "{host} möchte einen Passkey für dich erstellen.": "{host} sizin için bir geçiş anahtarı oluşturmak istiyor.",
+  "{host} möchte, dass du dich mit einem Passkey anmeldest.": "{host} geçiş anahtarıyla oturum açmanızı istiyor.",
+  "Passkey verwenden": "Geçiş anahtarını kullan",
+  "Mit Passkey bestätigen": "Geçiş anahtarıyla onayla",
+  "Bild kopiert": "Resim kopyalandı",
+  "Bild konnte nicht kopiert werden": "Resim kopyalanamadı",
   "Öffnen": "Aç"
 });

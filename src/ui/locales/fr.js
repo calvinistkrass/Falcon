@@ -301,5 +301,13 @@ I18N.add('fr', {
   "Leertaste oder Klick zum Starten": "Espace ou clic pour commencer",
   "Neuer Rekord!": "Nouveau record !",
   "Leertaste für eine neue Runde": "Espace pour rejouer",
+  "Passkey erstellen?": "Créer une clé d’accès ?",
+  "Mit Passkey anmelden?": "Se connecter avec une clé d’accès ?",
+  "{host} möchte einen Passkey für dich erstellen.": "{host} souhaite créer une clé d’accès pour vous.",
+  "{host} möchte, dass du dich mit einem Passkey anmeldest.": "{host} vous propose de vous connecter avec une clé d’accès.",
+  "Passkey verwenden": "Utiliser la clé d’accès",
+  "Mit Passkey bestätigen": "Confirmer avec une clé d’accès",
+  "Bild kopiert": "Image copiée",
+  "Bild konnte nicht kopiert werden": "Impossible de copier l’image",
   "Öffnen": "Ouvrir"
 });
