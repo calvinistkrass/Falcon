@@ -192,6 +192,7 @@ const Tabs = (() => {
     if (key === 'newtab') return h('img', { src: F.logoUrl, alt: '' });
     if (key === 'error') return icon('warning');
     if (key === 'globe') return icon('globe');
+    if (key === 'download') return icon('download');
     const img = h('img', { src: key, alt: '' });
     img.addEventListener('error', () => img.replaceWith(icon('globe')), { once: true });
     return img;
@@ -215,6 +216,7 @@ const Tabs = (() => {
     if (tab.loading && !tab.sleeping) key = 'loading';
     else if (isNewTab(tab.url)) key = 'newtab';
     else if (tab.error) key = 'error';
+    else if (tab.url && tab.url.startsWith('falcon://downloads')) key = 'download';
     else key = tab.favicon || (isInternal(tab.url) ? 'globe' : faviconFor(tab.url));
     if (el.dataset.iconKey !== key) {
       el.dataset.iconKey = key;

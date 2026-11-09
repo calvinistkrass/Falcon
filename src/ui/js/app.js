@@ -63,7 +63,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
   if ((ctrl && key === 'l') || key === 'f6' || (alt && key === 'd')) return Omnibox.focus();
   if (ctrl && key === 'f') return Find.open();
   if (ctrl && key === 'd') return Bookmarks.toggleCurrent($('#bookmarkBtn'));
-  if (ctrl && key === 'j') return Downloads.toggle();
+  if (ctrl && key === 'j') return openInternalPage(DOWNLOADS_URL);
   if (ctrl && key === ',') return Settings.open();
   if (ctrl && key === 'h') return Settings.open('history');
   if (ctrl && key === 'p') return wv?.print();

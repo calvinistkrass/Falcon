@@ -34,7 +34,7 @@ const Palette = (() => {
       { label: 'Auf Seite suchen', icon: 'search', key: 'Strg+F', words: 'find', run: () => Find.open(), when: web },
       { label: Bookmarks.has(t?.url) ? 'Lesezeichen bearbeiten' : 'Lesezeichen hinzufügen', icon: 'star', key: 'Strg+D', words: 'bookmark', run: () => Bookmarks.toggleCurrent($('#bookmarkBtn')), when: web },
       { label: s.showBookmarksBar ? 'Lesezeichenleiste ausblenden' : 'Lesezeichenleiste einblenden', icon: 'bookmark', key: 'Strg+Umschalt+B', run: () => updateSettings({ showBookmarksBar: !s.showBookmarksBar }) },
-      { label: 'Downloads', icon: 'download', key: 'Strg+J', run: () => Downloads.toggle() },
+      { label: 'Downloads', icon: 'download', key: 'Strg+J', words: 'falcon://downloads', run: () => openInternalPage(DOWNLOADS_URL) },
       { label: 'Verlauf', icon: 'clock', key: 'Strg+H', words: 'history', run: () => Settings.open('history') },
       { label: 'Vollbild', icon: 'maximize', key: 'F11', words: 'fullscreen', run: () => F.win('fullscreen') },
       { label: 'Entwicklertools', icon: 'code', key: 'F12', words: 'devtools', run: () => t?.webview?.openDevTools(), when: web },

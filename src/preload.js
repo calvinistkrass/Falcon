@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 const pkg = require('../package.json');
 
 const fileUrl = (...p) => pathToFileURL(path.join(__dirname, ...p)).href;
-const CHANNELS = ['open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed'];
+const CHANNELS = ['account-changed', 'history-replace', 'open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed'];
 
 contextBridge.exposeInMainWorld('falcon', {
   incognito: new URLSearchParams(location.search).has('incognito'),
@@ -35,6 +35,13 @@ contextBridge.exposeInMainWorld('falcon', {
     openDir: () => ipcRenderer.invoke('downloads:open-dir')
   },
   clearData: () => ipcRenderer.invoke('clear-data'),
+  account: Object.fromEntries(['state', 'signUp', 'signIn', 'signOut', 'resetPassword', 'resendVerification', 'refreshProfile', 'updateProfile',
+    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty']
+    .map((action) => [action, (arg) => ipcRenderer.invoke('account', action, arg)])),
+  defaultBrowser: {
+    status: () => ipcRenderer.invoke('default-browser:status'),
+    set: () => ipcRenderer.invoke('default-browser:set')
+  },
   copy: (text) => ipcRenderer.invoke('copy', text),
   fetchImage: (url) => ipcRenderer.invoke('image:fetch', url),
   writeImage: (png) => ipcRenderer.invoke('image:write', png),

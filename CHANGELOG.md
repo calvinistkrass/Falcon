@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.8.0] – 2026-11-10
+
+### Added
+- **Falcon account & sync**: create an account or sign in from the new profile button next to the menu. Bookmarks, passwords, history and settings sync between your PCs – you choose which. Everything is **end-to-end encrypted** on your PC with a key protected by your password, so the server can't read any of it.
+- **Account settings** (Settings → Account & sync): name, profile color, device name, sync status and per-category switches, change password, sign out and delete account. Forgotten passwords can be reset by email; afterwards your sync data is unlocked with your previous password, or you start fresh with the data on this PC.
+- **Downloads page** (`falcon://downloads`, Ctrl+J): every download with search, grouped by day, live speed and time left, pause, resume, cancel, retry, show in folder and remove. The list is kept across restarts; incognito downloads are not saved.
+- **Default browser**: make Falcon your default browser under Settings → General. Links and HTML files from other apps then open in Falcon.
+
 ## [1.7.0] – 2026-11-09
 
 ### Added
@@ -95,6 +103,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.8.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.0
 [1.7.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.7.0
 [1.6.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.1
 [1.6.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.0

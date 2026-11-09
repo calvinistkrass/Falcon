@@ -6,6 +6,8 @@ const crypto = require('crypto');
 
 const FILE = () => path.join(app.getPath('userData'), 'passwords.dat');
 let entries = null;
+let onChange = null;
+const changed = () => { try { onChange?.(); } catch { /* egal */ } };
 
 function canEncrypt() {
   try { return safeStorage.isEncryptionAvailable(); } catch { return false; }
@@ -66,6 +68,7 @@ function upsert({ origin, username, password }) {
   if (existing) { existing.password = password; existing.updated = Date.now(); }
   else entries.push({ id: crypto.randomUUID(), origin, username: username || '', password, created: Date.now() });
   persist();
+  changed();
   return true;
 }
 function exists({ origin, username, password }) {
@@ -79,6 +82,7 @@ function remove(id) {
   load();
   entries = entries.filter((e) => e.id !== id);
   persist();
+  changed();
 }
 function update(id, patch) {
   const e = load().find((x) => x.id === id);
@@ -87,8 +91,20 @@ function update(id, patch) {
   if (typeof patch.password === 'string' && patch.password) e.password = patch.password;
   e.updated = Date.now();
   persist();
+  changed();
   return true;
 }
+
+// Für den Sync: alle Einträge lesen bzw. ersetzen (ohne erneut eine Änderung zu melden)
+const all = () => load().map((e) => ({ ...e }));
+function replaceAll(list) {
+  if (!Array.isArray(list)) return;
+  entries = list
+    .filter((e) => e && typeof e.origin === 'string' && typeof e.password === 'string')
+    .map((e) => ({ ...e, id: typeof e.id === 'string' ? e.id : crypto.randomUUID(), username: e.username || '' }));
+  persist();
+}
+const setOnChange = (fn) => { onChange = fn; };
 
 // ---------- CSV (Chrome / Edge / Opera / Brave / Firefox / Bitwarden-kompatibel) ----------
 function parseCsv(text) {
@@ -152,4 +168,4 @@ function exportCsv() {
   return lines.join('\r\n') + '\r\n';
 }
 
-module.exports = { originOf, forUrl, list, reveal, upsert, exists, touch, remove, update, importCsv, exportCsv, canEncrypt, count: () => load().length };
+module.exports = { originOf, forUrl, list, reveal, upsert, exists, touch, remove, update, importCsv, exportCsv, canEncrypt, all, replaceAll, setOnChange, count: () => load().length };

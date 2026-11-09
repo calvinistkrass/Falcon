@@ -5,7 +5,15 @@ const History = (() => {
   const KEY = 'falcon.history';
   const MAX = 3000;
   let entries = store.get(KEY, []);
-  const persist = debounce(() => store.set(KEY, entries.slice(0, MAX)), 800);
+  const persist = debounce(() => { store.set(KEY, entries.slice(0, MAX)); if (!INCOGNITO) F.account.dirty('history'); }, 800);
+
+  // Vom Sync: Verlauf ersetzen (ohne erneut als Änderung zu gelten)
+  F.on('history-replace', (list) => {
+    if (INCOGNITO || !Array.isArray(list)) return;
+    entries = list.filter((e) => e && typeof e.url === 'string' && /^https?:/i.test(e.url)).slice(0, MAX);
+    store.set(KEY, entries);
+    emit('history-changed');
+  });
 
   const normalize = (url) => url.replace(/#.*$/, '');
 
@@ -67,7 +75,7 @@ const History = (() => {
     return p.startsWith('www.') ? 'www.' + best : best;
   }
 
-  function clear() { entries = []; store.set(KEY, []); emit('history-changed'); }
+  function clear() { entries = []; store.set(KEY, []); if (!INCOGNITO) F.account.dirty('history'); emit('history-changed'); }
   function remove(url) { entries = entries.filter((e) => e.url !== url); persist(); emit('history-changed'); }
   const all = () => entries;
 

@@ -744,3 +744,62 @@ body.incognito #content { border-top-left-radius: 0; }
 .pal-hint { flex: none; font-size: 11.5px; color: var(--text-3); opacity: 0; }
 .pal-item.sel .pal-hint { opacity: 1; }
 .pal-empty { padding: 26px; text-align: center; color: var(--text-3); }
+
+.pop-foot { border-top: 1px solid var(--line); padding: 8px 12px; display: flex; justify-content: center; }
+
+.default-card .s-row { align-items: center; }
+.default-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-weight: 500; white-space: nowrap; }
+.default-ok svg { width: 16px; height: 16px; }
+
+/* Falcon-Konto */
+.profile-btn { position: relative; }
+.avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; color: #fff; font-weight: 600; letter-spacing: .02em; line-height: 1; user-select: none; }
+.avatar.empty { background: var(--raised-2); color: var(--text-2); }
+.avatar.empty svg { width: 62%; height: 62%; }
+.profile-dot { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 0 2px var(--surface); }
+.profile-dot.err { background: var(--danger); }
+.account-pop { width: 320px; padding: 6px; }
+.acc-head { display: flex; align-items: center; gap: 12px; padding: 10px 10px 12px; }
+.acc-id { display: grid; min-width: 0; }
+.acc-id b { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acc-id > span { color: var(--text-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acc-note { display: flex; align-items: center; gap: 8px; width: calc(100% - 8px); margin: 0 4px 6px; padding: 8px 10px; border: 0; border-radius: var(--r); background: color-mix(in oklab, var(--warning) 12%, transparent); color: var(--text-2); font-size: 12px; text-align: left; }
+.acc-note svg { width: 15px; height: 15px; color: var(--warning); flex: none; }
+.acc-note span { flex: 1; }
+.acc-note.err { background: color-mix(in oklab, var(--danger) 12%, transparent); cursor: pointer; }
+.acc-note.err svg { color: var(--danger); }
+.acc-sync { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 6px 6px 10px; }
+.sync-line { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+.sync-line svg { width: 14px; height: 14px; flex: none; }
+.sync-line.ok svg { color: var(--success); }
+.sync-line.err { color: var(--danger); }
+.spinner.sm { width: 12px; height: 12px; display: inline-block; }
+.acc-hero { display: grid; justify-items: center; gap: 6px; padding: 18px 16px 8px; text-align: center; }
+.acc-hero b { font-size: 15px; color: var(--text); }
+.acc-hero p { margin: 0; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+.acc-actions { display: flex; gap: 8px; padding: 10px; }
+.account-pop .acc-actions .btn { flex: 1; justify-content: center; }
+.auth-dialog { width: 420px; }
+.auth-brand { display: flex; justify-content: center; margin-bottom: 6px; }
+.auth-dialog h3 { text-align: center; }
+.field-hint { display: block; margin-top: 8px; font-size: 11.5px; color: var(--text-3); line-height: 1.45; }
+.auth-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+.auth-foot { align-items: center; }
+.auth-switch { display: flex; justify-content: center; gap: 6px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--text-3); }
+.danger-text { color: var(--danger) !important; }
+.acc-signed-out { display: flex; gap: 18px; align-items: flex-start; padding: 22px; }
+.acc-signed-out b { font-size: 15px; color: var(--text); }
+.acc-signed-out p { margin: 6px 0 4px; color: var(--text-2); line-height: 1.55; max-width: 520px; }
+.acc-signed-out .acc-actions { padding: 10px 0 0; }
+.acc-profile { display: flex; align-items: center; gap: 16px; padding: 18px; }
+.acc-profile .acc-id b { font-size: 16px; }
+.badge-ok, .badge-warn { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; }
+.badge-ok { color: var(--success); }
+.badge-ok svg { width: 14px; height: 14px; }
+.badge-warn { color: var(--warning); }
+.s-label-icon { flex-direction: row !important; align-items: center; gap: 10px; }
+.s-label-icon svg { width: 16px; height: 16px; color: var(--text-2); }
+.acc-e2e { justify-content: flex-start !important; gap: 10px !important; min-height: 0 !important; color: var(--text-3); font-size: 12px; }
+.acc-e2e svg { width: 15px; height: 15px; color: var(--success); flex: none; }
+.acc-warn { background: color-mix(in oklab, var(--danger) 8%, transparent); }
+.swatch.auto { background: conic-gradient(from 0deg, #7c6cff, #3b9eff, #2ec4b6, #3dd68c, #ff8b3e, #f2559b, #7c6cff); }

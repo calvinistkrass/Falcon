@@ -46,6 +46,7 @@
     </button>
     <button id="updateBtn" class="update-btn hidden" title="Update verfügbar"><span data-icon="download"></span><span>Update</span></button>
     <span class="tb-sep"></span>
+    <button id="profileBtn" class="tb-btn profile-btn" title="Bei Falcon anmelden" aria-label="Konto"></button>
     <button id="menuBtn" class="tb-btn" data-icon="more" title="Falcon anpassen und einstellen" aria-label="Menü"></button>
   </nav>
 
@@ -116,6 +117,7 @@
       <button id="dlClear" class="link-btn">Liste leeren</button>
     </header>
     <div id="dlList" class="dl-list"></div>
+    <footer class="pop-foot"><button id="dlAll" class="link-btn">Alle Downloads anzeigen</button></footer>
   </section>
 
   <!-- Popover: Leistung -->
@@ -220,6 +222,7 @@
     <div class="settings">
       <aside class="s-nav">
         <div class="s-brand"><img id="sLogo" alt="" /><span>Einstellungen</span></div>
+        <button class="s-tab" data-section="account" data-icon="user">Konto &amp; Sync</button>
         <button class="s-tab" data-section="general" data-icon="sliders">Allgemein</button>
         <button class="s-tab" data-section="appearance" data-icon="palette">Darstellung</button>
         <button class="s-tab" data-section="performance" data-icon="gamepad">Leistung &amp; Game Mode</button>
@@ -236,8 +239,20 @@
       <div class="s-main">
         <button id="settingsClose" class="tb-btn s-close" data-icon="x" title="Schließen (Esc)"></button>
 
+        <section class="s-section" data-section="account">
+          <h2>Konto &amp; Sync</h2>
+          <div id="accountSettings"></div>
+        </section>
+
         <section class="s-section" data-section="general">
           <h2>Allgemein</h2>
+          <div class="s-card default-card" id="sDefaultCard">
+            <div class="s-row">
+              <div class="s-label"><b>Standardbrowser</b><span id="sDefaultText">Links aus anderen Programmen in Falcon öffnen.</span></div>
+              <button class="btn primary" id="sDefaultBtn">Als Standard festlegen</button>
+              <span class="default-ok hidden" id="sDefaultOk"></span>
+            </div>
+          </div>
           <div class="s-card">
             <div class="s-row">
               <div class="s-label"><b>Sprache</b><span>Sprache der Falcon-Oberfläche.</span></div>
@@ -484,6 +499,7 @@
   <script src="js/sidebar.js"></script>
   <script src="js/passwords.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/account.js"></script>
   <script src="js/history-view.js"></script>
   <script src="js/updates.js"></script>
   <script src="js/palette.js"></script>
