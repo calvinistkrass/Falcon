@@ -645,3 +645,21 @@ body.gamemode .spinner { animation-duration: .7s !important; }
 .sh-foot > span:first-child { white-space: nowrap; }
 .sh-foot > span:last-child { display: flex; gap: 2px; white-space: nowrap; }
 .shield-pop { width: 340px; }
+
+/* Lesezeichen-Ordner */
+.bm-folder .ic { width: 14px; height: 14px; color: var(--text-2); }
+.bm-folder-ic { width: 18px; display: grid; place-items: center; color: var(--text-2); flex: none; }
+.bm-folder-row .list-main b { font-weight: 600; }
+.s-sub-action { margin-left: auto; font-weight: 500; }
+.menu-fav .ic { width: 15px; height: 15px; color: var(--text-2); }
+
+/* Verlauf */
+.hist-card { padding: 4px 0; }
+.hist-day { margin: 14px 16px 4px !important; }
+.hist-day:first-child { margin-top: 8px !important; }
+.hist-row { min-height: 44px; padding-top: 4px; padding-bottom: 4px; }
+.hist-row + .hist-row { border-top: 0; }
+.hist-time { width: 44px; flex: none; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.hist-open { text-align: left; border-radius: var(--r-sm); padding: 2px 6px; margin: -2px -6px; }
+.hist-open:hover b { text-decoration: underline; }
+.hist-more { margin: 8px 16px 12px; }

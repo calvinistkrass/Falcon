@@ -102,7 +102,7 @@ const Omnibox = (() => {
       }
       if (out.length >= 4) break;
     }
-    for (const b of (state.settings.bookmarks || [])) {
+    for (const b of Bookmarks.flat()) {
       if (b.title.toLowerCase().includes(ql) || b.url.toLowerCase().includes(ql)) push({ kind: 'url', url: b.url, label: b.title, sub: hostOf(b.url), tag: $t('Lesezeichen') });
       if (out.length >= 6) break;
     }

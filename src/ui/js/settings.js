@@ -10,6 +10,7 @@ const Settings = (() => {
     ['Neuer Tab', 'Strg+T'], ['Tab schließen', 'Strg+W'],
     ['Tab wiederherstellen', 'Strg+Umschalt+T'], ['Nächster Tab', 'Strg+Tab'],
     ['Tab 1–8 / letzter', 'Strg+1…9'], ['Adressleiste', 'Strg+L'],
+    ['Verlauf', 'Strg+H'], ['Maus-Seitentasten', '◀ ▶'],
     ['Auf Seite suchen', 'Strg+F'], ['Lesezeichen', 'Strg+D'],
     ['Lesezeichenleiste', 'Strg+Umschalt+B'], ['Downloads', 'Strg+J'],
     ['Zoom', 'Strg+±'], ['Neu laden', 'F5'],

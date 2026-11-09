@@ -204,6 +204,7 @@
         <button class="s-tab" data-section="general" data-icon="sliders">Allgemein</button>
         <button class="s-tab" data-section="appearance" data-icon="palette">Darstellung</button>
         <button class="s-tab" data-section="performance" data-icon="gamepad">Leistung &amp; Game Mode</button>
+        <button class="s-tab" data-section="history" data-icon="clock">Verlauf</button>
         <button class="s-tab" data-section="adblock" data-icon="block">Werbeblocker</button>
         <button class="s-tab" data-section="downloads" data-icon="download">Downloads</button>
         <button class="s-tab" data-section="privacy" data-icon="shield">Datenschutz</button>
@@ -281,6 +282,15 @@
               </select></div>
             </div>
           </div>
+        </section>
+
+        <section class="s-section" data-section="history">
+          <h2>Verlauf</h2>
+          <div class="s-toolbar">
+            <div class="s-search" data-icon="search"><input id="histSearch" placeholder="Verlauf durchsuchen" spellcheck="false" /></div>
+            <button id="histClear" class="btn danger">Verlauf löschen …</button>
+          </div>
+          <div id="histList"></div>
         </section>
 
         <section class="s-section" data-section="adblock">
@@ -383,7 +393,7 @@
               <button id="bmExport" class="btn">Exportieren …</button>
             </div>
           </div>
-          <h4 class="s-sub">Gespeichert <span id="bmCount" class="count"></span></h4>
+          <h4 class="s-sub">Gespeichert <span id="bmCount" class="count"></span><button id="bmAddFolder" class="link-btn s-sub-action">Ordner hinzufügen</button></h4>
           <div id="bmList" class="s-card"></div>
         </section>
 
@@ -432,6 +442,7 @@
   <script src="js/sidebar.js"></script>
   <script src="js/passwords.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/history-view.js"></script>
   <script src="js/updates.js"></script>
   <script src="js/app.js"></script>
 </body>

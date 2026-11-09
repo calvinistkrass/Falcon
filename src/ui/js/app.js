@@ -61,7 +61,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
   if (ctrl && key === 'd') return Bookmarks.toggleCurrent($('#bookmarkBtn'));
   if (ctrl && key === 'j') return Downloads.toggle();
   if (ctrl && key === ',') return Settings.open();
-  if (ctrl && key === 'h') return t && Tabs.navigate('', t);
+  if (ctrl && key === 'h') return Settings.open('history');
   if (ctrl && key === 'p') return wv?.print();
   if ((ctrl && key === 'r') || key === 'f5') return Tabs.reload(t, shift || (ctrl && key === 'f5'));
   if (ctrl && (key === '+' || key === '=')) return Zoom.step(1);

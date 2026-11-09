@@ -65,7 +65,9 @@ const History = (() => {
     return p.startsWith('www.') ? 'www.' + best : best;
   }
 
-  function clear() { entries = []; store.set(KEY, []); }
+  function clear() { entries = []; store.set(KEY, []); emit('history-changed'); }
+  function remove(url) { entries = entries.filter((e) => e.url !== url); persist(); emit('history-changed'); }
+  const all = () => entries;
 
-  return { add, setTitle, query, completeHost, clear };
+  return { add, setTitle, query, completeHost, clear, remove, all };
 })();
