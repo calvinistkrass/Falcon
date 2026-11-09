@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.3.0] – 2026-11-09
+
+### Changed
+- Test release for the update mechanism. No functional changes.
+
 ## [1.2.0] – 2026-11-09
 
 ### Added
@@ -30,6 +35,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.3.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.3.0
 [1.2.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.2.0
 [1.1.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.1.0
 [1.0.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.0.0
