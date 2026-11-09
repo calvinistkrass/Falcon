@@ -2,7 +2,7 @@
 
 All notable changes to Falcon are documented here.
 
-## [Unreleased]
+## [1.4.0] – 2026-11-09
 
 ### Added
 - **Falcon Flight**: a small game on the error page when there's no internet connection. Press Space, ↑ or click to fly.
@@ -41,6 +41,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.4.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.4.0
 [1.3.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.3.0
 [1.2.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.2.0
 [1.1.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.1.0
