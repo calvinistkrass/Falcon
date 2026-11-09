@@ -70,13 +70,21 @@ const Settings = (() => {
   // Eigene CSS-Variablen gehen nur über setProperty
   $$('.swatch', swatches).forEach((s) => s.style.setProperty('--c', s.dataset.value));
 
-  const toggles = { sBookmarksBar: 'showBookmarksBar', sSidebar: 'showSidebar', sHud: 'showHud', sGame: 'gameMode', sAdblock: 'adblock', sPwAuth: 'pwRequireAuth' };
+  const toggles = { sBookmarksBar: 'showBookmarksBar', sSidebar: 'showSidebar', sHud: 'showHud', sGame: 'gameMode', sAdblock: 'adblock', sPwAuth: 'pwRequireAuth', sDlAsk: 'downloadAsk' };
   for (const [id, key] of Object.entries(toggles)) {
     $(`#${id}`).addEventListener('change', (e) => {
       if (key === 'gameMode') Perf.setGameMode(e.target.checked);
       else updateSettings({ [key]: e.target.checked });
     });
   }
+  const showDir = async () => { $('#dlDir').textContent = await F.downloads.dir(); };
+  $('#dlChooseDir').addEventListener('click', async () => {
+    const dir = await F.downloads.chooseDir();
+    if (dir) { showDir(); toast($t('Downloads werden jetzt hier gespeichert'), 'folder'); }
+  });
+  $('#dlOpenDir').addEventListener('click', () => F.downloads.openDir());
+  on('settings-section', (name) => { if (name === 'downloads') showDir(); });
+
   $('#sSleep').addEventListener('change', (e) => updateSettings({ sleepMinutes: Number(e.target.value) }));
 
   $('#sClearHistory').addEventListener('click', async () => {

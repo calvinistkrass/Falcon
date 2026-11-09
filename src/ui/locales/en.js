@@ -316,5 +316,10 @@ I18N.add('en', {
   "Gespeichertes Passwort verwenden": "Use saved password",
   "Passwort konnte nicht ausgefüllt werden": "Couldn’t fill in the password",
   "Passwörter verwalten": "Manage passwords",
+  "Speicherort": "Location",
+  "Ändern …": "Change…",
+  "Vor jedem Download fragen": "Ask where to save each file",
+  "Speicherort und Dateinamen bei jedem Download selbst wählen.": "Choose the folder and file name for every download.",
+  "Downloads werden jetzt hier gespeichert": "Downloads will be saved here now",
   "Öffnen": "Open"
 });

@@ -316,5 +316,10 @@ I18N.add('tr', {
   "Gespeichertes Passwort verwenden": "Kayıtlı şifreyi kullan",
   "Passwort konnte nicht ausgefüllt werden": "Şifre doldurulamadı",
   "Passwörter verwalten": "Şifreleri yönet",
+  "Speicherort": "Konum",
+  "Ändern …": "Değiştir…",
+  "Vor jedem Download fragen": "Her dosyanın nereye kaydedileceğini sor",
+  "Speicherort und Dateinamen bei jedem Download selbst wählen.": "Her indirme için klasörü ve dosya adını seç.",
+  "Downloads werden jetzt hier gespeichert": "İndirmeler artık buraya kaydedilecek",
   "Öffnen": "Aç"
 });

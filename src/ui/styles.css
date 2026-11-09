@@ -617,3 +617,6 @@ body.gamemode .spinner { animation-duration: .7s !important; }
 /* Passwort ausfüllen */
 .menu.pw-fill .menu-item:disabled:first-child { color: var(--text-2); font-size: 12px; height: 28px; }
 .menu.pw-fill .menu-item:disabled:first-child .ic { color: var(--accent); opacity: 1; }
+
+.s-label .path { font: 12px var(--mono); color: var(--text-2); word-break: break-all; user-select: text; }
+.btn-row { display: flex; gap: 6px; flex: none; }

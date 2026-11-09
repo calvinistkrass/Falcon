@@ -316,5 +316,10 @@ I18N.add('es', {
   "Gespeichertes Passwort verwenden": "Usar contraseña guardada",
   "Passwort konnte nicht ausgefüllt werden": "No se ha podido rellenar la contraseña",
   "Passwörter verwalten": "Gestionar contraseñas",
+  "Speicherort": "Ubicación",
+  "Ändern …": "Cambiar…",
+  "Vor jedem Download fragen": "Preguntar dónde guardar cada archivo",
+  "Speicherort und Dateinamen bei jedem Download selbst wählen.": "Elegir la carpeta y el nombre de cada descarga.",
+  "Downloads werden jetzt hier gespeichert": "Las descargas se guardarán aquí",
   "Öffnen": "Abrir"
 });

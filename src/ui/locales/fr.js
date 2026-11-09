@@ -316,5 +316,10 @@ I18N.add('fr', {
   "Gespeichertes Passwort verwenden": "Utiliser un mot de passe enregistré",
   "Passwort konnte nicht ausgefüllt werden": "Impossible de remplir le mot de passe",
   "Passwörter verwalten": "Gérer les mots de passe",
+  "Speicherort": "Emplacement",
+  "Ändern …": "Modifier…",
+  "Vor jedem Download fragen": "Demander où enregistrer chaque fichier",
+  "Speicherort und Dateinamen bei jedem Download selbst wählen.": "Choisir le dossier et le nom de chaque téléchargement.",
+  "Downloads werden jetzt hier gespeichert": "Les téléchargements seront enregistrés ici",
   "Öffnen": "Ouvrir"
 });

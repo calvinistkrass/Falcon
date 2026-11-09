@@ -25,6 +25,11 @@ contextBridge.exposeInMainWorld('falcon', {
   openPath: (p) => ipcRenderer.invoke('open-external', p),
   showInFolder: (p) => ipcRenderer.invoke('show-in-folder', p),
   cancelDownload: (id) => ipcRenderer.invoke('download:cancel', id),
+  downloads: {
+    dir: () => ipcRenderer.invoke('downloads:dir'),
+    chooseDir: () => ipcRenderer.invoke('downloads:choose-dir'),
+    openDir: () => ipcRenderer.invoke('downloads:open-dir')
+  },
   clearData: () => ipcRenderer.invoke('clear-data'),
   copy: (text) => ipcRenderer.invoke('copy', text),
   fetchImage: (url) => ipcRenderer.invoke('image:fetch', url),

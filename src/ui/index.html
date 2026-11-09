@@ -178,6 +178,7 @@
         <button class="s-tab" data-section="general" data-icon="sliders">Allgemein</button>
         <button class="s-tab" data-section="appearance" data-icon="palette">Darstellung</button>
         <button class="s-tab" data-section="performance" data-icon="gamepad">Leistung &amp; Game Mode</button>
+        <button class="s-tab" data-section="downloads" data-icon="download">Downloads</button>
         <button class="s-tab" data-section="privacy" data-icon="shield">Datenschutz</button>
         <button class="s-tab" data-section="passwords" data-icon="key">Passwörter</button>
         <button class="s-tab" data-section="bookmarks" data-icon="bookmark">Lesezeichen</button>
@@ -251,6 +252,23 @@
                 <option value="1">1 Minute</option><option value="5">5 Minuten</option><option value="10">10 Minuten</option>
                 <option value="15">15 Minuten</option><option value="30">30 Minuten</option><option value="60">1 Stunde</option>
               </select></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="s-section" data-section="downloads">
+          <h2>Downloads</h2>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Speicherort</b><span id="dlDir" class="path" data-no-i18n></span></div>
+              <div class="btn-row">
+                <button id="dlOpenDir" class="btn ghost">Öffnen</button>
+                <button id="dlChooseDir" class="btn">Ändern …</button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Vor jedem Download fragen</b><span>Speicherort und Dateinamen bei jedem Download selbst wählen.</span></div>
+              <label class="switch"><input type="checkbox" id="sDlAsk" /><span></span></label>
             </div>
           </div>
         </section>
