@@ -2,6 +2,17 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.8.1] – 2026-11-10
+
+### Fixed
+- **Signing in or creating an account failed** with "Sync storage isn't set up yet": a missing sync key was mistaken for a missing database. You're now signed in right away, and sync data that was marked as locked can be set up by entering your password.
+- The account menu flickered constantly while your email address wasn't confirmed yet.
+
+### Changed
+- After creating an account or signing in, the dialog closes and a welcome window confirms that you're signed in.
+- If an account already exists for the email address, Falcon offers to sign in instead.
+- If the sync key can't be set up during sign-in (e.g. while offline), you stay signed in and Falcon retries automatically.
+
 ## [1.8.0] – 2026-11-10
 
 ### Added
@@ -103,6 +114,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.8.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.1
 [1.8.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.0
 [1.7.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.7.0
 [1.6.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.1

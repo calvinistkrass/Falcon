@@ -534,5 +534,16 @@ I18N.add('es', {
   "Der Sync-Speicher ist noch nicht eingerichtet.": "El almacenamiento de sincronización aún no está configurado.",
   "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
   "Das hat nicht geklappt ({code}).": "No ha funcionado ({code}).",
+  "Stattdessen anmelden": "Iniciar sesión en su lugar",
+  "Willkommen bei Falcon, {name}!": "¡Bienvenido a Falcon, {name}!",
+  "Willkommen zurück, {name}!": "¡Bienvenido de nuevo, {name}!",
+  "Du bist angemeldet als {email}": "Has iniciado sesión como {email}",
+  "Der Sync wird eingerichtet, sobald die Verbindung zum Server steht.": "La sincronización se configurará en cuanto se pueda contactar con el servidor.",
+  "Lesezeichen, Passwörter, Verlauf und Einstellungen werden jetzt synchronisiert.": "Los marcadores, contraseñas, historial y ajustes ya se están sincronizando.",
+  "Alles wird auf deinem PC verschlüsselt, bevor es hochgeladen wird.": "Todo se cifra en tu PC antes de subirse.",
+  "Wir haben dir eine E-Mail geschickt. Bitte bestätige darin deine Adresse.": "Te hemos enviado un correo. Confirma allí tu dirección.",
+  "Sync-Einstellungen": "Ajustes de sincronización",
+  "Los geht’s": "¡Vamos!",
+  "Sync wird eingerichtet …": "Configurando la sincronización…",
   "Öffnen": "Abrir"
 });

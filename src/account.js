@@ -81,7 +81,8 @@ function publicState() {
     syncing,
     lastSync: data.lastSync || 0,
     lastError: data.lastError || null,
-    needsKey: !secret.dataKey,
+    needsKey: !secret.dataKey && !data.keyError,
+    keyPending: !secret.dataKey && !!data.keyError,
     canUnlock: !!pendingPassword
   };
 }
@@ -155,7 +156,8 @@ async function getDoc(p) {
   try {
     return await request(docUrl(p), { token: await token() });
   } catch (e) {
-    if (e.code === 'NOT_FOUND' && /database/i.test(e.detail || '')) throw new AccountError('NO_DATABASE', 404);
+    // Nur „The database (default) does not exist …“ – fehlende Dokumente nennen im Pfad ebenfalls „databases“
+    if (e.code === 'NOT_FOUND' && /database .*does not exist/i.test(e.detail || '')) throw new AccountError('NO_DATABASE', 404);
     if (e.code === 'NOT_FOUND' || e.status === 404) return null;
     throw e;
   }
@@ -240,13 +242,28 @@ function startSession(r, email) {
   setTokens(r);
 }
 
+// Die Anmeldung steht, sobald Firebase sie bestätigt hat. Klappt das Einrichten des Sync-Schlüssels
+// nicht (z. B. offline), bleibt man trotzdem angemeldet und Falcon versucht es beim nächsten Sync erneut.
+let pendingTimer = null;
+function rememberPassword(password) {
+  pendingPassword = password;
+  clearTimeout(pendingTimer);
+  pendingTimer = setTimeout(() => { pendingPassword = null; changed(); }, 15 * 60_000);
+}
 async function finishSignIn(password) {
-  const key = await setupKey(password);
-  if (key) { secret.dataKey = key; pendingPassword = null; }
-  else { pendingPassword = password; setTimeout(() => { pendingPassword = null; changed(); }, 15 * 60_000); }
+  let key = null;
+  try {
+    key = await setupKey(password);
+    data.keyError = null;
+  } catch (e) {
+    if (!(e instanceof AccountError)) console.error('Sync-Schlüssel:', e);
+    data.keyError = e.code || 'UNKNOWN';
+    data.lastError = data.keyError;
+  }
+  if (key) { secret.dataKey = key; pendingPassword = null; } else rememberPassword(password);
   persist();
   changed();
-  if (key) scheduleSync(500);
+  scheduleSync(key ? 500 : 20_000);
   startPeriodic();
 }
 
@@ -279,7 +296,7 @@ const signIn = safe(async ({ email, password }) => {
     if (u) { data.displayName = u.displayName || ''; data.emailVerified = !!u.emailVerified; }
   } catch { /* nicht wichtig */ }
   await finishSignIn(password);
-  return { needsKey: !secret.dataKey };
+  return { needsKey: !secret.dataKey && !data.keyError };
 });
 
 function clearLocal() {
@@ -299,7 +316,9 @@ const resendVerification = safe(async () => {
 });
 const refreshProfile = safe(async () => {
   const u = (await auth('lookup', { idToken: await token() })).users?.[0];
-  if (u) { data.displayName = u.displayName || ''; data.emailVerified = !!u.emailVerified; persist(); changed(); }
+  if (u && (data.displayName !== (u.displayName || '') || data.emailVerified !== !!u.emailVerified)) {
+    data.displayName = u.displayName || ''; data.emailVerified = !!u.emailVerified; persist(); changed();
+  }
   return {};
 });
 const updateProfile = safe(async ({ displayName, deviceName }) => {
@@ -447,7 +466,21 @@ async function syncKind(kind, attempt = 0) {
 }
 
 async function syncNow() {
-  if (!load() || !secret.dataKey || syncing) return publicState();
+  if (!load() || syncing) return publicState();
+  if (!secret.dataKey) {
+    // Schlüssel konnte bei der Anmeldung nicht eingerichtet werden – jetzt erneut versuchen
+    if (!data.keyError) return publicState();
+    if (!pendingPassword) { data.lastError = 'RELOGIN'; persist(); changed(); return publicState(); }
+    syncing = true; changed();
+    try {
+      const key = await setupKey(pendingPassword);
+      if (key) { secret.dataKey = key; pendingPassword = null; } else data.lastError = null;
+      data.keyError = null;
+    } catch (e) { data.keyError = data.lastError = e.code || 'UNKNOWN'; }
+    syncing = false;
+    persist(); changed();
+    if (!secret.dataKey) return publicState();
+  }
   syncing = true; changed();
   let error = null;
   for (const kind of KINDS) {
@@ -465,7 +498,7 @@ async function syncNow() {
 }
 
 function scheduleSync(ms) {
-  if (!load() || !secret.dataKey) return;
+  if (!load() || (!secret.dataKey && !data.keyError)) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => syncNow(), ms);
 }

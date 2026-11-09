@@ -803,3 +803,12 @@ body.incognito #content { border-top-left-radius: 0; }
 .acc-e2e svg { width: 15px; height: 15px; color: var(--success); flex: none; }
 .acc-warn { background: color-mix(in oklab, var(--danger) 8%, transparent); }
 .swatch.auto { background: conic-gradient(from 0deg, #7c6cff, #3b9eff, #2ec4b6, #3dd68c, #ff8b3e, #f2559b, #7c6cff); }
+
+.welcome-dialog { width: 420px; text-align: center; }
+.welcome-avatar { position: relative; width: 64px; margin: 6px auto 14px; }
+.welcome-check { position: absolute; right: -4px; bottom: -2px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--success); color: #0e0f11; box-shadow: 0 0 0 3px var(--surface); animation: dialog-in .3s var(--ease) .1s both; }
+.welcome-check svg { width: 14px; height: 14px; stroke-width: 2.4; }
+.welcome-mail { margin: 4px 0 0; color: var(--text-3); font-size: 12.5px; }
+.welcome-list { list-style: none; margin: 18px 0 2px; padding: 0; display: grid; gap: 10px; text-align: left; }
+.welcome-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
+.welcome-list svg { width: 16px; height: 16px; flex: none; margin-top: 1px; color: var(--accent); }
