@@ -119,7 +119,7 @@ const Tabs = (() => {
       navChanged();
     });
     wv.addEventListener('did-start-loading', () => { tab.loading = true; render(tab); navChanged(); });
-    wv.addEventListener('did-stop-loading', () => { tab.loading = false; render(tab); navChanged(); });
+    wv.addEventListener('did-stop-loading', () => { tab.loading = false; render(tab); navChanged(); emit('tab-loaded', tab); });
 
     wv.addEventListener('did-start-navigation', (e) => {
       if (!e.isMainFrame || e.isSameDocument) return;
@@ -130,6 +130,7 @@ const Tabs = (() => {
     const onNavigate = (e) => {
       if (e.isMainFrame === false) return;
       tab.url = e.url;
+      tab.readerable = undefined;
       if (isNewTab(e.url)) { tab.title = ''; tab.favicon = null; }
       render(tab);
       navChanged();

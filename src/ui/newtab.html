@@ -25,6 +25,14 @@
     padding: 0 24px; background: var(--bg); color: var(--text);
     font: 13px/1.45 var(--font); -webkit-font-smoothing: antialiased;
   }
+  body.has-bg { background: #0b0c0e center / cover no-repeat fixed; }
+  body.has-bg::before { inset: 0; height: auto; background: linear-gradient(180deg, rgb(0 0 0 / .6), rgb(0 0 0 / .45) 45%, rgb(0 0 0 / .7)); }
+  body.has-bg .brand span { text-shadow: 0 2px 14px rgb(0 0 0 / .7); }
+  body.has-bg #q { background: rgb(22 23 26 / .78); backdrop-filter: blur(10px); }
+  body.has-bg .tile { background: rgb(20 21 24 / .45); backdrop-filter: blur(8px); }
+  body.has-bg .tile:hover { background: rgb(30 31 35 / .65); }
+  body.has-bg footer { color: rgb(255 255 255 / .7); }
+  body.no-shortcuts #grid, body.no-clock footer { display: none; }
   body::before {
     content: ""; position: fixed; inset: 0 0 auto; height: 420px; pointer-events: none;
     background: radial-gradient(60% 100% at 50% 0%, color-mix(in oklab, var(--accent) 9%, transparent), transparent);
@@ -126,6 +134,15 @@
 <script>
 'use strict';
 const params = new URLSearchParams(location.search);
+
+// ----- Einstellungen aus Falcon -----
+const CONFIG = window.falconNewTab || {};
+if (CONFIG.image) {
+  document.body.classList.add('has-bg');
+  document.body.style.backgroundImage = `url("${CONFIG.image.replace(/"/g, '%22')}")`;
+}
+document.body.classList.toggle('no-shortcuts', CONFIG.showShortcuts === false);
+document.body.classList.toggle('no-clock', CONFIG.showClock === false);
 const ENGINES = {
   google: ['Google', 'https://www.google.com/search?q='],
   duckduckgo: ['DuckDuckGo', 'https://duckduckgo.com/?q='],

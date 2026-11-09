@@ -5,6 +5,7 @@ const { app } = require('electron');
 
 const STRINGS = {
   en: {
+    'Bilder': 'Images',
     'Passkey hinzufügen': 'Add passkey',
     'Mit Passkey bestätigen': 'Confirm with passkey',
     'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'In the Windows window that opens, choose your iPhone or Android device (scan the QR code with your phone camera), a security key or this PC.',
@@ -37,6 +38,7 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon wants to show a saved password.'
   },
   fr: {
+    'Bilder': 'Images',
     'Passkey hinzufügen': 'Ajouter une clé d’accès',
     'Mit Passkey bestätigen': 'Confirmer avec une clé d’accès',
     'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'Dans la fenêtre Windows qui s’ouvre, choisissez votre iPhone ou appareil Android (scannez le code QR avec l’appareil photo), une clé de sécurité ou ce PC.',
@@ -69,6 +71,7 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon souhaite afficher un mot de passe enregistré.'
   },
   es: {
+    'Bilder': 'Imágenes',
     'Passkey hinzufügen': 'Añadir llave de acceso',
     'Mit Passkey bestätigen': 'Confirmar con llave de acceso',
     'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'En la ventana de Windows que se abre, elige tu iPhone o dispositivo Android (escanea el código QR con la cámara), una llave de seguridad o este PC.',
@@ -101,6 +104,7 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon quiere mostrar una contraseña guardada.'
   },
   tr: {
+    'Bilder': 'Resimler',
     'Passkey hinzufügen': 'Geçiş anahtarı ekle',
     'Mit Passkey bestätigen': 'Geçiş anahtarıyla onayla',
     'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'Açılan Windows penceresinde iPhone veya Android cihazınızı (QR kodunu telefon kamerasıyla tarayın), bir güvenlik anahtarını ya da bu bilgisayarı seçin.',

@@ -54,6 +54,7 @@ const DEFAULTS = {
   pwRequireAuth: true,
   adblockAnnoyances: false,
   adblockAllow: [],
+  newtab: { image: '', showShortcuts: true, showClock: true },
   window: null,
   bookmarks: [
     { title: 'Twitch', url: 'https://www.twitch.tv' },
@@ -300,7 +301,7 @@ app.on('web-contents-created', (_e, contents) => {
     const ctrl = input.control || input.meta;
     const hit =
       (ctrl && SHORTCUT_KEYS_CTRL.includes(key)) ||
-      ['f5', 'f6', 'f11', 'f12'].includes(key) ||
+      ['f5', 'f6', 'f9', 'f11', 'f12'].includes(key) ||
       (input.alt && ['arrowleft', 'arrowright', 'home'].includes(key)) ||
       (ctrl && input.shift && ['g', 'b', 'delete'].includes(key));
     const payload = { key, ctrl, shift: input.shift, alt: input.alt };
@@ -513,6 +514,72 @@ ipcMain.handle('image:write', (e, png) => {
   return true;
 });
 ipcMain.handle('auth:available', () => isAvailable());
+
+// ---------- Leseansicht (Mozilla Readability) ----------
+// Läuft in einer isolierten JavaScript-Welt der Seite: die Seite kann nicht eingreifen, CSP greift nicht.
+const READER_WORLD = 1801;
+let readerScripts = null;
+function readerSource() {
+  if (!readerScripts) {
+    const dir = path.dirname(require.resolve('@mozilla/readability/package.json'));
+    readerScripts = {
+      readability: fs.readFileSync(path.join(dir, 'Readability.js'), 'utf8'),
+      readerable: fs.readFileSync(path.join(dir, 'Readability-readerable.js'), 'utf8')
+    };
+  }
+  return readerScripts;
+}
+function readerTarget(e, id) {
+  if (!win || e.sender !== win.webContents) return null;
+  const wc = require('electron').webContents.fromId(id);
+  return wc && !wc.isDestroyed() && wc.getType() === 'webview' ? wc : null;
+}
+ipcMain.handle('reader:check', async (e, id) => {
+  const wc = readerTarget(e, id);
+  if (!wc) return false;
+  const code = `(() => { ${readerSource().readerable}; return isProbablyReaderable(document, { minContentLength: 180, minScore: 22 }); })()`;
+  try { return !!(await wc.executeJavaScriptInIsolatedWorld(READER_WORLD, [{ code }])); } catch { return false; }
+});
+ipcMain.handle('reader:extract', async (e, id) => {
+  const wc = readerTarget(e, id);
+  if (!wc) return null;
+  const code = `(() => { ${readerSource().readability};
+    const a = new Readability(document.cloneNode(true), { charThreshold: 300 }).parse();
+    return a && { title: a.title, byline: a.byline, content: a.content, siteName: a.siteName, length: a.length, lang: a.lang || document.documentElement.lang };
+  })()`;
+  try { return await wc.executeJavaScriptInIsolatedWorld(READER_WORLD, [{ code }]); } catch { return null; }
+});
+
+// ---------- Startseite ----------
+const newtabConfig = () => {
+  const n = { image: '', showShortcuts: true, showClock: true, ...(settings.newtab || {}) };
+  const image = n.image && fs.existsSync(n.image) ? `${require('url').pathToFileURL(n.image).href}?v=${fs.statSync(n.image).mtimeMs}` : '';
+  return { image, showShortcuts: n.showShortcuts !== false, showClock: n.showClock !== false };
+};
+ipcMain.on('newtab:config', (e) => {
+  const url = e.senderFrame?.url || '';
+  e.returnValue = /^file:.*\/ui\/newtab\.html/.test(url) ? newtabConfig() : null;
+});
+ipcMain.handle('newtab:choose-image', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    filters: [{ name: tr('Bilder'), extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'] }]
+  });
+  if (canceled || !filePaths[0]) return null;
+  // Kopie im Datenordner, damit das Bild auch nach Verschieben des Originals bleibt
+  const dest = path.join(app.getPath('userData'), `newtab-background${path.extname(filePaths[0]).toLowerCase()}`);
+  for (const f of fs.readdirSync(app.getPath('userData'))) if (f.startsWith('newtab-background')) fs.rmSync(path.join(app.getPath('userData'), f), { force: true });
+  fs.copyFileSync(filePaths[0], dest);
+  settings.newtab = { ...(settings.newtab || {}), image: dest };
+  saveSettings();
+  return settings;
+});
+ipcMain.handle('newtab:clear-image', () => {
+  if (settings.newtab?.image) fs.rmSync(settings.newtab.image, { force: true });
+  settings.newtab = { ...(settings.newtab || {}), image: '' };
+  saveSettings();
+  return settings;
+});
 ipcMain.handle('update:status', () => updater.getStatus());
 ipcMain.handle('update:check', () => updater.check());
 ipcMain.on('update:download', () => updater.download());

@@ -29,6 +29,7 @@
       </div>
       <button id="zoomChip" class="omni-chip hidden" title="Zoom zurücksetzen"></button>
       <button id="pwKey" class="omni-btn accent hidden" data-icon="key" title="Passwort speichern"></button>
+      <button id="readerBtn" class="omni-btn hidden" data-icon="book" title="Leseansicht (F9)"></button>
       <button id="shieldBtn" class="omni-btn shield hidden" title="Werbeblocker"><img id="shieldLogo" alt="" /><span id="shieldCount" class="shield-count hidden" data-no-i18n></span></button>
       <button id="bookmarkBtn" class="omni-btn" data-icon="star" title="Lesezeichen für diese Seite (Strg+D)" aria-label="Lesezeichen"></button>
       <div id="suggest" class="suggest hidden" role="listbox"></div>
@@ -87,6 +88,20 @@
         <button id="findClose" class="tb-btn sm" data-icon="x" title="Schließen (Esc)"></button>
       </div>
       <div id="statusBubble" class="hidden"></div>
+      <div id="reader" class="reader hidden">
+        <div class="reader-bar">
+          <button id="rdClose" class="tb-btn sm" data-icon="x" title="Leseansicht schließen (F9)"></button>
+          <span class="reader-title"><span data-icon="book"></span>Leseansicht · <span id="rdSite" data-no-i18n></span></span>
+          <button id="rdSmaller" class="btn ghost rd-size" title="Kleiner">A−</button>
+          <button id="rdBigger" class="btn ghost rd-size big" title="Größer">A+</button>
+          <div class="segmented" id="rdTheme">
+            <button data-v="dark">Dunkel</button>
+            <button data-v="sepia">Sepia</button>
+            <button data-v="light">Hell</button>
+          </div>
+        </div>
+        <iframe id="rdFrame" sandbox="allow-same-origin" title="Leseansicht"></iframe>
+      </div>
     </main>
   </div>
 
@@ -251,6 +266,21 @@
             <div class="s-row">
               <div class="s-label"><b>Akzentfarbe</b><span>Für Hervorhebungen, Schalter und den aktiven Tab.</span></div>
               <div id="sAccents" class="swatches"></div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Hintergrund der Startseite</b><span id="ntBgInfo">Eigenes Bild statt des Standard-Hintergrunds.</span></div>
+              <div class="btn-row">
+                <button id="ntBgClear" class="btn ghost">Entfernen</button>
+                <button id="ntBgChoose" class="btn">Bild wählen …</button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Verknüpfungen auf der Startseite</b><span>Kacheln mit deinen Lieblingsseiten anzeigen.</span></div>
+              <label class="switch"><input type="checkbox" id="sNtShortcuts" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Uhr auf der Startseite</b><span>Uhrzeit und Datum unten rechts anzeigen.</span></div>
+              <label class="switch"><input type="checkbox" id="sNtClock" /><span></span></label>
             </div>
             <div class="s-row">
               <div class="s-label"><b>Lesezeichenleiste</b><span>Unter der Adressleiste anzeigen (Strg+Umschalt+B).</span></div>
@@ -439,6 +469,7 @@
   <script src="js/panels.js"></script>
   <script src="js/passkey-prompt.js"></script>
   <script src="js/shield.js"></script>
+  <script src="js/reader.js"></script>
   <script src="js/sidebar.js"></script>
   <script src="js/passwords.js"></script>
   <script src="js/settings.js"></script>

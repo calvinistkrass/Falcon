@@ -35,6 +35,14 @@ contextBridge.exposeInMainWorld('falcon', {
   fetchImage: (url) => ipcRenderer.invoke('image:fetch', url),
   writeImage: (png) => ipcRenderer.invoke('image:write', png),
   authAvailable: () => ipcRenderer.invoke('auth:available'),
+  reader: {
+    check: (webContentsId) => ipcRenderer.invoke('reader:check', webContentsId),
+    extract: (webContentsId) => ipcRenderer.invoke('reader:extract', webContentsId)
+  },
+  newtab: {
+    chooseImage: () => ipcRenderer.invoke('newtab:choose-image'),
+    clearImage: () => ipcRenderer.invoke('newtab:clear-image')
+  },
   adblock: {
     stats: (webContentsId) => ipcRenderer.invoke('adblock:stats', webContentsId),
     info: () => ipcRenderer.invoke('adblock:info'),

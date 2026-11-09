@@ -67,6 +67,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
   if (ctrl && (key === '+' || key === '=')) return Zoom.step(1);
   if (ctrl && key === '-') return Zoom.step(-1);
   if (ctrl && key === '0') return Zoom.reset();
+  if (key === 'f9') return Reader.toggle();
   if (key === 'f11') return F.win('fullscreen');
   if (key === 'f12') return wv?.isDevToolsOpened() ? wv.closeDevTools() : wv?.openDevTools();
   if (alt && key === 'arrowleft') return wv?.goBack();
@@ -81,7 +82,7 @@ window.addEventListener('keydown', (e) => {
   const global =
     (ctrl && ['t', 'w', 'l', 'f', 'd', 'j', 'h', 'r', 'p', 'tab', '+', '=', '-', '0', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(key)) ||
     (ctrl && e.shiftKey && ['g', 'b', 'delete'].includes(key)) ||
-    ['f5', 'f6', 'f11', 'f12', 'escape'].includes(key) ||
+    ['f5', 'f6', 'f9', 'f11', 'f12', 'escape'].includes(key) ||
     (e.altKey && ['arrowleft', 'arrowright', 'home', 'd'].includes(key));
   if (!global) return;
   if (inField && e.altKey && ['arrowleft', 'arrowright'].includes(key)) return; // Cursor im Eingabefeld
@@ -139,7 +140,7 @@ F.on('win-state', (s) => {
     applyAccent(s.accent);
     document.body.classList.toggle('no-bookmarks', !s.showBookmarksBar);
     // Startseite bekommt Akzentfarbe und Suchmaschine über die URL
-    if (prev.accent && (prev.accent !== s.accent || prev.searchEngine !== s.searchEngine || prev.language !== s.language)) {
+    if (prev.accent && (prev.accent !== s.accent || prev.searchEngine !== s.searchEngine || prev.language !== s.language || JSON.stringify(prev.newtab) !== JSON.stringify(s.newtab))) {
       for (const t of state.tabs) {
         if (!isNewTab(t.url)) continue;
         t.url = newTabUrl();

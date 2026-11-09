@@ -1,6 +1,11 @@
 // Läuft isoliert in jeder Webseite: füllt gespeicherte Logins aus und erkennt neue Logins.
 // Die Seite selbst hat keinen Zugriff auf diesen Code (contextIsolation).
-const { ipcRenderer, webFrame } = require('electron');
+const { ipcRenderer, webFrame, contextBridge } = require('electron');
+
+// Falcon-Startseite: Einstellungen (Hintergrundbild, Uhr, Verknüpfungen) bereitstellen
+if (location.protocol === 'file:' && /\/ui\/newtab\.html$/.test(location.pathname)) {
+  try { contextBridge.exposeInMainWorld('falconNewTab', ipcRenderer.sendSync('newtab:config')); } catch { /* ältere Seite */ }
+}
 
 // Google-Anmeldung: Seite soll Firefox sehen statt Electron/Chromium (siehe google-signin.js).
 // Läuft im Hauptkontext der Seite, bevor deren eigene Skripte starten.
