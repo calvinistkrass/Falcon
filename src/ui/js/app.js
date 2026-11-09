@@ -42,6 +42,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
     return dir < 0 ? wv?.goBack() : wv?.goForward();
   }
   if (key === 'escape') {
+    if (Palette.isOpen()) return Palette.close();
     if (FullscreenHint.windowFullscreen) { F.win('fullscreen'); return; }
     if (Popover.current) return Popover.close();
     if (Settings.isOpen()) return Settings.close();
@@ -54,6 +55,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
   if (ctrl && shift && key === 'g') return Perf.setGameMode(!state.settings.gameMode);
   if (ctrl && shift && key === 'b') return updateSettings({ showBookmarksBar: !state.settings.showBookmarksBar });
   if (ctrl && shift && key === 'delete') return Settings.open('privacy');
+  if (ctrl && key === 'k') return Palette.toggle();
   if (ctrl && key === 't') return Tabs.create();
   if (ctrl && key === 'w') return t && Tabs.close(t.id);
   if (ctrl && key === 'tab') return Tabs.cycle(shift ? -1 : 1);
@@ -82,7 +84,7 @@ window.addEventListener('keydown', (e) => {
   const ctrl = e.ctrlKey || e.metaKey;
   const inField = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
   const global =
-    (ctrl && ['t', 'w', 'l', 'f', 'd', 'j', 'h', 'r', 'p', 'tab', '+', '=', '-', '0', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(key)) ||
+    (ctrl && ['k', 't', 'w', 'l', 'f', 'd', 'j', 'h', 'r', 'p', 'tab', '+', '=', '-', '0', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(key)) ||
     (ctrl && e.shiftKey && ['g', 'b', 'n', 'delete'].includes(key)) ||
     ['f5', 'f6', 'f9', 'f11', 'f12', 'escape'].includes(key) ||
     (e.altKey && ['arrowleft', 'arrowright', 'home', 'd'].includes(key));

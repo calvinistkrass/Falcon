@@ -50,6 +50,7 @@ const DEFAULTS = {
   showSidebar: true,
   restoreSession: true,
   mouseButtons: 'history',
+  ramLimit: 0,
   downloadDir: '',
   downloadAsk: false,
   sidePanelWidth: 380,
@@ -372,7 +373,7 @@ ipcMain.handle('downloads:open-dir', () => shell.openPath(downloadDir()));
 // ---------------------------------------------------------------------------
 // Webviews
 // ---------------------------------------------------------------------------
-const SHORTCUT_KEYS_CTRL = ['t', 'w', 'l', 'r', 'd', 'h', 'j', 'tab', '+', '=', '-', '0', 'f', 'p', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const SHORTCUT_KEYS_CTRL = ['k', 't', 'w', 'l', 'r', 'd', 'h', 'j', 'tab', '+', '=', '-', '0', 'f', 'p', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return;

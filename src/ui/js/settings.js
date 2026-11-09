@@ -7,7 +7,7 @@ const Settings = (() => {
 
   // Übersetzt wird erst beim Anzeigen
   const SHORTCUTS = [
-    ['Neuer Tab', 'Strg+T'], ['Tab schließen', 'Strg+W'],
+    ['Befehlspalette', 'Strg+K'], ['Neuer Tab', 'Strg+T'], ['Tab schließen', 'Strg+W'],
     ['Neues Inkognito-Fenster', 'Strg+Umschalt+N'], ['Leseansicht', 'F9'],
     ['Tab wiederherstellen', 'Strg+Umschalt+T'], ['Nächster Tab', 'Strg+Tab'],
     ['Tab 1–8 / letzter', 'Strg+1…9'], ['Adressleiste', 'Strg+L'],
@@ -97,6 +97,7 @@ const Settings = (() => {
   $('#ntBgClear').addEventListener('click', async () => { const s = await F.newtab.clearImage(); state.settings = s; emit('settings', s); });
 
   $('#sSleep').addEventListener('change', (e) => updateSettings({ sleepMinutes: Number(e.target.value) }));
+  $('#sRamLimit').addEventListener('change', (e) => updateSettings({ ramLimit: Number(e.target.value) }));
 
   $('#sClearHistory').addEventListener('click', async () => {
     const ok = await confirmDialog({ title: $t('Verlauf löschen?'), message: $t('Besuchte Seiten werden nicht mehr in der Adressleiste vorgeschlagen.'), confirmLabel: $t('Löschen'), danger: true });
@@ -126,6 +127,7 @@ const Settings = (() => {
     });
     for (const [id, key] of Object.entries(toggles)) $(`#${id}`).checked = !!s[key];
     $('#sSleep').value = String(s.sleepMinutes);
+    $('#sRamLimit').value = String(s.ramLimit || 0);
     $('#sNtShortcuts').checked = s.newtab?.showShortcuts !== false;
     $('#sNtClock').checked = s.newtab?.showClock !== false;
     $('#ntBgClear').classList.toggle('hidden', !s.newtab?.image);

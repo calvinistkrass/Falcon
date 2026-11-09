@@ -705,3 +705,42 @@ body.incognito #content { border-top-left-radius: 0; }
 .fs-hint kbd { margin: 0 2px; }
 .fs-hint.out { opacity: 0; transform: translate(-50%, -6px); transition: opacity .3s, transform .3s; }
 @keyframes fs-in { from { opacity: 0; transform: translate(-50%, -8px); } }
+
+.mem-limit { font-style: normal; color: var(--danger); margin-left: 6px; font-size: 11px; }
+
+/* Passwort-Vorschlag */
+.gen-card { padding: 8px 10px 6px; display: grid; gap: 8px; }
+.gen-head { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 12.5px; }
+.gen-head svg { width: 15px; height: 15px; color: var(--accent); }
+.gen-row { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border-radius: 7px; background: var(--raised-2); border: 1px solid var(--line); }
+.gen-value { flex: 1; font: 500 13px/1.4 var(--mono); color: var(--text); letter-spacing: 0.02em; user-select: all; overflow-wrap: anywhere; }
+.gen-card p { margin: 0; font-size: 11.5px; color: var(--text-3); }
+
+/* Befehlspalette */
+.pal-overlay { place-items: start center; padding-top: 12vh; background: rgb(0 0 0 / .4); }
+.palette {
+  width: 600px; max-width: calc(100vw - 32px); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-pop); overflow: hidden; animation: dialog-in .16s var(--ease);
+}
+.pal-search { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 50px; border-bottom: 1px solid var(--line); color: var(--text-3); }
+.pal-search svg { width: 17px; height: 17px; flex: none; }
+.pal-input { flex: 1; height: 100%; border: 0; outline: 0; background: none; color: var(--text); font: 400 15px var(--font); }
+.pal-input::placeholder { color: var(--text-3); }
+.palette kbd, .pal-key kbd {
+  font: 500 10.5px var(--font); color: var(--text-2); background: var(--raised); border: 1px solid var(--line-2);
+  border-radius: 4px; padding: 1px 5px; min-width: 18px; text-align: center;
+}
+.pal-list { max-height: min(420px, 60vh); overflow-y: auto; padding: 6px; }
+.pal-group { padding: 8px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.pal-item { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: var(--r-sm); cursor: default; min-height: 38px; }
+.pal-item.sel { background: var(--hover); }
+.pal-item.sel .pal-icon { color: var(--accent); }
+.pal-icon { display: grid; place-items: center; width: 16px; color: var(--text-2); }
+.pal-icon svg { width: 16px; height: 16px; }
+.pal-text { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.pal-text b { font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+.pal-text span { color: var(--text-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pal-key { display: flex; gap: 3px; flex: none; }
+.pal-hint { flex: none; font-size: 11.5px; color: var(--text-3); opacity: 0; }
+.pal-item.sel .pal-hint { opacity: 1; }
+.pal-empty { padding: 26px; text-align: center; color: var(--text-3); }
