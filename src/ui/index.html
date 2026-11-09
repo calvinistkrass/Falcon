@@ -9,6 +9,7 @@
 <body>
   <!-- Tableiste -->
   <header id="tabstrip">
+    <div id="incogBadge" class="incog-badge" title="Inkognito: Verlauf, Cookies und Website-Daten werden beim Schließen gelöscht"><span data-icon="incognito"></span><span>Inkognito</span></div>
     <div id="tabs" role="tablist" aria-label="Tabs">
       <button id="newTab" class="strip-btn" data-icon="plus" title="Neuer Tab (Strg+T)" aria-label="Neuer Tab"></button>
     </div>
@@ -130,7 +131,7 @@
     <dl class="perf-stats">
       <div><dt>Prozesse</dt><dd id="pProc">—</dd></div>
       <div><dt>Aktive Tabs</dt><dd id="pTabs">—</dd></div>
-      <div><dt>Schlafend</dt><dd id="pSleep">—</dd></div>
+      <div><dt>Pausiert</dt><dd id="pSleep">—</dd></div>
       <div><dt>Blockiert</dt><dd id="pBlocked">—</dd></div>
     </dl>
     <div class="perf-game">
@@ -301,7 +302,7 @@
           <h2>Leistung &amp; Game Mode</h2>
           <div class="s-card">
             <div class="s-row">
-              <div class="s-label"><b>Game Mode</b><span>Gibt Arbeitsspeicher und CPU für Spiele frei: inaktive Tabs werden schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben wach.</span></div>
+              <div class="s-label"><b>Game Mode</b><span>Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.</span></div>
               <label class="switch"><input type="checkbox" id="sGame" /><span></span></label>
             </div>
             <div class="s-row">

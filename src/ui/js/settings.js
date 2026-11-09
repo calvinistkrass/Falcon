@@ -8,6 +8,7 @@ const Settings = (() => {
   // Übersetzt wird erst beim Anzeigen
   const SHORTCUTS = [
     ['Neuer Tab', 'Strg+T'], ['Tab schließen', 'Strg+W'],
+    ['Neues Inkognito-Fenster', 'Strg+Umschalt+N'], ['Leseansicht', 'F9'],
     ['Tab wiederherstellen', 'Strg+Umschalt+T'], ['Nächster Tab', 'Strg+Tab'],
     ['Tab 1–8 / letzter', 'Strg+1…9'], ['Adressleiste', 'Strg+L'],
     ['Verlauf', 'Strg+H'], ['Maus-Seitentasten', '◀ ▶'],

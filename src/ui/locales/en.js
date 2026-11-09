@@ -385,5 +385,15 @@ I18N.add('en', {
   "Hell": "Light",
   "{n} Min. Lesezeit": "{n} min read",
   "Leseansicht ist für diese Seite nicht verfügbar": "Reader view isn’t available for this page",
+  "Als Overlay öffnen": "Open as overlay",
+  "Neues Inkognito-Fenster": "New incognito window",
+  "Link in Inkognito-Fenster öffnen": "Open link in incognito window",
+  "Link als Overlay öffnen": "Open link as overlay",
+  "Inkognito – Falcon": "Incognito – Falcon",
+  "Inkognito": "Incognito",
+  "Inkognito: Verlauf, Cookies und Website-Daten werden beim Schließen gelöscht": "Incognito: history, cookies and site data are deleted when you close it",
+  "Pausiert": "Paused",
+  "Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.": "Pauses background tabs after 30 seconds, puts them to sleep after {n} min and turns off animations.",
+  "Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.": "Frees up CPU and memory for games: background tabs are paused after 30 seconds and later put to sleep, animations are turned off. Tabs playing audio stay active.",
   "Öffnen": "Open"
 });

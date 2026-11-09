@@ -33,6 +33,9 @@
   body.has-bg .tile:hover { background: rgb(30 31 35 / .65); }
   body.has-bg footer { color: rgb(255 255 255 / .7); }
   body.no-shortcuts #grid, body.no-clock footer { display: none; }
+  .incog-note { margin: -12px auto 24px; max-width: 460px; text-align: center; color: #c9b5ff; font-size: 13px; line-height: 1.5; }
+  .incog-note b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .incog-note span { color: var(--text-2); }
   body::before {
     content: ""; position: fixed; inset: 0 0 auto; height: 420px; pointer-events: none;
     background: radial-gradient(60% 100% at 50% 0%, color-mix(in oklab, var(--accent) 9%, transparent), transparent);
@@ -110,6 +113,7 @@
 <body>
   <main>
     <div class="brand"><img src="../../assets/falcon.png" alt="" /><span>Falcon</span></div>
+    <div class="incog-note" id="incogNote" hidden><b data-t="Du bist inkognito."></b><span data-t="Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt."></span></div>
 
     <form id="search" autocomplete="off">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
@@ -143,6 +147,8 @@ if (CONFIG.image) {
 }
 document.body.classList.toggle('no-shortcuts', CONFIG.showShortcuts === false);
 document.body.classList.toggle('no-clock', CONFIG.showClock === false);
+const INCOGNITO = params.has('incognito');
+if (INCOGNITO) document.getElementById('incogNote').hidden = false;
 const ENGINES = {
   google: ['Google', 'https://www.google.com/search?q='],
   duckduckgo: ['DuckDuckGo', 'https://duckduckgo.com/?q='],
@@ -155,10 +161,10 @@ const [engineName, engineUrl] = ENGINES[params.get('engine')] || ENGINES.google;
 // ----- Sprache -----
 const LOCALES = { de: 'de-DE', en: 'en-US', fr: 'fr-FR', es: 'es-ES', tr: 'tr-TR' };
 const STRINGS = {
-  en: { 'Neuer Tab': 'New tab', 'Im Web suchen oder Adresse eingeben': 'Search the web or enter address', 'Verknüpfungen': 'Shortcuts', 'Verknüpfung hinzufügen': 'Add shortcut', 'Verknüpfung bearbeiten': 'Edit shortcut', 'Name': 'Name', 'Adresse': 'URL', 'Abbrechen': 'Cancel', 'Fertig': 'Done', 'Verknüpfung': 'Add shortcut', 'Bearbeiten': 'Edit', 'Entfernen': 'Remove' },
-  fr: { 'Neuer Tab': 'Nouvel onglet', 'Im Web suchen oder Adresse eingeben': 'Rechercher sur le Web ou saisir une adresse', 'Verknüpfungen': 'Raccourcis', 'Verknüpfung hinzufügen': 'Ajouter un raccourci', 'Verknüpfung bearbeiten': 'Modifier le raccourci', 'Name': 'Nom', 'Adresse': 'URL', 'Abbrechen': 'Annuler', 'Fertig': 'OK', 'Verknüpfung': 'Raccourci', 'Bearbeiten': 'Modifier', 'Entfernen': 'Retirer' },
-  es: { 'Neuer Tab': 'Nueva pestaña', 'Im Web suchen oder Adresse eingeben': 'Busca en la Web o escribe una dirección', 'Verknüpfungen': 'Accesos directos', 'Verknüpfung hinzufügen': 'Añadir acceso directo', 'Verknüpfung bearbeiten': 'Editar acceso directo', 'Name': 'Nombre', 'Adresse': 'URL', 'Abbrechen': 'Cancelar', 'Fertig': 'Listo', 'Verknüpfung': 'Acceso directo', 'Bearbeiten': 'Editar', 'Entfernen': 'Quitar' },
-  tr: { 'Neuer Tab': 'Yeni sekme', 'Im Web suchen oder Adresse eingeben': 'Web\'de arayın veya adres girin', 'Verknüpfungen': 'Kısayollar', 'Verknüpfung hinzufügen': 'Kısayol ekle', 'Verknüpfung bearbeiten': 'Kısayolu düzenle', 'Name': 'Ad', 'Adresse': 'URL', 'Abbrechen': 'İptal', 'Fertig': 'Bitti', 'Verknüpfung': 'Kısayol', 'Bearbeiten': 'Düzenle', 'Entfernen': 'Kaldır' }
+  en: { 'Neuer Tab': 'New tab', 'Im Web suchen oder Adresse eingeben': 'Search the web or enter address', 'Verknüpfungen': 'Shortcuts', 'Verknüpfung hinzufügen': 'Add shortcut', 'Verknüpfung bearbeiten': 'Edit shortcut', 'Name': 'Name', 'Adresse': 'URL', 'Abbrechen': 'Cancel', 'Fertig': 'Done', 'Verknüpfung': 'Add shortcut', 'Bearbeiten': 'Edit', 'Entfernen': 'Remove', 'Du bist inkognito.': "You're incognito.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "History, cookies and site data are deleted as soon as you close all incognito windows." },
+  fr: { 'Neuer Tab': 'Nouvel onglet', 'Im Web suchen oder Adresse eingeben': 'Rechercher sur le Web ou saisir une adresse', 'Verknüpfungen': 'Raccourcis', 'Verknüpfung hinzufügen': 'Ajouter un raccourci', 'Verknüpfung bearbeiten': 'Modifier le raccourci', 'Name': 'Nom', 'Adresse': 'URL', 'Abbrechen': 'Annuler', 'Fertig': 'OK', 'Verknüpfung': 'Raccourci', 'Bearbeiten': 'Modifier', 'Entfernen': 'Retirer', 'Du bist inkognito.': "Vous êtes en navigation privée.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "L’historique, les cookies et les données des sites sont supprimés dès que vous fermez toutes les fenêtres privées." },
+  es: { 'Neuer Tab': 'Nueva pestaña', 'Im Web suchen oder Adresse eingeben': 'Busca en la Web o escribe una dirección', 'Verknüpfungen': 'Accesos directos', 'Verknüpfung hinzufügen': 'Añadir acceso directo', 'Verknüpfung bearbeiten': 'Editar acceso directo', 'Name': 'Nombre', 'Adresse': 'URL', 'Abbrechen': 'Cancelar', 'Fertig': 'Listo', 'Verknüpfung': 'Acceso directo', 'Bearbeiten': 'Editar', 'Entfernen': 'Quitar', 'Du bist inkognito.': "Estás en modo incógnito.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "El historial, las cookies y los datos de sitios se eliminan en cuanto cierras todas las ventanas de incógnito." },
+  tr: { 'Neuer Tab': 'Yeni sekme', 'Im Web suchen oder Adresse eingeben': 'Web\'de arayın veya adres girin', 'Verknüpfungen': 'Kısayollar', 'Verknüpfung hinzufügen': 'Kısayol ekle', 'Verknüpfung bearbeiten': 'Kısayolu düzenle', 'Name': 'Ad', 'Adresse': 'URL', 'Abbrechen': 'İptal', 'Fertig': 'Bitti', 'Verknüpfung': 'Kısayol', 'Bearbeiten': 'Düzenle', 'Entfernen': 'Kaldır', 'Du bist inkognito.': "Gizli moddasınız.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "Tüm gizli pencereleri kapattığınızda geçmiş, çerezler ve site verileri silinir." }
 };
 const lang = LOCALES[params.get('lang')] ? params.get('lang') : 'de';
 const T = (s) => (STRINGS[lang] && STRINGS[lang][s]) || s;

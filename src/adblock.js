@@ -118,7 +118,16 @@ function setup(ses, { settings, notify }) {
   options = { enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] };
   onStats = notify;
   ready = loadEngine();
+  ipcMain.handle('@ghostery/adblocker/inject-cosmetic-filters', (event, url, msg) => {
+    if (!engine || !options.enabled || isAllowedSite(url)) return undefined;
+    return engine.onInjectCosmeticFilters(event, url, msg);
+  });
+  ipcMain.handle('@ghostery/adblocker/is-mutation-observer-enabled', (event) => (engine ? engine.onIsMutationObserverEnabled(event) : false));
+  attach(ses);
+}
 
+/** Blocker an eine (weitere) Sitzung hängen, z. B. die Inkognito-Sitzung */
+function attach(ses) {
   ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
     if (!options.enabled || details.resourceType === 'mainFrame') return callback({});
     if (isAllowedSite(pageUrlFor(details.webContentsId))) return callback({});
@@ -140,11 +149,6 @@ function setup(ses, { settings, notify }) {
 
   // Kosmetische Filter (Werbeflächen in der Seite ausblenden) über Ghosterys Preload
   ses.setPreloads([...ses.getPreloads().filter((p) => p !== PRELOAD_PATH), PRELOAD_PATH]);
-  ipcMain.handle('@ghostery/adblocker/inject-cosmetic-filters', (event, url, msg) => {
-    if (!engine || !options.enabled || isAllowedSite(url)) return undefined;
-    return engine.onInjectCosmeticFilters(event, url, msg);
-  });
-  ipcMain.handle('@ghostery/adblocker/is-mutation-observer-enabled', (event) => (engine ? engine.onIsMutationObserverEnabled(event) : false));
 }
 
 function configure(next) {
@@ -156,6 +160,7 @@ function configure(next) {
 
 module.exports = {
   setup,
+  attach,
   configure,
   resetTab,
   stats,

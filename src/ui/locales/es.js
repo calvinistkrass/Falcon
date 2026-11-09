@@ -385,5 +385,15 @@ I18N.add('es', {
   "Hell": "Claro",
   "{n} Min. Lesezeit": "{n} min de lectura",
   "Leseansicht ist für diese Seite nicht verfügbar": "La vista de lectura no está disponible para esta página",
+  "Als Overlay öffnen": "Abrir como superposición",
+  "Neues Inkognito-Fenster": "Nueva ventana de incógnito",
+  "Link in Inkognito-Fenster öffnen": "Abrir enlace en ventana de incógnito",
+  "Link als Overlay öffnen": "Abrir enlace como superposición",
+  "Inkognito – Falcon": "Incógnito – Falcon",
+  "Inkognito": "Incógnito",
+  "Inkognito: Verlauf, Cookies und Website-Daten werden beim Schließen gelöscht": "Incógnito: el historial, las cookies y los datos de sitios se eliminan al cerrar",
+  "Pausiert": "En pausa",
+  "Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.": "Pausa las pestañas en segundo plano tras 30 segundos, las suspende tras {n} min y desactiva las animaciones.",
+  "Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.": "Libera CPU y memoria para tus juegos: las pestañas en segundo plano se pausan tras 30 segundos y después se suspenden, las animaciones se desactivan. Las pestañas que reproducen sonido siguen activas.",
   "Öffnen": "Abrir"
 });

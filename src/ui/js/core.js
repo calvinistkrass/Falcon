@@ -2,6 +2,9 @@
 /* Grundbausteine: DOM-Helfer, Icons, Zustand, Popover, Menüs, Dialoge, Toasts */
 
 const F = window.falcon;
+/** Inkognito-Fenster: eigene Sitzung im Arbeitsspeicher, kein Verlauf, keine gespeicherte Sitzung */
+const INCOGNITO = !!F.incognito;
+const APP_TITLE = INCOGNITO ? 'Falcon Inkognito' : 'Falcon';
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -81,6 +84,7 @@ const ICONS = {
   selectAll: '<path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
   block: '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
+  incognito: '<path d="M3 11h18M5.5 11 7.5 5h9l2 6"/><circle cx="7.5" cy="16" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/><path d="M10.1 16c1.2-.8 2.6-.8 3.8 0"/>',
   book: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15.5H5.5A1.5 1.5 0 0 0 4 21z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15.5h5.5A1.5 1.5 0 0 1 20 21z"/>',
   chevronsRight: '<path d="m6 7 5 5-5 5M13 7l5 5-5 5"/>',
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/>',
@@ -145,6 +149,7 @@ const searchUrl = (q) => engine().url + encodeURIComponent(q.trim());
 
 function newTabUrl() {
   const q = new URLSearchParams({ engine: state.settings.searchEngine || 'google', accent: state.settings.accent || '', lang: I18N.lang });
+  if (INCOGNITO) q.set('incognito', '1');
   return `${F.newTabUrl}?${q}`;
 }
 const isNewTab = (url) => !url || url.startsWith(F.newTabUrl);

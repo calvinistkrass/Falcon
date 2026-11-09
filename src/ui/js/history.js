@@ -10,6 +10,7 @@ const History = (() => {
   const normalize = (url) => url.replace(/#.*$/, '');
 
   function add(url, title) {
+    if (INCOGNITO) return;
     if (!/^https?:/i.test(url)) return;
     url = normalize(url);
     const i = entries.findIndex((e) => e.url === url);
@@ -22,6 +23,7 @@ const History = (() => {
   }
 
   function setTitle(url, title) {
+    if (INCOGNITO) return;
     const e = entries.find((x) => x.url === normalize(url));
     if (e && title) { e.title = title; persist(); }
   }

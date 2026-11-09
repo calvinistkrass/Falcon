@@ -678,3 +678,19 @@ body.gamemode .spinner { animation-duration: .7s !important; }
 .rd-size { height: 28px; padding: 0 10px; font: 600 12px var(--font); }
 .rd-size.big { font-size: 14px; }
 #rdFrame { flex: 1; width: 100%; border: 0; background: transparent; }
+
+/* Inkognito */
+.incog-badge { display: none; }
+body.incognito { --chrome: #14101c; --surface: #1b1624; }
+body.incognito .incog-badge {
+  display: flex; align-items: center; gap: 6px; height: 26px; margin: 0 8px 5px 0; padding: 0 10px 0 8px; flex: none;
+  border-radius: 13px; background: rgb(162 120 255 / .14); color: #c9b5ff; font-weight: 600; font-size: 12px; -webkit-app-region: no-drag;
+}
+body.incognito .incog-badge .ic { width: 15px; height: 15px; }
+body.incognito .incog-badge > span:first-child { display: grid; }
+body.incognito #sidebar, body.incognito #sidepanel { display: none; }
+body.incognito #content { border-top-left-radius: 0; }
+
+/* Game Mode: eingefrorene Tabs */
+.tab.frozen .tab-icon img { opacity: .55; }
+.tab.frozen .tab-title { color: var(--text-3); }

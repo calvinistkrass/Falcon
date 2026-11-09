@@ -94,6 +94,7 @@ const Tabs = (() => {
   function mount(tab) {
     const wv = document.createElement('webview');
     wv.setAttribute('preload', F.webviewPreloadUrl);
+    if (INCOGNITO) wv.setAttribute('partition', 'incognito');
     wv.setAttribute('allowpopups', '');
     wv.setAttribute('webpreferences', 'backgroundThrottling=yes');
     wv.setAttribute('src', tab.url);
@@ -147,7 +148,7 @@ const Tabs = (() => {
       tab.title = e.title;
       History.setTitle(tab.url, e.title);
       render(tab);
-      if (isActive(tab)) document.title = `${displayTitle(tab)} – Falcon`;
+      if (isActive(tab)) document.title = `${displayTitle(tab)} – ${APP_TITLE}`;
       saveSession();
     });
     wv.addEventListener('page-favicon-updated', (e) => { tab.favicon = e.favicons[0] || null; render(tab); });
@@ -202,6 +203,7 @@ const Tabs = (() => {
     el.classList.toggle('active', act);
     el.setAttribute('aria-selected', String(act));
     el.classList.toggle('sleeping', tab.sleeping);
+    el.classList.toggle('frozen', !!tab.frozen);
     el.querySelector('.tab-close').title = $t('Tab schließen (Strg+W)');
 
     const title = displayTitle(tab);
@@ -240,12 +242,13 @@ const Tabs = (() => {
     state.activeId = id;
     tab.lastActive = Date.now();
     if (tab.sleeping) wake(tab);
+    if (tab.frozen) freeze(tab, false);
 
     for (const t of state.tabs) {
       t.webview?.classList.toggle('active', t === tab);
       render(t);
     }
-    document.title = `${displayTitle(tab)} – Falcon`;
+    document.title = `${displayTitle(tab)} – ${APP_TITLE}`;
     tab.el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
     emit('tab-activated', tab);
@@ -336,6 +339,7 @@ const Tabs = (() => {
     tab.ready = false;
     tab.loading = false;
     tab.sleeping = true;
+    tab.frozen = false;
     render(tab);
     emit('tabs-changed');
     return true;
@@ -351,9 +355,23 @@ const Tabs = (() => {
     for (const t of state.tabs) if (!isActive(t) && now - t.lastActive >= minIdleMs && sleep(t)) count++;
     return count;
   }
+  // Game Mode: erst einfrieren (Seite bleibt geladen, keine CPU), später schlafen legen (Speicher frei)
+  const FREEZE_AFTER_MS = 30_000;
+  async function freeze(tab, on) {
+    if (!tab.webview || !tab.ready || !!tab.frozen === on) return;
+    let id;
+    try { id = tab.webview.getWebContentsId(); } catch { return; }
+    if (await F.setTabFrozen(id, on)) { tab.frozen = on; render(tab); emit('tabs-changed'); }
+  }
   setInterval(() => {
-    if (state.settings.gameMode) sleepInactive((state.settings.sleepMinutes || 10) * 60_000);
-  }, 15_000);
+    if (!state.settings.gameMode) return;
+    const now = Date.now();
+    for (const t of state.tabs) {
+      if (!isActive(t) && !t.audible && !t.sleeping && now - t.lastActive > FREEZE_AFTER_MS) freeze(t, true);
+    }
+    sleepInactive((state.settings.sleepMinutes || 10) * 60_000);
+  }, 10_000);
+  on('settings', (s) => { if (!s.gameMode) for (const t of state.tabs) if (t.frozen) freeze(t, false); });
 
   // -------------------------------------------------------------------------
   // Kontextmenü
@@ -365,6 +383,7 @@ const Tabs = (() => {
       '-',
       { label: $t('Neu laden'), icon: 'reload', shortcut: kb('Strg+R'), onClick: () => reload(tab) },
       { label: $t('Duplizieren'), icon: 'duplicate', onClick: () => duplicate(tab.id) },
+      { label: $t('Als Overlay öffnen'), icon: 'pip', disabled: !/^https?:/.test(tab.url), onClick: () => F.openOverlay(tab.url) },
       { label: tab.muted ? $t('Ton einschalten') : $t('Tab stummschalten'), icon: tab.muted ? 'volume' : 'volumeX', onClick: () => toggleMute(tab) },
       { label: $t('Schlafen legen'), icon: 'moon', disabled: isActive(tab) || tab.sleeping || tab.audible, onClick: () => sleep(tab) },
       '-',
@@ -380,6 +399,7 @@ const Tabs = (() => {
   // Sitzung
   // -------------------------------------------------------------------------
   const saveSession = debounce(() => {
+    if (INCOGNITO) return;
     const saved = state.tabs.filter((t) => !isInternal(t.url));
     store.set(SESSION_KEY, {
       tabs: saved.map((t) => ({ url: t.url, title: t.title })),
@@ -388,6 +408,7 @@ const Tabs = (() => {
   }, 400);
 
   function restoreSession() {
+    if (INCOGNITO) return false;
     const s = store.get(SESSION_KEY, null);
     if (!s || !Array.isArray(s.tabs) || !s.tabs.length) return false;
     const created = s.tabs.map((t) => create(t.url, { title: t.title, lazy: true, activate: false }));

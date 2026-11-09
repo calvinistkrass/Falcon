@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src * data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" />
+<title>Falcon Overlay</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font: 12px "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; color: #ececee; }
+  webview { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .bar {
+    position: absolute; left: 0; right: 0; top: 0; z-index: 2; height: 34px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 10px;
+    background: linear-gradient(180deg, rgb(10 10 12 / .92), rgb(10 10 12 / .75)); -webkit-app-region: drag;
+    opacity: 0; transform: translateY(-4px); transition: opacity .15s, transform .15s;
+  }
+  body:hover .bar, body.pinned .bar { opacity: 1; transform: none; }
+  .bar img { width: 14px; height: 14px; }
+  .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #a3a3ab; }
+  .bar button, .bar input { -webkit-app-region: no-drag; }
+  button { width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: #a3a3ab; display: grid; place-items: center; cursor: default; }
+  button:hover { background: rgb(255 255 255 / .1); color: #fff; }
+  button.close:hover { background: #e81123; }
+  svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  input[type=range] { width: 74px; accent-color: #7c6cff; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <img id="logo" alt="" />
+    <span class="title" id="title"></span>
+    <input type="range" id="opacity" min="30" max="100" value="100" />
+    <button id="toTab"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4.5"/></svg></button>
+    <button id="close" class="close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <webview id="view" allowpopups></webview>
+<script>
+  'use strict';
+  const O = window.falconOverlay;
+  const view = document.getElementById('view');
+  document.getElementById('logo').src = O.logo;
+  document.getElementById('opacity').title = O.strings.opacity;
+  document.getElementById('toTab').title = O.strings.toTab;
+  document.getElementById('close').title = O.strings.close;
+  view.setAttribute('src', O.url);
+  view.addEventListener('page-title-updated', (e) => { document.getElementById('title').textContent = e.title; document.title = e.title; });
+  view.addEventListener('dom-ready', () => { document.getElementById('title').textContent = view.getTitle() || O.url; }, { once: true });
+  document.getElementById('opacity').addEventListener('input', (e) => O.setOpacity(Number(e.target.value) / 100));
+  document.getElementById('toTab').addEventListener('click', () => O.toTab(view.getURL()));
+  document.getElementById('close').addEventListener('click', () => O.close());
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') O.close(); });
+</script>
+</body>
+</html>
