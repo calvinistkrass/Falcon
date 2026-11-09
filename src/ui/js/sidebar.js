@@ -36,6 +36,7 @@ const Sidebar = (() => {
       wv.setAttribute('src', app.url);
       views.set(app.id, wv);
       PasskeyPrompt.attach(wv, null);
+      Passwords.attachFill(wv);
       body.append(wv);
     }
     return wv;

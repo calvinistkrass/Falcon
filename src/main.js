@@ -359,11 +359,22 @@ const pendingLogins = new Map();
 const frameUrl = (e) => (e.senderFrame && e.senderFrame.url) || e.sender.getURL();
 
 // Aus Webseiten (webview-preload): die Herkunft wird immer aus dem echten Frame ermittelt, nie von der Seite übernommen
-ipcMain.handle('pw:for-page', (e) => {
+// Nur Benutzernamen – das Passwort gibt es erst über pw:fill nach einem Klick
+ipcMain.handle('pw:accounts', (e) => {
   if (e.sender.getType() !== 'webview') return [];
-  return pw.forUrl(frameUrl(e)).map(({ id, username, password }) => ({ id, username, password }));
+  return pw.forUrl(frameUrl(e)).map(({ id, username }) => ({ id, username }));
 });
-ipcMain.on('pw:used', (_e, id) => pw.touch(id));
+ipcMain.handle('pw:fill', (e, webContentsId, id) => {
+  if (!win || e.sender !== win.webContents) return false;
+  const wc = require('electron').webContents.fromId(webContentsId);
+  if (!wc || wc.isDestroyed() || wc.getType() !== 'webview') return false;
+  // Nur passend zur Seite, die gerade wirklich in diesem Webview geladen ist
+  const cred = pw.forUrl(wc.getURL()).find((c) => c.id === id);
+  if (!cred) return false;
+  wc.send('pw-fill', { username: cred.username, password: cred.password });
+  pw.touch(id);
+  return true;
+});
 ipcMain.on('pw:submitted', (e, data) => {
   if (e.sender.getType() !== 'webview') return;
   const origin = pw.originOf(frameUrl(e));

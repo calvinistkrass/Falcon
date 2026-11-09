@@ -313,5 +313,8 @@ I18N.add('fr', {
   "Was die beiden Daumentasten an der Maus tun.": "Action des deux boutons pour le pouce de la souris.",
   "Seite zurück / vor": "Page précédente / suivante",
   "Tab wechseln": "Changer d’onglet",
+  "Gespeichertes Passwort verwenden": "Utiliser un mot de passe enregistré",
+  "Passwort konnte nicht ausgefüllt werden": "Impossible de remplir le mot de passe",
+  "Passwörter verwalten": "Gérer les mots de passe",
   "Öffnen": "Ouvrir"
 });
