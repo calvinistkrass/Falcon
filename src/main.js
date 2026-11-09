@@ -375,7 +375,7 @@ ipcMain.handle('bookmarks:export', async () => {
   const list = settings.bookmarks || [];
   const data = filePath.toLowerCase().endsWith('.json') ? JSON.stringify(list, null, 2) : bookmarksIO.toHtml(list);
   fs.writeFileSync(filePath, data, 'utf8');
-  return { count: list.length, filePath };
+  return { count: bookmarksIO.count(list), filePath };
 });
 ipcMain.handle('bookmarks:import', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -387,12 +387,10 @@ ipcMain.handle('bookmarks:import', async () => {
   let imported;
   try { imported = bookmarksIO.parse(fs.readFileSync(filePaths[0], 'utf8')); }
   catch (err) { return { error: err.message }; }
-  const list = [...(settings.bookmarks || [])];
-  let added = 0;
-  for (const b of imported) if (!list.some((x) => x.url === b.url)) { list.push(b); added++; }
-  settings.bookmarks = list;
+  const { tree, added, total } = bookmarksIO.merge(settings.bookmarks || [], imported);
+  settings.bookmarks = tree;
   saveSettings();
-  return { added, total: imported.length, bookmarks: list };
+  return { added, total, bookmarks: tree };
 });
 
 // ---------- Passwörter ----------

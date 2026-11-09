@@ -325,10 +325,17 @@ function dialogShell(content, onDismiss) {
 
 function openForm({ title, description, fields, submitLabel = $t('Speichern'), onSubmit }) {
   const error = h('p', { class: 'dialog-error' });
-  const inputs = fields.map((f) => h('input', {
-    class: 'field-input', name: f.name, value: f.value || '', placeholder: f.placeholder || '',
-    type: f.type || 'text', spellcheck: false, autocomplete: 'off'
-  }));
+  const inputs = fields.map((f) => {
+    if (f.type === 'select') {
+      const sel = h('select', { class: 'field-input', name: f.name }, (f.options || []).map((o) => h('option', { value: o.value }, o.label)));
+      sel.value = f.value ?? '';
+      return sel;
+    }
+    return h('input', {
+      class: 'field-input', name: f.name, value: f.value || '', placeholder: f.placeholder || '',
+      type: f.type || 'text', spellcheck: false, autocomplete: 'off'
+    });
+  });
   const form = h('form', { class: 'dialog', novalidate: true },
     h('div', { class: 'dialog-body' },
       h('h3', {}, title),
