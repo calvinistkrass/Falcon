@@ -435,11 +435,22 @@ const PageError = (() => {
     return msg('{host} ist im Moment nicht erreichbar.');
   }
 
+  // Fehler, hinter denen meist eine fehlende Internetverbindung steckt
+  const OFFLINE_CODES = [-106, -105, -137, -21, -109, -130];
+  const isOffline = (err) => OFFLINE_CODES.includes(err.code) || (!navigator.onLine && typeof err.code === 'number');
+  FalconGame.mount($('#peGame'));
+
   on('page-error', (tab) => {
-    if (!tab || tab.id !== state.activeId || !tab.error) { box.classList.add('hidden'); return; }
+    if (!tab || tab.id !== state.activeId || !tab.error) { box.classList.add('hidden'); FalconGame.hide(); return; }
     text.replaceChildren(...message(tab.error));
     code.textContent = tab.error.desc || '';
     box.classList.remove('hidden');
+    if (isOffline(tab.error)) FalconGame.show(); else FalconGame.hide();
+  });
+
+  // Sobald die Verbindung zurück ist, Offline-Tabs automatisch neu laden
+  window.addEventListener('online', () => {
+    for (const t of state.tabs) if (t.error && isOffline(t.error)) Tabs.reload(t);
   });
   $('#peRetry').addEventListener('click', () => Tabs.reload());
 })();

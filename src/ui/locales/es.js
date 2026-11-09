@@ -297,5 +297,9 @@ I18N.add('es', {
   "Wird heruntergeladen …": "Descargando…",
   "Herunterladen": "Descargar",
   "Ansehen": "Ver",
+  "Keine Verbindung? Vertreib dir die Zeit.": "¿Sin conexión? Pasa el rato.",
+  "Leertaste oder Klick zum Starten": "Pulsa Espacio o haz clic para empezar",
+  "Neuer Rekord!": "¡Nuevo récord!",
+  "Leertaste für eine neue Runde": "Pulsa Espacio para jugar otra vez",
   "Öffnen": "Abrir"
 });

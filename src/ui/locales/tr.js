@@ -297,5 +297,9 @@ I18N.add('tr', {
   "Wird heruntergeladen …": "İndiriliyor…",
   "Herunterladen": "İndir",
   "Ansehen": "Görüntüle",
+  "Keine Verbindung? Vertreib dir die Zeit.": "Bağlantı yok mu? Biraz oyalan.",
+  "Leertaste oder Klick zum Starten": "Başlamak için Boşluk tuşuna basın veya tıklayın",
+  "Neuer Rekord!": "Yeni rekor!",
+  "Leertaste für eine neue Runde": "Yeniden oynamak için Boşluk tuşuna basın",
   "Öffnen": "Aç"
 });

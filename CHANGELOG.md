@@ -2,6 +2,12 @@
 
 All notable changes to Falcon are documented here.
 
+## [Unreleased]
+
+### Added
+- **Falcon Flight**: a small game on the error page when there's no internet connection. Press Space, ↑ or click to fly.
+- Tabs that failed to load because of a missing connection reload automatically once you're back online.
+
 ## [1.3.0] – 2026-11-09
 
 ### Changed
