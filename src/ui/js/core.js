@@ -80,6 +80,7 @@ const ICONS = {
   clipboard: '<rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3.5h6v1"/>',
   selectAll: '<path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
+  block: '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
   chevronsRight: '<path d="m6 7 5 5-5 5M13 7l5 5-5 5"/>',
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/>',
   usbKey: '<rect x="8" y="9" width="8" height="12.5" rx="2"/><path d="M10 9V4.5a2 2 0 0 1 4 0V9M12 13.5v3"/>',
