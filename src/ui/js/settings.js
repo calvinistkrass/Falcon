@@ -86,6 +86,15 @@ const Settings = (() => {
   $('#dlOpenDir').addEventListener('click', () => F.downloads.openDir());
   on('settings-section', (name) => { if (name === 'downloads') showDir(); });
 
+  const nt = () => ({ image: '', showShortcuts: true, showClock: true, ...(state.settings.newtab || {}) });
+  $('#sNtShortcuts').addEventListener('change', (e) => updateSettings({ newtab: { ...nt(), showShortcuts: e.target.checked } }));
+  $('#sNtClock').addEventListener('change', (e) => updateSettings({ newtab: { ...nt(), showClock: e.target.checked } }));
+  $('#ntBgChoose').addEventListener('click', async () => {
+    const s = await F.newtab.chooseImage();
+    if (s) { state.settings = s; emit('settings', s); toast($t('Hintergrundbild gesetzt'), 'image'); }
+  });
+  $('#ntBgClear').addEventListener('click', async () => { const s = await F.newtab.clearImage(); state.settings = s; emit('settings', s); });
+
   $('#sSleep').addEventListener('change', (e) => updateSettings({ sleepMinutes: Number(e.target.value) }));
 
   $('#sClearHistory').addEventListener('click', async () => {
@@ -116,6 +125,9 @@ const Settings = (() => {
     });
     for (const [id, key] of Object.entries(toggles)) $(`#${id}`).checked = !!s[key];
     $('#sSleep').value = String(s.sleepMinutes);
+    $('#sNtShortcuts').checked = s.newtab?.showShortcuts !== false;
+    $('#sNtClock').checked = s.newtab?.showClock !== false;
+    $('#ntBgClear').classList.toggle('hidden', !s.newtab?.image);
     renderTexts();
   }
 

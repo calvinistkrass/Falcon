@@ -62,6 +62,7 @@
   },
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.20.3",
+    "@mozilla/readability": "^0.6.0",
     "electron-updater": "^6.8.11"
   },
   "repository": "github:calvinistkrass/Falcon"

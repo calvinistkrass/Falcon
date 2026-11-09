@@ -2,7 +2,8 @@
 /* Seitenleiste mit Web-Apps, die neben der Seite offen bleiben */
 
 const Sidebar = (() => {
-  const APPS = [
+  // Standard-Apps; eigene Apps und ausgeblendete Standard-Apps stehen in settings.sidebarApps
+  const DEFAULT_APPS = [
     { id: 'discord', name: 'Discord', url: 'https://discord.com/app' },
     { id: 'twitch', name: 'Twitch', url: 'https://www.twitch.tv' },
     { id: 'spotify', name: 'Spotify', url: 'https://open.spotify.com' },
@@ -18,11 +19,59 @@ const Sidebar = (() => {
   const views = new Map();     // id -> webview (bleiben im Hintergrund aktiv, z. B. für Discord-Anrufe)
   const buttons = new Map();
   let current = null;
+  const apps = () => state.settings.sidebarApps || DEFAULT_APPS;
+  const saveApps = (list) => updateSettings({ sidebarApps: list });
+
+  function renderApps() {
+    buttons.clear();
+    appsEl.replaceChildren(...apps().map(button), h('button', {
+      class: 'sb-btn sb-add', title: $t('App hinzufügen'), onclick: addApp
+    }, icon('plus')));
+    if (current) buttons.get(current.id)?.classList.add('active');
+    // Webviews entfernter Apps schließen
+    for (const [id, wv] of views) {
+      if (id !== 'link' && !apps().some((a) => a.id === id)) { wv.remove(); views.delete(id); if (current?.id === id) close(); }
+    }
+  }
+
+  function addApp() {
+    openForm({
+      title: $t('App zur Seitenleiste hinzufügen'),
+      fields: [
+        { name: 'url', label: $t('Adresse'), placeholder: 'https://web.telegram.org' },
+        { name: 'name', label: $t('Name'), placeholder: $t('z. B. Telegram') }
+      ],
+      submitLabel: $t('Hinzufügen'),
+      onSubmit: async ({ url, name }) => {
+        if (!url.trim() || !looksLikeUrl(url.trim())) return $t('Das sieht nicht nach einer gültigen Adresse aus.');
+        const full = toUrl(url.trim());
+        await saveApps([...apps(), { id: `app-${Date.now().toString(36)}`, name: name.trim() || hostOf(full), url: full }]);
+      }
+    });
+  }
+
+  function appMenu(app, e) {
+    const list = apps();
+    const i = list.findIndex((a) => a.id === app.id);
+    showMenu([
+      { label: $t('Neu laden'), icon: 'reload', disabled: !views.has(app.id), onClick: () => views.get(app.id)?.reload() },
+      { label: $t('In neuem Tab öffnen'), icon: 'tab', onClick: () => Tabs.create(app.url) },
+      '-',
+      { label: $t('Nach oben'), icon: 'chevronUp', disabled: i <= 0, onClick: () => { const l = [...list]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; saveApps(l); } },
+      { label: $t('Nach unten'), icon: 'chevronDown', disabled: i >= list.length - 1, onClick: () => { const l = [...list]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; saveApps(l); } },
+      '-',
+      { label: $t('Aus der Seitenleiste entfernen'), icon: 'trash', danger: true, onClick: () => saveApps(list.filter((a) => a.id !== app.id)) },
+      { label: $t('Standard-Apps wiederherstellen'), icon: 'restore', disabled: !state.settings.sidebarApps, onClick: () => updateSettings({ sidebarApps: null }) }
+    ], { point: { x: e.clientX, y: e.clientY } });
+  }
 
   function button(app) {
     const img = h('img', { src: faviconFor(app.url, 64), alt: '' });
     img.addEventListener('error', () => img.replaceWith(icon('globe')), { once: true });
-    const btn = h('button', { class: 'sb-btn', title: app.name, onclick: () => toggle(app) }, img);
+    const btn = h('button', {
+      class: 'sb-btn', title: app.name, onclick: () => toggle(app),
+      oncontextmenu: (e) => { e.preventDefault(); appMenu(app, e); }
+    }, img);
     buttons.set(app.id, btn);
     return btn;
   }
@@ -104,9 +153,9 @@ const Sidebar = (() => {
   });
   $('#sbSettings').addEventListener('click', () => Settings.open());
 
-  appsEl.append(...APPS.map(button));
 
   on('settings', (s) => {
+    renderApps();
     document.body.classList.toggle('no-sidebar', !s.showSidebar);
     if (s.sidePanelWidth) document.documentElement.style.setProperty('--sp-width', `${s.sidePanelWidth}px`);
   });
