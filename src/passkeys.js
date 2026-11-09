@@ -14,6 +14,7 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
+const winAuthn = require('./win-webauthn');
 
 const RP_ID = 'localhost';
 const FILE = () => path.join(app.getPath('userData'), 'passkeys.json');
@@ -79,9 +80,9 @@ function ensureServer() {
 // ---------------------------------------------------------------------------
 let active = null; // { win, request, challenge, resolve, mode }
 
-ipcMain.handle('passkey-window:request', (e) => (active && e.sender === active.win.webContents ? active.request : null));
+ipcMain.handle('passkey-window:request', (e) => (active?.win && e.sender === active.win.webContents ? active.request : null));
 ipcMain.handle('passkey-window:finish', (e, result) => {
-  if (!active || e.sender !== active.win.webContents) return { ok: false };
+  if (!active?.win || e.sender !== active.win.webContents) return { ok: false };
   let outcome;
   try {
     outcome = active.mode === 'register' ? finishRegistration(result) : finishAssertion(result);
@@ -97,11 +98,55 @@ ipcMain.handle('passkey-window:finish', (e, result) => {
   return outcome;
 });
 ipcMain.on('passkey-window:cancel', (e) => {
-  if (active && e.sender === active.win.webContents) active.win.close();
+  if (active?.win && e.sender === active.win.webContents) active.win.close();
 });
 
-async function ceremony(mode, { parent, strings, reason }) {
-  if (active) { active.win.focus(); return { ok: false, error: 'busy' }; }
+/**
+ * Windows: direkt über webauthn.dll – Windows zeigt sofort seinen Passkey-Dialog (Windows Hello,
+ * Sicherheitsschlüssel, „iPhone, iPad oder Android-Gerät“). clientDataJSON baut Falcon selbst.
+ */
+const NATIVE_ORIGIN = 'https://localhost';
+async function nativeCeremony(mode, { parent }) {
+  if (active) return { ok: false, error: 'busy' };
+  const challenge = crypto.randomBytes(32);
+  const creds = load().credentials;
+  const hwnd = parent && !parent.isDestroyed() ? parent.getNativeWindowHandle().readBigUInt64LE(0) : 0n;
+  active = { native: true, mode, challenge: b64u(challenge), origin: NATIVE_ORIGIN };
+  try {
+    if (mode === 'register') {
+      const r = await winAuthn.makeCredential({
+        hwnd, origin: NATIVE_ORIGIN, challenge,
+        rp: { id: RP_ID, name: 'Falcon' },
+        user: { id: fromB64u(store.userId), name: 'Falcon', displayName: 'Falcon' },
+        algs: [-7, -8, -257],
+        exclude: creds.map((c) => ({ id: fromB64u(c.id) })),
+        residentKey: 'preferred', userVerification: 'required'
+      });
+      return finishRegistration({
+        rawId: b64u(r.credentialId), clientDataJSON: b64u(r.clientDataJSON), authenticatorData: b64u(r.authenticatorData),
+        publicKey: r.publicKey ? b64u(r.publicKey) : null, alg: r.alg, transports: r.transports
+      });
+    }
+    const r = await winAuthn.getAssertion({
+      hwnd, origin: NATIVE_ORIGIN, challenge, rpId: RP_ID,
+      allow: creds.map((c) => ({ id: fromB64u(c.id) })), userVerification: 'required'
+    });
+    return finishAssertion({
+      rawId: b64u(r.credentialId), clientDataJSON: b64u(r.clientDataJSON),
+      authenticatorData: b64u(r.authenticatorData), signature: b64u(r.signature)
+    });
+  } catch (err) {
+    const name = String(err.name || err.message || '');
+    return { ok: false, error: /NotAllowed|Cancel|0x80090036/i.test(name) ? 'cancelled' : name };
+  } finally {
+    active = null;
+  }
+}
+
+async function ceremony(mode, opts) {
+  if (winAuthn.isAvailable()) return nativeCeremony(mode, opts);
+  const { parent, strings, reason } = opts;
+  if (active) { active.win?.focus(); return { ok: false, error: 'busy' }; }
   const base = await ensureServer();
   const challenge = crypto.randomBytes(32);
   const creds = load().credentials;

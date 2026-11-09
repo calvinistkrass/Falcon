@@ -42,6 +42,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
     return dir < 0 ? wv?.goBack() : wv?.goForward();
   }
   if (key === 'escape') {
+    if (FullscreenHint.windowFullscreen) { F.win('fullscreen'); return; }
     if (Popover.current) return Popover.close();
     if (Settings.isOpen()) return Settings.close();
     if (!$('#findbar').classList.contains('hidden')) return Find.close();
@@ -109,9 +110,34 @@ F.on('pw-offer', (o) => Passwords.receive(o));
 F.on('page-context-menu', openPageMenu);
 // Einstellungen, die ein anderes Falcon-Fenster geändert hat
 F.on('settings-changed', (s) => { state.settings = s; emit('settings', s); });
+// ---------------------------------------------------------------------------
+// Vollbild: kurzer Hinweis, wie man es beendet; Esc beendet auch das F11-Vollbild
+// ---------------------------------------------------------------------------
+const FullscreenHint = (() => {
+  const el = $('#fsHint');
+  let timer;
+  let windowFullscreen = false;
+  function show() {
+    el.replaceChildren(...I18N.tNodes('Drücke {key}, um den Vollbildmodus zu beenden', { key: h('kbd', {}, 'Esc') }));
+    el.classList.remove('hidden', 'out');
+    clearTimeout(timer);
+    timer = setTimeout(() => { el.classList.add('out'); timer = setTimeout(() => el.classList.add('hidden'), 300); }, 3500);
+  }
+  function hide() { clearTimeout(timer); el.classList.add('hidden'); }
+  return {
+    show, hide,
+    get windowFullscreen() { return windowFullscreen; },
+    set windowFullscreen(v) { windowFullscreen = v; }
+  };
+})();
+
 F.on('win-state', (s) => {
+  const wasFullscreen = FullscreenHint.windowFullscreen;
+  FullscreenHint.windowFullscreen = s === 'fullscreen';
   document.body.classList.toggle('fullscreen', s === 'fullscreen');
   document.body.classList.toggle('maximized', s === 'max');
+  if (s === 'fullscreen' && !wasFullscreen) FullscreenHint.show();
+  if (s !== 'fullscreen') FullscreenHint.hide();
 });
 
 // ---------------------------------------------------------------------------

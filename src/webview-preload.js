@@ -22,17 +22,40 @@ if (location.hostname === 'accounts.google.com' || location.hostname === 'accoun
   })();`);
 }
 
-// Passkeys: Die Seite darf den Windows-Dialog nicht sofort öffnen. navigator.credentials wird im
-// Hauptkontext so umgeleitet, dass Falcon zuerst einen Hinweis zeigt und erst nach dem Klick auf
-// „Passkey verwenden“ die eigentliche Anfrage weitergibt. (Reine Bedienhilfe, keine Sicherheitsgrenze.)
+// Passkeys auf Websites
+// 1. Die Seite ruft navigator.credentials.create/get auf → Falcon zeigt zuerst einen kleinen Hinweis.
+// 2. Erst nach „Passkey verwenden“ geht die Anfrage weiter – unter Windows über webauthn.dll
+//    (Electron selbst kann kein WebAuthn), sonst an die normale Browser-Schnittstelle.
+// Die Seite kann nur ihren eigenen Ursprung anfragen: den prüft der Hauptprozess anhand des echten Frames.
 if (/^https?:$/.test(location.protocol) && window.top === window) {
   const ORIGIN = location.origin;
+  const pending = new Map(); // id → { kind, publicKey }
+  let native = null;
+  const nativeAvailable = () => (native ??= !!ipcRenderer.sendSync('webauthn:available'));
+  const reply = (data) => window.postMessage({ __falconPasskey: 'answer', ...data }, ORIGIN);
+
   window.addEventListener('message', (e) => {
     if (e.source !== window || !e.data || typeof e.data !== 'object') return;
-    if (e.data.__falconPasskey === 'ask') ipcRenderer.sendToHost('passkey-ask', { id: e.data.id, kind: e.data.kind === 'create' ? 'create' : 'get' });
-    if (e.data.__falconPasskey === 'cancel') ipcRenderer.sendToHost('passkey-cancel', e.data.id);
+    const d = e.data;
+    if (d.__falconPasskey === 'ask') {
+      pending.set(d.id, { kind: d.kind === 'create' ? 'create' : 'get', publicKey: d.publicKey });
+      ipcRenderer.sendToHost('passkey-ask', { id: d.id, kind: d.kind === 'create' ? 'create' : 'get' });
+    }
+    if (d.__falconPasskey === 'cancel') { pending.delete(d.id); ipcRenderer.sendToHost('passkey-cancel', d.id); }
   });
-  ipcRenderer.on('passkey-answer', (_e, id, ok) => window.postMessage({ __falconPasskey: 'answer', id, ok: !!ok }, ORIGIN));
+
+  ipcRenderer.on('passkey-answer', async (_e, id, ok) => {
+    const req = pending.get(id);
+    pending.delete(id);
+    if (!ok || !req) return reply({ id, ok: false });
+    if (!nativeAvailable()) return reply({ id, ok: true }); // Seite nutzt die eingebaute Schnittstelle
+    try {
+      const r = await ipcRenderer.invoke('webauthn:request', req);
+      reply(r.error ? { id, ok: false, error: r.error } : { id, ok: true, result: r.result });
+    } catch (err) {
+      reply({ id, ok: false, error: { name: 'NotAllowedError', message: String(err.message || err) } });
+    }
+  });
 
   webFrame.executeJavaScript(`(() => {
     const creds = navigator.credentials;
@@ -42,8 +65,45 @@ if (/^https?:$/.test(location.protocol) && window.top === window) {
     let seq = 0;
     const notAllowed = () => new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError');
 
+    const b64u = (buf) => { const b = new Uint8Array(buf instanceof ArrayBuffer ? buf : buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)); let s = ''; for (const c of b) s += String.fromCharCode(c); return btoa(s).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, ''); };
+    const fromB64u = (s) => { const bin = atob(String(s || '').replace(/-/g, '+').replace(/_/g, '/')); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out.buffer; };
+    // Optionen übertragbar machen: Binärdaten → { __b: base64url }
+    const encode = (v) => {
+      if (v instanceof ArrayBuffer || ArrayBuffer.isView(v)) return { __b: b64u(v) };
+      if (Array.isArray(v)) return v.map(encode);
+      if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) o[k] = encode(v[k]); return o; }
+      return v;
+    };
+    const fixed = (props) => Object.fromEntries(Object.entries(props).map(([k, value]) => [k, { value, enumerable: true }]));
+
+    function credentialFrom(kind, r) {
+      const rawId = fromB64u(r.id);
+      let response;
+      if (kind === 'create') {
+        const ad = fromB64u(r.authenticatorData);
+        const pk = r.publicKey ? fromB64u(r.publicKey) : null;
+        response = Object.create(AuthenticatorAttestationResponse.prototype, fixed({
+          clientDataJSON: fromB64u(r.clientDataJSON), attestationObject: fromB64u(r.attestationObject),
+          getTransports: () => r.transports || [], getAuthenticatorData: () => ad,
+          getPublicKey: () => pk, getPublicKeyAlgorithm: () => r.alg
+        }));
+      } else {
+        response = Object.create(AuthenticatorAssertionResponse.prototype, fixed({
+          clientDataJSON: fromB64u(r.clientDataJSON), authenticatorData: fromB64u(r.authenticatorData),
+          signature: fromB64u(r.signature), userHandle: r.userHandle ? fromB64u(r.userHandle) : null
+        }));
+      }
+      const json = kind === 'create'
+        ? { clientDataJSON: r.clientDataJSON, attestationObject: r.attestationObject, authenticatorData: r.authenticatorData, transports: r.transports || [], publicKey: r.publicKey, publicKeyAlgorithm: r.alg }
+        : { clientDataJSON: r.clientDataJSON, authenticatorData: r.authenticatorData, signature: r.signature, userHandle: r.userHandle || undefined };
+      return Object.create(PublicKeyCredential.prototype, fixed({
+        id: r.id, rawId, type: 'public-key', response, authenticatorAttachment: r.attachment || null,
+        getClientExtensionResults: () => ({}),
+        toJSON: () => ({ id: r.id, rawId: r.id, type: 'public-key', authenticatorAttachment: r.attachment || null, clientExtensionResults: {}, response: json })
+      }));
+    }
+
     function gate(kind, options, original) {
-      // Nur echte Passkey-Abfragen; „conditional“ (Vorschläge im Eingabefeld) läuft ohne Dialog
       if (!options || !options.publicKey || options.mediation === 'conditional' || options.mediation === 'silent') return original(options);
       const id = ++seq;
       return new Promise((resolve, reject) => {
@@ -52,13 +112,16 @@ if (/^https?:$/.test(location.protocol) && window.top === window) {
         const onMessage = (e) => {
           if (e.source !== window || !e.data || e.data.__falconPasskey !== 'answer' || e.data.id !== id) return;
           cleanup();
-          if (e.data.ok) original(options).then(resolve, reject); else reject(notAllowed());
+          const d = e.data;
+          if (d.result) return resolve(credentialFrom(kind, d.result));
+          if (d.ok) return original(options).then(resolve, reject);
+          reject(d.error ? new DOMException(d.error.message || d.error.name, d.error.name || 'NotAllowedError') : notAllowed());
         };
         const cleanup = () => { window.removeEventListener('message', onMessage); if (signal) signal.removeEventListener('abort', onAbort); };
         if (signal && signal.aborted) return reject(signal.reason || new DOMException('Aborted', 'AbortError'));
         if (signal) signal.addEventListener('abort', onAbort);
         window.addEventListener('message', onMessage);
-        window.postMessage({ __falconPasskey: 'ask', id, kind }, location.origin);
+        window.postMessage({ __falconPasskey: 'ask', id, kind, publicKey: encode(options.publicKey) }, location.origin);
       });
     }
 

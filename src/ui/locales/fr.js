@@ -395,5 +395,6 @@ I18N.add('fr', {
   "Pausiert": "En pause",
   "Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.": "Met en pause les onglets en arrière-plan après 30 secondes, les met en veille après {n} min et désactive les animations.",
   "Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.": "Libère du processeur et de la mémoire pour vos jeux : les onglets en arrière-plan sont mis en pause après 30 secondes puis en veille, les animations sont désactivées. Les onglets qui diffusent du son restent actifs.",
+  "Drücke {key}, um den Vollbildmodus zu beenden": "Appuyez sur {key} pour quitter le mode plein écran",
   "Öffnen": "Ouvrir"
 });

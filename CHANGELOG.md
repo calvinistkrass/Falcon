@@ -2,6 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.6.1] – 2026-11-09
+
+### Fixed
+- **Passkeys now work**: Electron doesn't pass WebAuthn requests to Windows, so adding a passkey always failed. Falcon now talks to the Windows passkey API (webauthn.dll) directly – the same one Chrome and Edge use. The Windows dialog offers Windows Hello, security keys and "iPhone, iPad or Android device".
+- **Passkey sign-in on websites** (e.g. Google, GitHub, Microsoft) works the same way, after a short prompt in Falcon. Sites can only request passkeys for their own domain.
+- **Updates are checked right at startup** instead of after 15 seconds, and the update window opens immediately. A found update is remembered, so the notice appears instantly on the next start.
+
+### Added
+- A short hint when entering full screen; Esc now also leaves full screen opened with F11.
+
 ## [1.6.0] – 2026-11-09
 
 ### Added
@@ -78,6 +88,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.6.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.1
 [1.6.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.0
 [1.5.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.1
 [1.5.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.0

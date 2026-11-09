@@ -1,7 +1,7 @@
 {
   "name": "falcon-browser",
   "productName": "Falcon",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "A fast, focused Chromium browser built for gamers.",
   "main": "src/main.js",
   "author": "Calvin Bandle",
@@ -63,7 +63,9 @@
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.20.3",
     "@mozilla/readability": "^0.6.0",
-    "electron-updater": "^6.8.11"
+    "electron-updater": "^6.8.11",
+    "koffi": "^3.3.7",
+    "tldts": "^7.4.19"
   },
   "repository": "github:calvinistkrass/Falcon"
 }
