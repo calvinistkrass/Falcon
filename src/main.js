@@ -47,6 +47,8 @@ const DEFAULTS = {
   showSidebar: true,
   restoreSession: true,
   mouseButtons: 'history',
+  downloadDir: '',
+  downloadAsk: false,
   sidePanelWidth: 380,
   pwNever: [],
   pwRequireAuth: true,
@@ -211,8 +213,24 @@ function setupAdblock(ses) {
 // Downloads
 // ---------------------------------------------------------------------------
 const downloadItems = new Map();
+const downloadDir = () => {
+  const dir = settings.downloadDir;
+  return dir && fs.existsSync(dir) ? dir : app.getPath('downloads');
+};
+/** Freier Dateiname im Zielordner: „Datei.zip“ → „Datei (1).zip“ */
+function uniquePath(dir, name) {
+  const safe = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_') || 'download';
+  const ext = path.extname(safe);
+  const base = safe.slice(0, safe.length - ext.length);
+  let candidate = path.join(dir, safe);
+  for (let i = 1; fs.existsSync(candidate); i++) candidate = path.join(dir, `${base} (${i})${ext}`);
+  return candidate;
+}
+
 function setupDownloads(ses) {
   ses.on('will-download', (_e, item) => {
+    if (settings.downloadAsk) item.setSaveDialogOptions({ defaultPath: path.join(downloadDir(), item.getFilename()) });
+    else item.setSavePath(uniquePath(downloadDir(), item.getFilename()));
     const id = crypto.randomUUID();
     downloadItems.set(id, item);
     const report = (state, extra = {}) => send('download', {
@@ -228,6 +246,15 @@ function setupDownloads(ses) {
   });
 }
 ipcMain.handle('download:cancel', (_e, id) => { downloadItems.get(id)?.cancel(); return true; });
+ipcMain.handle('downloads:dir', () => downloadDir());
+ipcMain.handle('downloads:choose-dir', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, { defaultPath: downloadDir(), properties: ['openDirectory', 'createDirectory'] });
+  if (canceled || !filePaths[0]) return null;
+  settings.downloadDir = filePaths[0];
+  saveSettings();
+  return filePaths[0];
+});
+ipcMain.handle('downloads:open-dir', () => shell.openPath(downloadDir()));
 
 // ---------------------------------------------------------------------------
 // Webviews
