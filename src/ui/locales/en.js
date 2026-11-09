@@ -309,5 +309,9 @@ I18N.add('en', {
   "Mit Passkey bestätigen": "Confirm with passkey",
   "Bild kopiert": "Image copied",
   "Bild konnte nicht kopiert werden": "Couldn’t copy the image",
+  "Maus-Seitentasten": "Mouse side buttons",
+  "Was die beiden Daumentasten an der Maus tun.": "What the two thumb buttons on your mouse do.",
+  "Seite zurück / vor": "Page back / forward",
+  "Tab wechseln": "Switch tabs",
   "Öffnen": "Open"
 });

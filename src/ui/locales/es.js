@@ -309,5 +309,9 @@ I18N.add('es', {
   "Mit Passkey bestätigen": "Confirmar con llave de acceso",
   "Bild kopiert": "Imagen copiada",
   "Bild konnte nicht kopiert werden": "No se ha podido copiar la imagen",
+  "Maus-Seitentasten": "Botones laterales del ratón",
+  "Was die beiden Daumentasten an der Maus tun.": "Qué hacen los dos botones para el pulgar del ratón.",
+  "Seite zurück / vor": "Página atrás / adelante",
+  "Tab wechseln": "Cambiar de pestaña",
   "Öffnen": "Abrir"
 });

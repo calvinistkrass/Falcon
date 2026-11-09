@@ -56,6 +56,12 @@ const Settings = (() => {
     if (b) updateSettings({ restoreSession: b.dataset.value === 'restore' });
   });
 
+  const mouse = $('#sMouse');
+  mouse.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) updateSettings({ mouseButtons: b.dataset.value });
+  });
+
   const swatches = $('#sAccents');
   swatches.append(...ACCENTS.map((a) => h('button', {
     class: 'swatch', dataset: { value: a.value, name: a.name },
@@ -94,6 +100,7 @@ const Settings = (() => {
     langSel.options[0].textContent = $t('Systemsprache');
     engineSel.value = s.searchEngine;
     $$('button', startup).forEach((b) => b.classList.toggle('sel', (b.dataset.value === 'restore') === !!s.restoreSession));
+    $$('button', mouse).forEach((b) => b.classList.toggle('sel', b.dataset.value === (s.mouseButtons || 'history')));
     $$('.swatch', swatches).forEach((b) => {
       b.classList.toggle('sel', b.dataset.value.toLowerCase() === String(s.accent).toLowerCase());
       b.title = $t(b.dataset.name);

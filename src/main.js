@@ -46,6 +46,7 @@ const DEFAULTS = {
   showBookmarksBar: true,
   showSidebar: true,
   restoreSession: true,
+  mouseButtons: 'history',
   sidePanelWidth: 380,
   pwNever: [],
   pwRequireAuth: true,
@@ -178,6 +179,12 @@ function createWindow() {
 
   const state = () => (win.isFullScreen() ? 'fullscreen' : win.isMaximized() ? 'max' : 'normal');
   for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, () => send('win-state', state()));
+
+  // Seitentasten der Maus (Windows meldet sie als App-Befehl – auch wenn eine Webseite den Fokus hat)
+  win.on('app-command', (_e, cmd) => {
+    if (cmd === 'browser-backward') send('shortcut', { key: 'mouse-back' });
+    if (cmd === 'browser-forward') send('shortcut', { key: 'mouse-forward' });
+  });
 
   win.on('close', () => {
     const b = win.getNormalBounds();

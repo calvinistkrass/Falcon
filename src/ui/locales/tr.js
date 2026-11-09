@@ -309,5 +309,9 @@ I18N.add('tr', {
   "Mit Passkey bestätigen": "Geçiş anahtarıyla onayla",
   "Bild kopiert": "Resim kopyalandı",
   "Bild konnte nicht kopiert werden": "Resim kopyalanamadı",
+  "Maus-Seitentasten": "Fare yan tuşları",
+  "Was die beiden Daumentasten an der Maus tun.": "Faredeki iki başparmak tuşunun işlevi.",
+  "Seite zurück / vor": "Sayfa geri / ileri",
+  "Tab wechseln": "Sekme değiştir",
   "Öffnen": "Aç"
 });

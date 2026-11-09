@@ -36,6 +36,11 @@ function handleShortcut({ key, ctrl, shift, alt }) {
   const t = Tabs.active();
   const wv = t?.ready ? t.webview : null;
 
+  if (key === 'mouse-back' || key === 'mouse-forward') {
+    const dir = key === 'mouse-back' ? -1 : 1;
+    if (state.settings.mouseButtons === 'tabs') return Tabs.cycle(dir);
+    return dir < 0 ? wv?.goBack() : wv?.goForward();
+  }
   if (key === 'escape') {
     if (Popover.current) return Popover.close();
     if (Settings.isOpen()) return Settings.close();

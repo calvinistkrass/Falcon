@@ -309,5 +309,9 @@ I18N.add('fr', {
   "Mit Passkey bestätigen": "Confirmer avec une clé d’accès",
   "Bild kopiert": "Image copiée",
   "Bild konnte nicht kopiert werden": "Impossible de copier l’image",
+  "Maus-Seitentasten": "Boutons latéraux de la souris",
+  "Was die beiden Daumentasten an der Maus tun.": "Action des deux boutons pour le pouce de la souris.",
+  "Seite zurück / vor": "Page précédente / suivante",
+  "Tab wechseln": "Changer d’onglet",
   "Öffnen": "Ouvrir"
 });
