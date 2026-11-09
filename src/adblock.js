@@ -16,7 +16,8 @@ const path = require('path');
 const fs = require('fs');
 const { ElectronBlocker } = require('@ghostery/adblocker-electron');
 // Das Paket erlaubt keinen Tiefen-Import, also den Pfad des Preload-Pakets direkt auflösen
-const PRELOAD_PATH = require.resolve('@ghostery/adblocker-electron-preload');
+// Im gepackten Programm liegt das Preload-Paket verschachtelt unter der Engine – deshalb von dort aus suchen
+const PRELOAD_PATH = require.resolve('@ghostery/adblocker-electron-preload', { paths: [path.dirname(require.resolve('@ghostery/adblocker-electron'))] });
 
 const LIST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 

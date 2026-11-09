@@ -2,6 +2,29 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.6.0] – 2026-11-09
+
+### Added
+- **Real ad blocker**: EasyList, EasyPrivacy and more (over 150,000 rules), updated weekly. Ad slots inside pages are hidden too. An optional filter hides cookie banners and other annoyances.
+- **Falcon shield** next to the star in the address bar: shows how many ads and trackers were blocked on the current page, which hosts they came from, and turns the blocker off for a single site.
+- **Ad blocker settings**: own section with on/off switch, filter list status and the list of sites where it's off.
+- **Bookmark folders**: folders in the bookmarks bar with submenus and "Open all"; folders are kept when importing from Chrome, Edge, Firefox or Opera.
+- **History** (Ctrl+H): grouped by day, searchable, remove single entries.
+- **Incognito windows** (Ctrl+Shift+N): separate in-memory session; no history, cookies or site data are kept after closing.
+- **Overlay window**: open a page in a small window that stays on top, e.g. a stream or guide next to your game.
+- **Reader view** (F9): articles without ads and clutter, with dark, sepia and light themes.
+- **Custom sidebar apps**: add any web app to the sidebar, reorder or remove apps.
+- **Start page options**: custom background image, show or hide shortcuts and clock.
+- **Download settings**: choose the download folder or get asked every time.
+- **Mouse side buttons** go back and forward (or switch tabs, if you prefer).
+
+### Changed
+- **Passwords are filled in only after you choose an account** from the list below the login field.
+- **Game Mode** now pauses background tabs after 30 seconds (they stay loaded but use no CPU) before putting them to sleep.
+
+### Fixed
+- Adding a passkey failed immediately with "cancelled or timed out" because the passkey window didn't have focus yet.
+
 ## [1.5.1] – 2026-11-09
 
 ### Fixed
@@ -55,6 +78,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.6.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.0
 [1.5.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.1
 [1.5.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.0
 [1.4.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.4.0

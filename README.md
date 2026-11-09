@@ -26,26 +26,34 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 ## Features
 
 ### 🎮 Made for gaming
-- **Game Mode**: puts background tabs to sleep and turns off animations, so your game gets the memory and CPU. Tabs playing audio stay awake.
+- **Game Mode**: pauses background tabs after 30 seconds and later puts them to sleep, so your game gets the CPU and memory. Tabs playing audio stay active.
+- **Overlay window**: keep a stream, guide or chat in a small window that stays on top of your game.
 - **Performance meter**: live CPU and memory usage in the toolbar, with a 60-second graph.
-- **Sidebar apps**: Discord, Twitch, Spotify, YouTube Music and WhatsApp next to the page. They keep running in the background, and the panel is resizable.
+- **Sidebar apps**: Discord, Twitch, Spotify, YouTube Music, WhatsApp, or any web app you add. They keep running in the background, and the panel is resizable.
 - **Picture-in-picture**: pop any video out into a floating window with one click.
 
 ### 🧭 A browser that stays out of your way
 - **Tabs that behave like Chrome's**: drag to reorder, middle-click to close, duplicate, mute, put to sleep, reopen closed tabs. Your session is restored on startup.
 - **Smart address bar**: suggestions from history, bookmarks and open tabs, inline autocomplete and domain highlighting.
-- **Per-site zoom**, find in page, downloads with progress, and a custom right-click menu with spell-check suggestions.
-- **Built-in ad and tracker blocker**.
+- **Bookmark folders** and a searchable **history** (Ctrl+H).
+- **Incognito windows** (Ctrl+Shift+N) with a separate in-memory session.
+- **Reader view** (F9) for distraction-free articles.
+- **Per-site zoom**, find in page, a download folder of your choice, mouse side buttons, and a custom right-click menu with spell-check suggestions.
+
+### 🛡️ Ad blocker
+- **EasyList, EasyPrivacy and more**: over 150,000 filter rules, refreshed weekly, plus hiding of ad slots inside pages and optional removal of cookie banners.
+- **Falcon shield** in the address bar shows what was blocked on the current page and turns the blocker off for a single site.
 
 ### 🔐 Passwords & security
-- **Password manager**: saves logins encrypted with your Windows account (DPAPI) and fills them in automatically.
+- **Password manager**: saves logins encrypted with your Windows account (DPAPI). Passwords are only sent to a page after you pick an account from the list below the login field.
 - **Unlock with passkeys**: confirm with your **iPhone, Android phone or a security key** before passwords are shown, copied, imported or exported. Falcon asks with a small prompt first and falls back to Windows Hello.
 - **Import & export** passwords as CSV from Chrome, Edge, Opera, Brave, Firefox or Bitwarden.
 - **Google sign-in works**, unlike in most Electron-based browsers.
 
 ### ✨ Everything else
 - **5 languages**: English, Deutsch, Français, Español, Türkçe. Falcon follows your system language by default.
-- **Bookmarks bar** with an overflow menu and HTML/JSON import and export.
+- **Bookmarks bar** with folders, an overflow menu and HTML/JSON import and export.
+- **Start page** with your own background image.
 - **7 accent colors**, native Windows 11 window controls with Snap Layouts.
 - **Automatic updates** from GitHub Releases.
 
@@ -101,6 +109,8 @@ npm run dist       # build the installer into dist/
 | `src/webview-preload.js` | Autofill and login detection inside web pages |
 | `src/updater.js` | Update checks against GitHub Releases |
 | `src/google-signin.js` | Makes Google sign-in work |
+| `src/adblock.js` | Ad blocker (Ghostery engine, per-tab statistics, site exceptions) |
+| `src/overlay/` | Always-on-top overlay window |
 | `.github/workflows/release.yml` | Builds and publishes a release for every version tag |
 
 ### Publishing a release
