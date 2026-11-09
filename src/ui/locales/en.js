@@ -297,5 +297,9 @@ I18N.add('en', {
   "Wird heruntergeladen …": "Downloading…",
   "Herunterladen": "Download",
   "Ansehen": "View",
+  "Keine Verbindung? Vertreib dir die Zeit.": "No connection? Pass the time.",
+  "Leertaste oder Klick zum Starten": "Press Space or click to start",
+  "Neuer Rekord!": "New high score!",
+  "Leertaste für eine neue Runde": "Press Space to play again",
   "Öffnen": "Open"
 });

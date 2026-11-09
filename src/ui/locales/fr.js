@@ -297,5 +297,9 @@ I18N.add('fr', {
   "Wird heruntergeladen …": "Téléchargement…",
   "Herunterladen": "Télécharger",
   "Ansehen": "Voir",
+  "Keine Verbindung? Vertreib dir die Zeit.": "Pas de connexion ? Passez le temps.",
+  "Leertaste oder Klick zum Starten": "Espace ou clic pour commencer",
+  "Neuer Rekord!": "Nouveau record !",
+  "Leertaste für eine neue Runde": "Espace pour rejouer",
   "Öffnen": "Ouvrir"
 });
