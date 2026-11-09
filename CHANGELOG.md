@@ -1,26 +1,35 @@
-# Änderungen
+# Changelog
 
-## 1.2.0 – 9. November 2026
+All notable changes to Falcon are documented here.
 
-### Neu
-- Update-Hinweis: Falcon erkennt neue Versionen auf GitHub, lädt sie herunter und installiert sie beim Neustart
-- Automatische Releases über GitHub Actions
+## [1.2.0] – 2026-11-09
 
-## 1.1.0 – 9. November 2026
+### Added
+- **Automatic updates**: Falcon checks GitHub Releases on startup and every four hours. An **Update** button appears in the toolbar when a new version is available. The installed version downloads the update and installs it on restart.
+- **Passkeys**: unlock your passwords with an iPhone, an Android phone or a security key.
+- **Bookmark overflow menu**: bookmarks that don't fit into the bar are listed behind a » button.
+- Releases are built and published automatically by GitHub Actions.
 
-### Neu
-- Komplett überarbeitetes Design: ruhige Farben, Tabs wie in Chrome, native Windows-Fensterknöpfe mit Snap-Layouts
-- Adressleiste mit Vorschlägen aus Verlauf, Lesezeichen und offenen Tabs sowie Autovervollständigung
-- Einstellungen als eigene Seite, Hauptmenü mit Zoom, eigenes Kontextmenü auf Webseiten
-- Leistungsanzeige mit Verlaufsgrafik, Fehlerseite bei nicht erreichbaren Websites
-- Sprachen: Deutsch, English, Français, Español, Türkçe
-- Passwort-Manager: Passwörter automatisch ausfüllen, Import und Export als CSV
-- Passkeys (iPhone, Android, Sicherheitsschlüssel) und Windows Hello zum Entsperren der Passwörter
-- Lesezeichen: Kontextmenü, Import/Export, »-Menü für Lesezeichen, die nicht mehr in die Leiste passen
-- Sitzung, Fenstergröße und Zoom pro Website werden gespeichert
+### Fixed
+- Google sign-in was blocked with "This browser or app may not be secure".
+- Pages without their own title kept the previous tab title.
 
-### Behoben
-- Google-Anmeldung wurde mit „Dieser Browser oder diese App ist unter Umständen nicht sicher“ blockiert
+## [1.1.0] – 2026-11-09
 
-## 1.0.0 – 8. November 2026
-- Erste Version
+### Added
+- Completely redesigned interface: calmer colors, Chrome-style tabs, native Windows 11 window controls with Snap Layouts.
+- Address bar with suggestions from history, bookmarks and open tabs, plus inline autocomplete.
+- Settings page with sections, main menu with zoom controls, custom right-click menu on web pages.
+- Performance meter with a live graph; custom error page for unreachable sites.
+- Languages: English, Deutsch, Français, Español, Türkçe.
+- Password manager with autofill, CSV import/export and Windows Hello protection.
+- Bookmark context menu and HTML/JSON import/export.
+- Session, window size and per-site zoom are remembered.
+
+## [1.0.0] – 2026-11-08
+
+- First release.
+
+[1.2.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.2.0
+[1.1.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.1.0
+[1.0.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.0.0

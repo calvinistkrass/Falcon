@@ -2,7 +2,7 @@
   "name": "falcon-browser",
   "productName": "Falcon",
   "version": "1.2.0",
-  "description": "Falcon – der Browser für Gamer",
+  "description": "A fast, focused Chromium browser built for gamers.",
   "main": "src/main.js",
   "author": "Calvin Bandle",
   "license": "MIT",
@@ -25,8 +25,7 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "icon": "assets/falcon.ico"
     },
@@ -36,7 +35,8 @@
       "createDesktopShortcut": true,
       "shortcutName": "Falcon",
       "installerIcon": "assets/falcon.ico",
-      "uninstallerIcon": "assets/falcon.ico"
+      "uninstallerIcon": "assets/falcon.ico",
+      "artifactName": "Falcon-Setup-${version}.${ext}"
     },
     "mac": {
       "icon": "assets/falcon.png",
@@ -63,5 +63,5 @@
   "dependencies": {
     "electron-updater": "^6.8.11"
   },
-  "repository": "github:DEIN-GITHUB-NAME/falcon"
+  "repository": "github:calvinistkrass/Falcon"
 }
