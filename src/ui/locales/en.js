@@ -313,5 +313,8 @@ I18N.add('en', {
   "Was die beiden Daumentasten an der Maus tun.": "What the two thumb buttons on your mouse do.",
   "Seite zurück / vor": "Page back / forward",
   "Tab wechseln": "Switch tabs",
+  "Gespeichertes Passwort verwenden": "Use saved password",
+  "Passwort konnte nicht ausgefüllt werden": "Couldn’t fill in the password",
+  "Passwörter verwalten": "Manage passwords",
   "Öffnen": "Open"
 });

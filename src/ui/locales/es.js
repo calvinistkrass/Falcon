@@ -313,5 +313,8 @@ I18N.add('es', {
   "Was die beiden Daumentasten an der Maus tun.": "Qué hacen los dos botones para el pulgar del ratón.",
   "Seite zurück / vor": "Página atrás / adelante",
   "Tab wechseln": "Cambiar de pestaña",
+  "Gespeichertes Passwort verwenden": "Usar contraseña guardada",
+  "Passwort konnte nicht ausgefüllt werden": "No se ha podido rellenar la contraseña",
+  "Passwörter verwalten": "Gestionar contraseñas",
   "Öffnen": "Abrir"
 });

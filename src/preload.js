@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('falcon', {
   passwords: {
     list: () => ipcRenderer.invoke('pw:list'),
     reveal: (id) => ipcRenderer.invoke('pw:reveal', id),
+    fill: (webContentsId, id) => ipcRenderer.invoke('pw:fill', webContentsId, id),
     remove: (id) => ipcRenderer.invoke('pw:delete', id),
     update: (id, patch) => ipcRenderer.invoke('pw:update', id, patch),
     add: (entry) => ipcRenderer.invoke('pw:add', entry),

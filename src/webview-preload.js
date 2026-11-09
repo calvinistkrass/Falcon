@@ -91,24 +91,54 @@ if (/^https?:$/.test(location.protocol)) {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  let creds = null;
-  const filled = new WeakSet();
-  async function autofill() {
-    const pws = passwordFields().filter((p) => !filled.has(p) && !p.value);
-    if (!pws.length) return;
-    if (creds === null) creds = await ipcRenderer.invoke('pw:for-page').catch(() => []);
-    if (!creds.length) return;
-    const pw = pws[0];
-    const user = usernameFieldFor(pw);
-    // Wenn schon ein Benutzername eingetragen ist, passenden Eintrag wählen
-    const typed = user && user.value;
-    const c = (typed && creds.find((x) => x.username === typed)) || creds[0];
-    if (user && !user.value && c.username) setValue(user, c.username);
-    setValue(pw, c.password);
-    filled.add(pw);
-    pw.style.backgroundColor = 'rgba(255, 46, 77, 0.08)';
-    ipcRenderer.send('pw:used', c.id);
+  // Gespeicherte Logins werden nur angeboten. Das Passwort selbst schickt Falcon erst,
+  // wenn der Nutzer in der Liste ein Konto auswählt.
+  let accounts = null;
+  let target = null; // { pw, user }
+  let quietUntil = 0; // direkt nach dem Ausfüllen nicht erneut anbieten
+  const loadAccounts = async () => {
+    if (accounts === null) accounts = await ipcRenderer.invoke('pw:accounts').catch(() => []);
+    return accounts;
+  };
+
+  function loginFieldsFor(el) {
+    if (!el || el.tagName !== 'INPUT' || !visible(el)) return null;
+    const type = (el.type || 'text').toLowerCase();
+    if (type === 'password') return { pw: el, user: usernameFieldFor(el) };
+    if (!['text', 'email', 'tel', ''].includes(type)) return null;
+    const pw = [...(el.form || document).querySelectorAll('input[type=password]')].find(visible);
+    return pw && usernameFieldFor(pw) === el ? { pw, user: el } : null;
   }
+
+  async function offer(el) {
+    const fields = loginFieldsFor(el);
+    if (!fields || !document.hasFocus() || Date.now() < quietUntil) return;
+    const list = await loadAccounts();
+    if (!list.length || document.activeElement !== el) return;
+    target = fields;
+    const r = el.getBoundingClientRect();
+    ipcRenderer.sendToHost('pw-fill-offer', { accounts: list, rect: { x: r.left, y: r.top, width: r.width, height: r.height } });
+  }
+
+  document.addEventListener('focusin', (e) => offer(e.target), true);
+  document.addEventListener('mousedown', (e) => { if (e.target === document.activeElement) offer(e.target); }, true);
+  document.addEventListener('input', (e) => {
+    if (e.isTrusted && target && (e.target === target.pw || e.target === target.user)) ipcRenderer.sendToHost('pw-fill-hide');
+  }, true);
+  document.addEventListener('focusout', () => setTimeout(() => {
+    if (!loginFieldsFor(document.activeElement)) ipcRenderer.sendToHost('pw-fill-hide');
+  }, 150), true);
+
+  ipcRenderer.on('pw-fill', (_e, cred) => {
+    let t = target && target.pw.isConnected ? target : null;
+    if (!t) { const pw = passwordFields()[0]; t = pw ? { pw, user: usernameFieldFor(pw) } : null; }
+    if (!t || !cred) return;
+    quietUntil = Date.now() + 1500;
+    if (t.user && cred.username) setValue(t.user, cred.username);
+    setValue(t.pw, cred.password);
+    t.pw.style.backgroundColor = 'rgba(124, 108, 255, 0.10)';
+    if (t.user && cred.username) t.user.style.backgroundColor = 'rgba(124, 108, 255, 0.10)';
+  });
 
   // Login-Erkennung
   let lastSent = '';
@@ -133,10 +163,4 @@ if (/^https?:$/.test(location.protocol)) {
     if (e.key === 'Enter' && e.target && e.target.type === 'password') capture(e.target);
   }, true);
 
-  let timer;
-  const schedule = () => { clearTimeout(timer); timer = setTimeout(autofill, 300); };
-  window.addEventListener('DOMContentLoaded', () => {
-    schedule();
-    new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
-  });
 }

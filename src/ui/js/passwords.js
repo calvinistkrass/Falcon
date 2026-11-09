@@ -244,5 +244,37 @@ const Passwords = (() => {
   on('settings-section', (s) => { if (s === 'passwords') { search.value = ''; render(); renderPasskeys(); } });
   on('settings', () => { if (Settings.section === 'passwords') { render(); renderPasskeys(); } });
 
-  return { receive, render };
+  // -------------------------------------------------------------------------
+  // Ausfüllen anbieten (Liste unter dem Login-Feld)
+  // -------------------------------------------------------------------------
+  let fillMenu = null;
+  function attachFill(wv) {
+    let quietUntil = 0;
+    wv.addEventListener('ipc-message', (e) => {
+      if (e.channel === 'pw-fill-hide') { if (fillMenu && Popover.current?.el === fillMenu) Popover.close(); return; }
+      if (e.channel !== 'pw-fill-offer' || Date.now() < quietUntil) return;
+      const { accounts, rect } = e.args[0] || {};
+      if (!accounts?.length || !wv.classList.contains('active') && wv.closest('#views')) return;
+      const box = wv.getBoundingClientRect();
+      const zoom = (() => { try { return wv.getZoomFactor(); } catch { return 1; } })();
+      const point = { x: box.left + rect.x * zoom, y: box.top + (rect.y + rect.height) * zoom + 4 };
+      const id = wv.getWebContentsId();
+      fillMenu = showMenu([
+        { label: $t('Gespeichertes Passwort verwenden'), icon: 'key', disabled: true },
+        ...accounts.map((a) => ({
+          label: a.username || $t('Kein Benutzername'), icon: 'check',
+          onClick: async () => { quietUntil = Date.now() + 1500; if (!(await F.passwords.fill(id, a.id))) toast($t('Passwort konnte nicht ausgefüllt werden'), 'warning'); else wv.focus(); }
+        })),
+        '-',
+        { label: $t('Passwörter verwalten'), icon: 'settings', onClick: () => Settings.open('passwords') }
+      ], { point });
+      fillMenu.classList.add('pw-fill');
+      fillMenu.dataset.sticky = ''; // bleibt offen, wenn der Fokus gleich zur Seite zurückgeht
+      fillMenu.style.minWidth = `${Math.max(236, Math.round(rect.width * zoom))}px`;
+      // Die Seite behält den Fokus, damit man normal weitertippen kann
+      wv.focus();
+    });
+  }
+
+  return { receive, render, attachFill };
 })();

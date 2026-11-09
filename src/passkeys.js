@@ -126,7 +126,7 @@ async function ceremony(mode, { parent, strings, reason }) {
     };
 
   const win = new BrowserWindow({
-    parent, modal: !!parent, width: 420, height: 330, resizable: false, minimizable: false, maximizable: false,
+    parent, modal: !!parent, width: 420, height: 350, resizable: false, minimizable: false, maximizable: false,
     fullscreenable: false, show: false, frame: false, backgroundColor: '#17181b', title: 'Falcon',
     icon: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', process.platform === 'win32' ? 'falcon.ico' : 'falcon.png')),
     webPreferences: { preload: path.join(__dirname, 'auth-window', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
@@ -140,7 +140,7 @@ async function ceremony(mode, { parent, strings, reason }) {
       win, mode, challenge: b64u(challenge), origin: base, resolve,
       request: { mode, publicKey, strings, reason, logo: 'data:image/png;base64,' + logoBase64() }
     };
-    win.once('ready-to-show', () => win.show());
+    win.once('ready-to-show', () => { win.show(); win.focus(); win.webContents.focus(); });
     win.on('closed', () => {
       if (active && active.win === win) { active = null; resolve({ ok: false, error: 'cancelled' }); }
     });

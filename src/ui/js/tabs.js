@@ -102,6 +102,7 @@ const Tabs = (() => {
     tab.sleeping = false;
     bind(tab, wv);
     PasskeyPrompt.attach(wv, () => tab);
+    Passwords.attachFill(wv);
     if (isActive(tab)) wv.classList.add('active');
     views.append(wv);
   }

@@ -313,5 +313,8 @@ I18N.add('tr', {
   "Was die beiden Daumentasten an der Maus tun.": "Faredeki iki başparmak tuşunun işlevi.",
   "Seite zurück / vor": "Sayfa geri / ileri",
   "Tab wechseln": "Sekme değiştir",
+  "Gespeichertes Passwort verwenden": "Kayıtlı şifreyi kullan",
+  "Passwort konnte nicht ausgefüllt werden": "Şifre doldurulamadı",
+  "Passwörter verwalten": "Şifreleri yönet",
   "Öffnen": "Aç"
 });
