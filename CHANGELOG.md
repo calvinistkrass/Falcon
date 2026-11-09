@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.8.3] – 2026-11-10
+
+### Changed
+- Test release for the silent update mechanism. No functional changes.
+
 ## [1.8.2] – 2026-11-10
 
 ### Changed
@@ -123,6 +128,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.8.3]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.3
 [1.8.2]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.2
 [1.8.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.1
 [1.8.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.0
