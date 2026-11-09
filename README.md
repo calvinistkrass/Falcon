@@ -48,6 +48,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **Password manager**: saves logins encrypted with your Windows account (DPAPI). Passwords are only sent to a page after you pick an account from the list below the login field.
 - **Unlock with passkeys**: confirm with your **iPhone, Android phone or a security key** before passwords are shown, copied, imported or exported. Falcon asks with a small prompt first and falls back to Windows Hello.
 - **Import & export** passwords as CSV from Chrome, Edge, Opera, Brave, Firefox or Bitwarden.
+- **Passkeys on websites**: sign in with Windows Hello, a security key or your phone – Falcon uses the Windows passkey API directly.
 - **Google sign-in works**, unlike in most Electron-based browsers.
 
 ### ✨ Everything else
@@ -106,6 +107,7 @@ npm run dist       # build the installer into dist/
 | `src/passwords.js` | Encrypted password store, CSV import/export |
 | `src/passkeys.js`, `src/auth-window/` | Passkey (WebAuthn) registration and verification |
 | `src/auth.js` | Windows Hello / Touch ID |
+| `src/win-webauthn.js` | Windows passkey API (webauthn.dll) for Falcon and websites |
 | `src/webview-preload.js` | Autofill and login detection inside web pages |
 | `src/updater.js` | Update checks against GitHub Releases |
 | `src/google-signin.js` | Makes Google sign-in work |

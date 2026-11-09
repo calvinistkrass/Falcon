@@ -395,5 +395,6 @@ I18N.add('tr', {
   "Pausiert": "Duraklatıldı",
   "Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.": "Arka plan sekmelerini 30 saniye sonra duraklatır, {n} dk sonra uyutur ve animasyonları kapatır.",
   "Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.": "Oyunlar için CPU ve bellek boşaltır: arka plan sekmeleri 30 saniye sonra duraklatılır ve sonra uyutulur, animasyonlar kapatılır. Ses çalan sekmeler etkin kalır.",
+  "Drücke {key}, um den Vollbildmodus zu beenden": "Tam ekrandan çıkmak için {key} tuşuna basın",
   "Öffnen": "Aç"
 });

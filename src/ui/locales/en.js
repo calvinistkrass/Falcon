@@ -395,5 +395,6 @@ I18N.add('en', {
   "Pausiert": "Paused",
   "Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.": "Pauses background tabs after 30 seconds, puts them to sleep after {n} min and turns off animations.",
   "Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.": "Frees up CPU and memory for games: background tabs are paused after 30 seconds and later put to sleep, animations are turned off. Tabs playing audio stay active.",
+  "Drücke {key}, um den Vollbildmodus zu beenden": "Press {key} to exit full screen",
   "Öffnen": "Open"
 });

@@ -10,6 +10,8 @@ const bookmarksIO = require('./bookmarks-io');
 const pw = require('./passwords');
 const { verifyUser, isAvailable } = require('./auth');
 const passkeys = require('./passkeys');
+const winAuthn = require('./win-webauthn');
+const tldts = require('tldts');
 const googleSignin = require('./google-signin');
 const updater = require('./updater');
 const { translator } = require('./i18n-main');
@@ -694,6 +696,59 @@ ipcMain.handle('update:check', () => updater.check());
 ipcMain.on('update:download', () => updater.download());
 ipcMain.on('update:install', () => updater.install());
 ipcMain.on('signin-user-agent', (e) => { e.returnValue = googleSignin.firefoxUserAgent(); });
+
+// ---------- Passkeys auf Websites (über webauthn.dll) ----------
+ipcMain.on('webauthn:available', (e) => { e.returnValue = winAuthn.isAvailable(); });
+ipcMain.handle('webauthn:request', async (e, req) => {
+  const fail = (name, message = name) => ({ error: { name, message } });
+  if (e.sender.getType() !== 'webview' || !req || typeof req !== 'object') return fail('NotAllowedError');
+  let url;
+  try { url = new URL(frameUrl(e)); } catch { return fail('SecurityError'); }
+  const host = url.hostname;
+  if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(host)) return fail('SecurityError', 'Passkeys need a secure connection (https).');
+  const pk = req.publicKey || {};
+  const rpId = String((req.kind === 'create' ? pk.rp?.id : pk.rpId) || host).toLowerCase();
+  // RP-ID muss die eigene Domain oder eine übergeordnete, registrierbare Domain sein (keine öffentliche Endung wie „co.uk“)
+  const registrable = tldts.getDomain(host, { allowPrivateDomains: true }) || host;
+  if (!(rpId === host || (host.endsWith(`.${rpId}`) && rpId.length >= registrable.length))) return fail('SecurityError', 'The relying party ID is not valid for this site.');
+
+  const bytes = (x) => (x && typeof x.__b === 'string' ? Buffer.from(x.__b, 'base64url') : Buffer.alloc(0));
+  const hostWin = BrowserWindow.fromWebContents(e.sender.hostWebContents) || win;
+  const hwnd = alive(hostWin) ? hostWin.getNativeWindowHandle().readBigUInt64LE(0) : 0n;
+  const b64 = (buf) => (buf ? Buffer.from(buf).toString('base64url') : null);
+  try {
+    if (req.kind === 'create') {
+      const sel = pk.authenticatorSelection || {};
+      const r = await winAuthn.makeCredential({
+        hwnd, origin: url.origin, challenge: bytes(pk.challenge), timeout: pk.timeout,
+        rp: { id: rpId, name: String(pk.rp?.name || rpId) },
+        user: { id: bytes(pk.user?.id), name: String(pk.user?.name || ''), displayName: String(pk.user?.displayName || pk.user?.name || '') },
+        algs: (pk.pubKeyCredParams || []).map((p) => p.alg).filter(Number.isInteger),
+        exclude: (pk.excludeCredentials || []).map((c) => ({ id: bytes(c.id) })),
+        residentKey: sel.residentKey || (sel.requireResidentKey ? 'required' : 'discouraged'),
+        userVerification: sel.userVerification || 'preferred',
+        attachment: sel.authenticatorAttachment
+      });
+      return { result: {
+        id: b64(r.credentialId), clientDataJSON: b64(r.clientDataJSON), attestationObject: b64(r.attestationObject),
+        authenticatorData: b64(r.authenticatorData), publicKey: b64(r.publicKey), alg: r.alg, transports: r.transports,
+        attachment: r.transports.includes('internal') ? 'platform' : 'cross-platform'
+      } };
+    }
+    const r = await winAuthn.getAssertion({
+      hwnd, origin: url.origin, rpId, challenge: bytes(pk.challenge), timeout: pk.timeout,
+      allow: (pk.allowCredentials || []).map((c) => ({ id: bytes(c.id) })),
+      userVerification: pk.userVerification || 'preferred'
+    });
+    return { result: {
+      id: b64(r.credentialId), clientDataJSON: b64(r.clientDataJSON), authenticatorData: b64(r.authenticatorData),
+      signature: b64(r.signature), userHandle: b64(r.userHandle)
+    } };
+  } catch (err) {
+    const name = /^[A-Za-z]+Error$/.test(String(err.name)) ? err.name : 'NotAllowedError';
+    return fail(name, String(err.message || name));
+  }
+});
 
 ipcMain.handle('passkey:list', () => passkeys.list());
 ipcMain.handle('passkey:register', async () => {

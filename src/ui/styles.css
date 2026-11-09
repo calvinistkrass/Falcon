@@ -694,3 +694,14 @@ body.incognito #content { border-top-left-radius: 0; }
 /* Game Mode: eingefrorene Tabs */
 .tab.frozen .tab-icon img { opacity: .55; }
 .tab.frozen .tab-title { color: var(--text-3); }
+
+/* Vollbild-Hinweis */
+.fs-hint {
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 400;
+  display: block; white-space: nowrap; padding: 9px 16px; border-radius: 999px;
+  background: rgb(20 21 24 / .92); color: #ececee; font-size: 13px; box-shadow: 0 10px 30px rgb(0 0 0 / .5), 0 0 0 1px rgb(255 255 255 / .08);
+  backdrop-filter: blur(8px); pointer-events: none; animation: fs-in .2s var(--ease);
+}
+.fs-hint kbd { margin: 0 2px; }
+.fs-hint.out { opacity: 0; transform: translate(-50%, -6px); transition: opacity .3s, transform .3s; }
+@keyframes fs-in { from { opacity: 0; transform: translate(-50%, -8px); } }
