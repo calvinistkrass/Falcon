@@ -66,8 +66,14 @@ function init(sender) {
   autoUpdater.on('download-progress', (p) => setStatus({ state: 'downloading', percent: Math.round(p.percent) }));
   autoUpdater.on('update-downloaded', (info) => setStatus({ state: 'downloaded', available: info.version }));
   autoUpdater.on('error', (err) => {
-    // Kein Netz oder noch kein Release – still bleiben, aber in den Einstellungen anzeigen
-    setStatus({ state: status.state === 'downloading' ? 'available' : 'error', error: String(err?.message || err).split('\n')[0].slice(0, 200) });
+    const message = String(err?.message || err);
+    // Noch kein Release veröffentlicht – das ist kein Fehler
+    if (/No published versions|Unable to find latest version|HttpError: 404/i.test(message)) {
+      setStatus({ state: 'latest', checkedAt: Date.now() });
+      return;
+    }
+    // Kein Netz o. Ä. – still bleiben, aber in den Einstellungen anzeigen
+    setStatus({ state: status.state === 'downloading' ? 'available' : 'error', error: message.split('\n')[0].slice(0, 200) });
   });
 
   setTimeout(check, 15_000);
