@@ -38,6 +38,9 @@ const ICONS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+  user: '<circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5a7 7 0 0 1 14 0"/>',
+  sync: '<path d="M4.5 12a7.5 7.5 0 0 1 13.2-4.9L19.5 9M19.5 4.5V9H15M19.5 12a7.5 7.5 0 0 1-13.2 4.9L4.5 15M4.5 19.5V15H9"/>',
+  logout: '<path d="M14 4.5h3.5A1.5 1.5 0 0 1 19 6v12a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h9"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/>',
   warning: '<path d="M10.3 4.2 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0zM12 9.5v4M12 17h.01"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
@@ -153,7 +156,16 @@ function newTabUrl() {
   return `${F.newTabUrl}?${q}`;
 }
 const isNewTab = (url) => !url || url.startsWith(F.newTabUrl);
-const isInternal = (url) => !url || url.startsWith('file:') || url.startsWith('about:');
+const isInternal = (url) => !url || url.startsWith('file:') || url.startsWith('about:') || url.startsWith('falcon:');
+const DOWNLOADS_URL = 'falcon://downloads/';
+/** Interne Seite öffnen – vorhandenen Tab wiederverwenden */
+function openInternalPage(url) {
+  const existing = state.tabs.find((t) => t.url && t.url.startsWith(url.replace(/\/$/, '')));
+  if (existing) return Tabs.activate(existing.id);
+  const t = Tabs.active();
+  if (t && isNewTab(t.url)) return Tabs.navigate(url, t);
+  Tabs.create(url, { index: state.tabs.indexOf(t) + 1 });
+}
 
 function looksLikeUrl(s) {
   if (/\s/.test(s)) return false;

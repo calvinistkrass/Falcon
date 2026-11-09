@@ -34,7 +34,28 @@ const Settings = (() => {
   }
   const isOpen = () => !overlay.classList.contains('hidden');
 
+  // Standardbrowser
+  async function renderDefaultBrowser() {
+    const { supported, isDefault } = await F.defaultBrowser.status().catch(() => ({ supported: false }));
+    $('#sDefaultCard').classList.toggle('hidden', !supported);
+    $('#sDefaultBtn').classList.toggle('hidden', !!isDefault);
+    const ok = $('#sDefaultOk');
+    ok.classList.toggle('hidden', !isDefault);
+    ok.replaceChildren(icon('check'), $t('Falcon ist dein Standardbrowser'));
+    $('#sDefaultText').textContent = isDefault
+      ? $t('Links aus anderen Programmen öffnen sich in Falcon.')
+      : $t('Links aus anderen Programmen in Falcon öffnen.');
+  }
+  $('#sDefaultBtn').addEventListener('click', async () => {
+    await F.defaultBrowser.set();
+    toast($t('Wähle in den Windows-Einstellungen bei „Webbrowser“ Falcon aus.'), 'settings');
+  });
+  // Nach der Rückkehr aus den Windows-Einstellungen neu prüfen
+  window.addEventListener('focus', () => { if (isOpen() && section === 'general') renderDefaultBrowser(); });
+
   function select(name) {
+    if (name === 'general') renderDefaultBrowser();
+    if (name === 'account' && typeof Account !== 'undefined') Account.renderSettings();
     section = name;
     $$('.s-tab', overlay).forEach((t) => t.classList.toggle('sel', t.dataset.section === name));
     $$('.s-section', overlay).forEach((s) => s.classList.toggle('sel', s.dataset.section === name));

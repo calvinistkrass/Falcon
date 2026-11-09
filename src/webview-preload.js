@@ -27,6 +27,26 @@ if (location.hostname === 'accounts.google.com' || location.hostname === 'accoun
 // 2. Erst nach „Passkey verwenden“ geht die Anfrage weiter – unter Windows über webauthn.dll
 //    (Electron selbst kann kein WebAuthn), sonst an die normale Browser-Schnittstelle.
 // Die Seite kann nur ihren eigenen Ursprung anfragen: den prüft der Hauptprozess anhand des echten Frames.
+// falcon://downloads
+if (location.protocol === 'falcon:' && location.hostname === 'downloads') {
+  const call = (action, id) => ipcRenderer.invoke('dlpage', action, id);
+  contextBridge.exposeInMainWorld('falconDownloads', {
+    info: () => call('info'),
+    list: () => call('list'),
+    open: (id) => call('open', id),
+    show: (id) => call('show', id),
+    pause: (id) => call('pause', id),
+    resume: (id) => call('resume', id),
+    cancel: (id) => call('cancel', id),
+    retry: (id) => call('retry', id),
+    openSource: (id) => call('source', id),
+    remove: (id) => call('remove', id),
+    clear: () => call('clear'),
+    openDir: () => call('open-dir'),
+    onChanged: (fn) => ipcRenderer.on('dlpage:changed', (_e, data) => fn(data))
+  });
+}
+
 if (/^https?:$/.test(location.protocol) && window.top === window) {
   const ORIGIN = location.origin;
   const pending = new Map(); // id → { kind, publicKey }

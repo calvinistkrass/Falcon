@@ -40,11 +40,18 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **Bookmark folders** and a searchable **history** (Ctrl+H).
 - **Incognito windows** (Ctrl+Shift+N) with a separate in-memory session.
 - **Reader view** (F9) for distraction-free articles.
+- **Downloads page** (`falcon://downloads`, Ctrl+J) with search, live speed, pause and resume.
+- **Default browser**: open links from other apps in Falcon.
 - **Per-site zoom**, find in page, a download folder of your choice, mouse side buttons, and a custom right-click menu with spell-check suggestions.
 
 ### 🛡️ Ad blocker
 - **EasyList, EasyPrivacy and more**: over 150,000 filter rules, refreshed weekly, plus hiding of ad slots inside pages and optional removal of cookie banners.
 - **Falcon shield** in the address bar shows what was blocked on the current page and turns the blocker off for a single site.
+
+### ☁️ Falcon account & sync
+- **Sync between your PCs**: bookmarks, passwords, history and settings – pick what you want to sync.
+- **End-to-end encrypted**: data is encrypted on your PC (AES-256-GCM) with a key protected by your password before it's uploaded. The server only ever sees ciphertext.
+- **Profile** with name and color, device names, password reset by email and account deletion.
 
 ### 🔐 Passwords & security
 - **Password manager**: saves logins encrypted with your Windows account (DPAPI). Passwords are only sent to a page after you pick an account from the list below the login field.
@@ -113,6 +120,9 @@ npm run dist       # build the installer into dist/
 | `src/win-webauthn.js` | Windows passkey API (webauthn.dll) for Falcon and websites |
 | `src/webview-preload.js` | Autofill and login detection inside web pages |
 | `src/updater.js` | Update checks against GitHub Releases |
+| `src/account.js`, `src/firebase-config.js` | Falcon account (Firebase Auth) and end-to-end encrypted sync (Firestore) |
+| `src/default-browser.js` | Registers Falcon as a browser in Windows |
+| `src/ui/pages/` | Internal pages such as `falcon://downloads` |
 | `src/google-signin.js` | Makes Google sign-in work |
 | `src/adblock.js` | Ad blocker (Ghostery engine, per-tab statistics, site exceptions) |
 | `src/overlay/` | Always-on-top overlay window |
@@ -127,6 +137,21 @@ npm run dist       # build the installer into dist/
    git push && git push --tags
    ```
 3. GitHub Actions builds Falcon and publishes the release with the installer and `latest.yml`. Every installed copy of Falcon picks it up automatically.
+
+### Using your own Firebase project
+
+The account system uses Firebase Authentication (email/password) and Cloud Firestore. To point a fork at your own project, put its web config into `src/firebase-config.js` and use these Firestore rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
 
 ### Adding a language
 

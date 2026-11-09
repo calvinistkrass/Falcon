@@ -1,7 +1,8 @@
 'use strict';
 // Falcon – Hauptprozess
 
-const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen, protocol, net, webContents } = require('electron');
+const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -15,6 +16,8 @@ const tldts = require('tldts');
 const googleSignin = require('./google-signin');
 const updater = require('./updater');
 const { translator } = require('./i18n-main');
+const defaultBrowser = require('./default-browser');
+const account = require('./account');
 
 const IS_MAC = process.platform === 'darwin';
 const ICON = path.join(__dirname, '..', 'assets', process.platform === 'win32' ? 'falcon.ico' : 'falcon.png');
@@ -28,6 +31,9 @@ app.userAgentFallback = app.userAgentFallback
   .replace(/\sFalcon\/\S+/i, '');
 
 if (process.platform === 'win32') app.setAppUserModelId('com.falcon.browser');
+
+// Interne Seiten wie falcon://downloads
+protocol.registerSchemesAsPrivileged([{ scheme: 'falcon', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
@@ -59,6 +65,7 @@ const DEFAULTS = {
   adblockAnnoyances: false,
   adblockAllow: [],
   newtab: { image: '', showShortcuts: true, showClock: true },
+  profileColor: '',
   window: null,
   bookmarks: [
     { title: 'Twitch', url: 'https://www.twitch.tv' },
@@ -340,6 +347,32 @@ function uniquePath(dir, name) {
   return candidate;
 }
 
+// Download-Liste für falcon://downloads (Inkognito-Downloads werden nicht gespeichert)
+const DL_FILE = () => path.join(app.getPath('userData'), 'downloads.json');
+const DL_MAX = 500;
+let dlLog = null;
+let dlSaveTimer = null;
+function dlEntries() {
+  if (!dlLog) {
+    try { dlLog = JSON.parse(fs.readFileSync(DL_FILE(), 'utf8')); } catch { dlLog = []; }
+    if (!Array.isArray(dlLog)) dlLog = [];
+    // Nach einem Absturz gibt es keine laufenden Downloads mehr
+    for (const d of dlLog) if (d.state === 'progressing' || d.state === 'started') { d.state = 'interrupted'; d.paused = false; }
+  }
+  return dlLog;
+}
+function saveDlLog(now = false) {
+  clearTimeout(dlSaveTimer);
+  const write = () => { try { fs.writeFileSync(DL_FILE(), JSON.stringify(dlEntries().slice(0, DL_MAX))); } catch { /* egal */ } };
+  if (now) write(); else dlSaveTimer = setTimeout(write, 1500);
+}
+const dlView = (d) => ({ ...d, exists: d.state === 'completed' && !!d.path && fs.existsSync(d.path) });
+function pushToDownloadPages(data) {
+  for (const wc of webContents.getAllWebContents()) {
+    if (!wc.isDestroyed() && wc.getURL().startsWith('falcon://downloads')) wc.send('dlpage:changed', data);
+  }
+}
+
 function setupDownloads(ses) {
   ses.on('will-download', (_e, item) => {
     if (settings.downloadAsk) item.setSaveDialogOptions({ defaultPath: path.join(downloadDir(), item.getFilename()) });
@@ -347,10 +380,21 @@ function setupDownloads(ses) {
     const id = crypto.randomUUID();
     downloadItems.set(id, item);
     const incognito = ses === incognitoSession();
-    const report = (state, extra = {}) => broadcast('download', {
-      id, state, name: item.getFilename(), url: item.getURL(),
-      received: item.getReceivedBytes(), total: item.getTotalBytes(), paused: item.isPaused(), ...extra
-    }, { incognito });
+    const entry = incognito ? null : { id, name: item.getFilename(), url: item.getURL(), path: '', state: 'started', received: 0, total: item.getTotalBytes(), paused: false, start: Date.now() };
+    if (entry) { dlEntries().unshift(entry); if (dlLog.length > DL_MAX) dlLog.length = DL_MAX; }
+    const report = (state, extra = {}) => {
+      const data = {
+        id, state, name: item.getFilename(), url: item.getURL(),
+        received: item.getReceivedBytes(), total: item.getTotalBytes(), paused: item.isPaused(), ...extra
+      };
+      broadcast('download', data, { incognito });
+      if (entry) {
+        Object.assign(entry, { state, name: data.name, received: data.received, total: data.total, paused: data.paused, path: item.getSavePath() || entry.path });
+        if (extra.path) entry.end = Date.now();
+        saveDlLog(state !== 'progressing');
+        pushToDownloadPages(dlView(entry));
+      }
+    };
     report('started');
     item.on('updated', (_ev, state) => report(state));
     item.once('done', (_ev, state) => {
@@ -360,6 +404,60 @@ function setupDownloads(ses) {
   });
 }
 ipcMain.handle('download:cancel', (_e, id) => { downloadItems.get(id)?.cancel(); return true; });
+
+// Aktionen der Seite falcon://downloads – nur von dieser Seite aus erlaubt
+const fromFalconPage = (e, page) => { try { const u = new URL(e.senderFrame.url); return u.protocol === 'falcon:' && u.hostname === page; } catch { return false; } };
+function pageLanguage() {
+  const supported = ['de', 'en', 'fr', 'es', 'tr'];
+  const lang = settings.language && settings.language !== 'auto' ? settings.language : app.getLocale().slice(0, 2);
+  return supported.includes(lang) ? lang : 'en';
+}
+ipcMain.handle('dlpage', async (e, action, id) => {
+  if (!fromFalconPage(e, 'downloads')) return null;
+  const d = typeof id === 'string' ? dlEntries().find((x) => x.id === id) : null;
+  const item = typeof id === 'string' ? downloadItems.get(id) : null;
+  switch (action) {
+    case 'info': return { lang: pageLanguage(), accent: settings.accent };
+    case 'list': return dlEntries().map(dlView);
+    case 'open': if (d?.path && fs.existsSync(d.path)) shell.openPath(d.path); return true;
+    case 'show': if (d?.path) shell.showItemInFolder(d.path); return true;
+    case 'pause': item?.pause(); if (item && d) { d.paused = true; pushToDownloadPages(dlView(d)); } return true;
+    case 'resume': if (item?.canResume()) item.resume(); if (item && d) { d.paused = false; pushToDownloadPages(dlView(d)); } return true;
+    case 'cancel': item?.cancel(); return true;
+    case 'retry': if (d && /^(https?|data|blob):/i.test(d.url)) session.defaultSession.downloadURL(d.url); return true;
+    case 'source': if (d && /^https?:/i.test(d.url)) toHost(e.sender, 'open-tab', { url: d.url, background: false }); return true;
+    case 'remove':
+      if (!d || downloadItems.has(d.id)) return false;
+      dlLog = dlEntries().filter((x) => x !== d);
+      saveDlLog(true);
+      pushToDownloadPages({ id: d.id, removed: true });
+      return true;
+    case 'clear':
+      dlLog = dlEntries().filter((x) => downloadItems.has(x.id));
+      saveDlLog(true);
+      pushToDownloadPages({ reset: true, items: dlLog.map(dlView) });
+      return true;
+    case 'open-dir': shell.openPath(downloadDir()); return true;
+  }
+  return null;
+});
+
+// falcon://<seite>/ liefert Dateien aus src/ui (Seite selbst aus src/ui/pages)
+const UI_DIR = path.join(__dirname, 'ui');
+const FALCON_PAGES = { downloads: 'pages/downloads.html' };
+function setupFalconProtocol(ses) {
+  if (ses.protocol.isProtocolHandled('falcon')) return;
+  ses.protocol.handle('falcon', (req) => {
+    let u;
+    try { u = new URL(req.url); } catch { return new Response('Bad request', { status: 400 }); }
+    const page = FALCON_PAGES[u.hostname];
+    if (!page) return new Response('Not found', { status: 404 });
+    const rel = u.pathname === '/' ? page : decodeURIComponent(u.pathname).replace(/^\/+/, '');
+    const file = rel === 'falcon.png' ? path.join(__dirname, '..', 'assets', 'falcon.png') : path.resolve(UI_DIR, rel);
+    if (rel !== 'falcon.png' && !file.startsWith(UI_DIR + path.sep)) return new Response('Forbidden', { status: 403 });
+    return net.fetch(pathToFileURL(file).href);
+  });
+}
 ipcMain.handle('downloads:dir', () => downloadDir());
 ipcMain.handle('downloads:choose-dir', async (e) => {
   const { canceled, filePaths } = await dialog.showOpenDialog(parentFor(e), { defaultPath: downloadDir(), properties: ['openDirectory', 'createDirectory'] });
@@ -368,6 +466,75 @@ ipcMain.handle('downloads:choose-dir', async (e) => {
   saveSettings();
   return filePaths[0];
 });
+// ---------------------------------------------------------------------------
+// Falcon-Konto & Sync
+// ---------------------------------------------------------------------------
+const SYNC_SETTINGS = ['accent', 'language', 'searchEngine', 'adblock', 'adblockAnnoyances', 'adblockAllow', 'showBookmarksBar', 'showSidebar',
+  'showHud', 'sleepMinutes', 'ramLimit', 'mouseButtons', 'sidebarApps', 'pwNever', 'restoreSession', 'newtab', 'profileColor'];
+function applySyncedSettings(patch) {
+  settings = { ...settings, ...patch };
+  adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
+  saveSettings();
+  broadcast('settings-changed', settings);
+}
+const syncProviders = {
+  bookmarks: {
+    get: () => settings.bookmarks || [],
+    set: (tree) => { if (Array.isArray(tree)) applySyncedSettings({ bookmarks: tree }); }
+  },
+  settings: {
+    get: () => {
+      const out = {};
+      for (const k of SYNC_SETTINGS) if (settings[k] !== undefined) out[k] = settings[k];
+      if (out.newtab) { const { image: _local, ...rest } = out.newtab; out.newtab = rest; } // Hintergrundbild ist ein lokaler Pfad
+      return out;
+    },
+    set: (remote) => {
+      const patch = {};
+      for (const k of SYNC_SETTINGS) if (remote && remote[k] !== undefined) patch[k] = remote[k];
+      if (patch.newtab) patch.newtab = { ...settings.newtab, ...patch.newtab, image: settings.newtab?.image || '' };
+      applySyncedSettings(patch);
+    }
+  },
+  passwords: { get: () => pw.all(), set: (list) => pw.replaceAll(list) },
+  history: {
+    get: async () => {
+      const w = [...uiWindows].find((x) => alive(x) && !x.falconIncognito);
+      if (!w) return [];
+      const list = await w.webContents.executeJavaScript('History.all()').catch(() => []);
+      return (Array.isArray(list) ? list : []).slice(0, 2000);
+    },
+    set: (list) => { if (Array.isArray(list)) broadcast('history-replace', list, { incognito: false }); }
+  }
+};
+pw.setOnChange(() => account.markDirty('passwords'));
+
+const accountHandlers = {
+  state: () => account.state(),
+  signUp: (a) => account.signUp(a),
+  signIn: (a) => account.signIn(a),
+  signOut: () => account.signOut(),
+  resetPassword: (a) => account.resetPassword(a),
+  resendVerification: () => account.resendVerification(),
+  refreshProfile: () => account.refreshProfile(),
+  updateProfile: (a) => account.updateProfile(a),
+  unlockKey: (a) => account.unlockKey(a),
+  resetSyncData: () => account.resetSyncData(),
+  changePassword: (a) => account.changePassword(a),
+  deleteAccount: (a) => account.deleteAccount(a),
+  syncNow: () => account.syncNow(),
+  setKinds: (a) => account.setKinds(a),
+  dirty: (kind) => { if (kind === 'history') account.markDirty('history'); return true; }
+};
+ipcMain.handle('account', async (e, action, arg) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (!uiWindows.has(w) || w.falconIncognito) return { ok: false, error: 'FORBIDDEN' };
+  const fn = accountHandlers[action];
+  return fn ? fn(arg && typeof arg === 'object' ? { ...arg } : arg) : { ok: false, error: 'UNKNOWN_ACTION' };
+});
+
+ipcMain.handle('default-browser:status', async () => ({ supported: defaultBrowser.supported(), isDefault: await defaultBrowser.isDefault() }));
+ipcMain.handle('default-browser:set', () => defaultBrowser.makeDefault());
 ipcMain.handle('downloads:open-dir', () => shell.openPath(downloadDir()));
 
 // ---------------------------------------------------------------------------
@@ -451,6 +618,8 @@ ipcMain.handle('settings:set', async (e, patch) => {
     delete safe.pwRequireAuth;
   }
   settings = { ...settings, ...safe };
+  if ('bookmarks' in safe) account.markDirty('bookmarks');
+  if (SYNC_SETTINGS.some((k) => k in safe)) account.markDirty('settings');
   if ('adblock' in safe || 'adblockAnnoyances' in safe || 'adblockAllow' in safe) {
     adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
   }
@@ -503,6 +672,7 @@ ipcMain.handle('bookmarks:import', async (e) => {
   const { tree, added, total } = bookmarksIO.merge(settings.bookmarks || [], imported);
   settings.bookmarks = tree;
   saveSettings();
+  account.markDirty('bookmarks');
   return { added, total, bookmarks: tree };
 });
 
@@ -774,7 +944,7 @@ if (!gotLock) {
     if (!win) return;
     if (win.isMinimized()) win.restore();
     win.focus();
-    const url = argv.find((a) => /^https?:\/\//i.test(a));
+    const url = defaultBrowser.urlFromArgv(argv);
     if (url) win.webContents.send('open-tab', url);
   });
 
@@ -786,6 +956,7 @@ if (!gotLock) {
       if (ses !== session.defaultSession) adblock.attach(ses);
       googleSignin.setup(ses);
       setupDownloads(ses);
+      setupFalconProtocol(ses);
       // Berechtigungen (Kamera/Mikro für Discord etc.) erlauben
       ses.setPermissionRequestHandler((_wc, permission, cb) => {
         cb(['media', 'fullscreen', 'notifications', 'clipboard-sanitized-write', 'pointerLock', 'display-capture'].includes(permission));
@@ -797,7 +968,15 @@ if (!gotLock) {
       set: (v) => { settings.pendingUpdate = v; saveSettings(); }
     });
     // Sofort prüfen, sobald die Oberfläche geladen ist – nicht erst nach einer Wartezeit
-    first.webContents.once('did-finish-load', () => updater.check());
+    first.webContents.once('did-finish-load', () => {
+      updater.check();
+      // Falcon wurde über einen Link oder eine HTML-Datei gestartet
+      const startUrl = defaultBrowser.urlFromArgv(process.argv);
+      if (startUrl) setTimeout(() => { if (alive(first)) first.webContents.send('open-tab', startUrl); }, 300);
+    });
+    defaultBrowser.refreshRegistration();
+    account.init({ notify: (state) => broadcast('account-changed', state, { incognito: false }), providers: syncProviders, locale: pageLanguage });
+    app.on('browser-window-focus', () => account.syncIfStale());
     app.on('browser-window-focus', () => updater.checkIfStale());
   });
 

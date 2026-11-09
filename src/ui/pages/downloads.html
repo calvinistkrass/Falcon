@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://www.google.com https://*.gstatic.com data:; style-src 'self' 'unsafe-inline'" />
+  <title>Downloads</title>
+  <link rel="icon" href="falcon.png" />
+  <link rel="stylesheet" href="pages/downloads.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <h1><img src="falcon.png" alt="" width="26" height="26" /> <span data-t="Downloads">Downloads</span></h1>
+      <label class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+        <input id="q" type="search" spellcheck="false" autocomplete="off" data-tp="Downloads durchsuchen" placeholder="Downloads durchsuchen" />
+      </label>
+      <div class="top-actions">
+        <button id="openDir" class="btn" type="button">
+          <svg viewBox="0 0 24 24"><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 17z"/></svg>
+          <span data-t="Ordner öffnen">Ordner öffnen</span>
+        </button>
+        <button id="clearAll" class="btn" type="button"><span data-t="Liste leeren">Liste leeren</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="summary" class="summary"></div>
+    <div id="list"></div>
+    <div id="empty" class="empty hidden">
+      <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>
+      <b id="emptyTitle" data-t="Noch keine Downloads">Noch keine Downloads</b>
+      <span id="emptyText" data-t="Dateien, die du herunterlädst, erscheinen hier.">Dateien, die du herunterlädst, erscheinen hier.</span>
+    </div>
+  </main>
+
+  <script src="pages/downloads.js"></script>
+</body>
+</html>

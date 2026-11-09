@@ -121,6 +121,7 @@ const Downloads = (() => {
   }
 
   btn.addEventListener('click', toggle);
+  $('#dlAll').addEventListener('click', () => { Popover.close(); openInternalPage(DOWNLOADS_URL); });
   $('#dlClear').addEventListener('click', () => {
     for (const [id, d] of items) if (!running(d)) items.delete(id);
     renderList();
@@ -359,7 +360,7 @@ function openAppMenu() {
     { label: $t('Geschlossenen Tab öffnen'), icon: 'restore', shortcut: kb('Strg+Umschalt+T'), disabled: !Tabs.closedCount, onClick: () => Tabs.reopen() },
     '-',
     { label: $t('Verlauf'), icon: 'clock', shortcut: kb('Strg+H'), onClick: () => Settings.open('history') },
-    { label: $t('Downloads'), icon: 'download', shortcut: kb('Strg+J'), onClick: () => Downloads.toggle() },
+    { label: $t('Downloads'), icon: 'download', shortcut: kb('Strg+J'), onClick: () => openInternalPage(DOWNLOADS_URL) },
     { label: $t('Lesezeichen'), icon: 'bookmark', onClick: () => Settings.open('bookmarks') },
     { label: $t('Passwörter'), icon: 'key', onClick: () => Settings.open('passwords') },
     '-',

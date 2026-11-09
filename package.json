@@ -1,7 +1,7 @@
 {
   "name": "falcon-browser",
   "productName": "Falcon",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "A fast, focused Chromium browser built for gamers.",
   "main": "src/main.js",
   "author": "Calvin Bandle",
@@ -36,7 +36,8 @@
       "shortcutName": "Falcon",
       "installerIcon": "assets/falcon.ico",
       "uninstallerIcon": "assets/falcon.ico",
-      "artifactName": "Falcon-Setup-${version}.${ext}"
+      "artifactName": "Falcon-Setup-${version}.${ext}",
+      "include": "build/installer.nsh"
     },
     "mac": {
       "icon": "assets/falcon.png",
