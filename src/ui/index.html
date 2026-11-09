@@ -29,6 +29,7 @@
       </div>
       <button id="zoomChip" class="omni-chip hidden" title="Zoom zurücksetzen"></button>
       <button id="pwKey" class="omni-btn accent hidden" data-icon="key" title="Passwort speichern"></button>
+      <button id="shieldBtn" class="omni-btn shield hidden" title="Werbeblocker"><img id="shieldLogo" alt="" /><span id="shieldCount" class="shield-count hidden" data-no-i18n></span></button>
       <button id="bookmarkBtn" class="omni-btn" data-icon="star" title="Lesezeichen für diese Seite (Strg+D)" aria-label="Lesezeichen"></button>
       <div id="suggest" class="suggest hidden" role="listbox"></div>
     </div>
@@ -127,6 +128,31 @@
     <button id="pSleepNow" class="btn block">Inaktive Tabs jetzt schlafen legen</button>
   </section>
 
+  <!-- Popover: Werbeblocker -->
+  <section id="shieldPop" class="pop shield-pop hidden">
+    <header class="pop-head">
+      <img id="shPopLogo" class="sh-logo" alt="" />
+      <h3>Werbeblocker</h3>
+      <span class="pop-sub" id="shHost" data-no-i18n></span>
+    </header>
+    <div class="sh-hero">
+      <b id="shCount" data-no-i18n></b>
+      <span id="shCountLabel" data-no-i18n></span>
+    </div>
+    <div id="shTop" class="sh-top"></div>
+    <div class="sh-switch">
+      <span id="shSiteLabel" data-no-i18n></span>
+      <label class="switch"><input type="checkbox" id="shSite" /><span></span></label>
+    </div>
+    <footer class="sh-foot">
+      <span id="shTotal" data-no-i18n></span>
+      <span>
+        <button id="shGlobal" class="link-btn" data-no-i18n></button>
+        <button id="shSettings" class="link-btn">Einstellungen</button>
+      </span>
+    </footer>
+  </section>
+
   <!-- Popover: Update -->
   <section id="updatePop" class="pop update-pop hidden" data-sticky>
     <header class="pop-head"><h3 id="upTitle"></h3><span class="pop-sub" id="upCurrent" data-no-i18n></span></header>
@@ -178,6 +204,7 @@
         <button class="s-tab" data-section="general" data-icon="sliders">Allgemein</button>
         <button class="s-tab" data-section="appearance" data-icon="palette">Darstellung</button>
         <button class="s-tab" data-section="performance" data-icon="gamepad">Leistung &amp; Game Mode</button>
+        <button class="s-tab" data-section="adblock" data-icon="block">Werbeblocker</button>
         <button class="s-tab" data-section="downloads" data-icon="download">Downloads</button>
         <button class="s-tab" data-section="privacy" data-icon="shield">Datenschutz</button>
         <button class="s-tab" data-section="passwords" data-icon="key">Passwörter</button>
@@ -256,6 +283,32 @@
           </div>
         </section>
 
+        <section class="s-section" data-section="adblock">
+          <h2>Werbeblocker</h2>
+          <div class="s-card ab-hero">
+            <img id="abLogo" alt="" />
+            <div><b id="abTotal" data-no-i18n>0</b><span>Werbeanzeigen und Tracker seit dem Start blockiert</span></div>
+          </div>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Werbe- und Trackerblocker</b><span>Blockiert Werbung, Tracker und Werbeflächen auf Webseiten.</span></div>
+              <label class="switch"><input type="checkbox" id="sAdblock" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Cookie-Hinweise und Störer ausblenden</b><span>Blendet zusätzlich Cookie-Banner, Newsletter-Popups und Social-Media-Leisten aus.</span></div>
+              <label class="switch"><input type="checkbox" id="sAdblockAnnoy" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Filterlisten</b><span id="abInfo" data-no-i18n></span></div>
+              <button id="abUpdate" class="btn">Jetzt aktualisieren</button>
+            </div>
+          </div>
+          <div id="abAllowWrap" class="hidden">
+            <h4 class="s-sub">Ausgeschaltet für</h4>
+            <div id="abAllow" class="s-card"></div>
+          </div>
+        </section>
+
         <section class="s-section" data-section="downloads">
           <h2>Downloads</h2>
           <div class="s-card">
@@ -276,10 +329,6 @@
         <section class="s-section" data-section="privacy">
           <h2>Datenschutz</h2>
           <div class="s-card">
-            <div class="s-row">
-              <div class="s-label"><b>Werbe- und Trackerblocker</b><span>Blockiert Anfragen an bekannte Werbe- und Tracking-Dienste.</span></div>
-              <label class="switch"><input type="checkbox" id="sAdblock" /><span></span></label>
-            </div>
             <div class="s-row">
               <div class="s-label"><b>Verlauf löschen</b><span>Entfernt besuchte Seiten aus den Vorschlägen der Adressleiste.</span></div>
               <button id="sClearHistory" class="btn">Löschen</button>
@@ -379,6 +428,7 @@
   <script src="js/game.js"></script>
   <script src="js/panels.js"></script>
   <script src="js/passkey-prompt.js"></script>
+  <script src="js/shield.js"></script>
   <script src="js/sidebar.js"></script>
   <script src="js/passwords.js"></script>
   <script src="js/settings.js"></script>

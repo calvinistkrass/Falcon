@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 const pkg = require('../package.json');
 
 const fileUrl = (...p) => pathToFileURL(path.join(__dirname, ...p)).href;
-const CHANNELS = ['open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt'];
+const CHANNELS = ['open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats'];
 
 contextBridge.exposeInMainWorld('falcon', {
   platform: process.platform,
@@ -35,6 +35,11 @@ contextBridge.exposeInMainWorld('falcon', {
   fetchImage: (url) => ipcRenderer.invoke('image:fetch', url),
   writeImage: (png) => ipcRenderer.invoke('image:write', png),
   authAvailable: () => ipcRenderer.invoke('auth:available'),
+  adblock: {
+    stats: (webContentsId) => ipcRenderer.invoke('adblock:stats', webContentsId),
+    info: () => ipcRenderer.invoke('adblock:info'),
+    update: () => ipcRenderer.invoke('adblock:update')
+  },
   answerPasskeyPrompt: (id, ok) => ipcRenderer.send('passkey-prompt:answer', id, !!ok),
   updates: {
     status: () => ipcRenderer.invoke('update:status'),

@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImag
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { isBlocked } = require('./adblock');
+const adblock = require('./adblock');
 const bookmarksIO = require('./bookmarks-io');
 const pw = require('./passwords');
 const { verifyUser, isAvailable } = require('./auth');
@@ -52,6 +52,8 @@ const DEFAULTS = {
   sidePanelWidth: 380,
   pwNever: [],
   pwRequireAuth: true,
+  adblockAnnoyances: false,
+  adblockAllow: [],
   window: null,
   bookmarks: [
     { title: 'Twitch', url: 'https://www.twitch.tv' },
@@ -140,7 +142,6 @@ function writeSettingsNow() {
 // Fenster
 // ---------------------------------------------------------------------------
 let win;
-let blockedCount = 0;
 const send = (channel, data) => { if (win && !win.isDestroyed()) win.webContents.send(channel, data); };
 
 function restoredBounds() {
@@ -199,15 +200,19 @@ function createWindow() {
 // Werbeblocker
 // ---------------------------------------------------------------------------
 function setupAdblock(ses) {
-  ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, cb) => {
-    if (settings.adblock && details.resourceType !== 'mainFrame' && isBlocked(details.url)) {
-      blockedCount++;
-      send('blocked-count', blockedCount);
-      return cb({ cancel: true });
+  adblock.setup(ses, {
+    settings,
+    // Zähler gehen an das Fenster, in dem der Tab liegt
+    notify: (webContentsId, stats) => {
+      const host = require('electron').webContents.fromId(webContentsId)?.hostWebContents;
+      if (host && !host.isDestroyed()) host.send('adblock-stats', { webContentsId, ...stats });
+      send('blocked-count', stats.total);
     }
-    cb({});
   });
 }
+ipcMain.handle('adblock:stats', (_e, id) => adblock.stats(id));
+ipcMain.handle('adblock:info', () => adblock.info());
+ipcMain.handle('adblock:update', async () => { await adblock.update(); return adblock.info(); });
 
 // ---------------------------------------------------------------------------
 // Downloads
@@ -263,6 +268,12 @@ const SHORTCUT_KEYS_CTRL = ['t', 'w', 'l', 'r', 'd', 'h', 'j', 'tab', '+', '=', 
 
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return;
+
+  // Neue Seite im Tab → Werbeblocker-Zähler zurücksetzen
+  contents.on('did-start-navigation', (_ev, url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) adblock.resetTab(contents.id, url);
+  });
+  contents.once('destroyed', () => adblock.resetTab(contents.id, ''));
 
   contents.setWindowOpenHandler(({ url, disposition }) => {
     send('open-tab', { url, background: disposition === 'background-tab' });
@@ -328,6 +339,9 @@ ipcMain.handle('settings:set', async (_e, patch) => {
     delete safe.pwRequireAuth;
   }
   settings = { ...settings, ...safe };
+  if ('adblock' in safe || 'adblockAnnoyances' in safe || 'adblockAllow' in safe) {
+    adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
+  }
   saveSettings();
   return settings;
 });
@@ -339,7 +353,7 @@ ipcMain.handle('metrics', () => {
     mem += p.memory.workingSetSize || 0; // KB
     cpu += p.cpu.percentCPUUsage || 0;
   }
-  return { memMB: Math.round(mem / 1024), cpu: Math.round(cpu * 10) / 10, processes: m.length, blocked: blockedCount };
+  return { memMB: Math.round(mem / 1024), cpu: Math.round(cpu * 10) / 10, processes: m.length, blocked: adblock.stats(-1).total };
 });
 
 ipcMain.handle('open-external', (_e, p) => shell.openPath(p));

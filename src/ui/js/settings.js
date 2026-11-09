@@ -70,7 +70,7 @@ const Settings = (() => {
   // Eigene CSS-Variablen gehen nur über setProperty
   $$('.swatch', swatches).forEach((s) => s.style.setProperty('--c', s.dataset.value));
 
-  const toggles = { sBookmarksBar: 'showBookmarksBar', sSidebar: 'showSidebar', sHud: 'showHud', sGame: 'gameMode', sAdblock: 'adblock', sPwAuth: 'pwRequireAuth', sDlAsk: 'downloadAsk' };
+  const toggles = { sBookmarksBar: 'showBookmarksBar', sSidebar: 'showSidebar', sHud: 'showHud', sGame: 'gameMode', sAdblock: 'adblock', sAdblockAnnoy: 'adblockAnnoyances', sPwAuth: 'pwRequireAuth', sDlAsk: 'downloadAsk' };
   for (const [id, key] of Object.entries(toggles)) {
     $(`#${id}`).addEventListener('change', (e) => {
       if (key === 'gameMode') Perf.setGameMode(e.target.checked);
@@ -133,6 +133,9 @@ const Settings = (() => {
   // -------------------------------------------------------------------------
   $('#sLogo').src = F.logoUrl;
   $('#aboutLogo').src = F.logoUrl;
+  $('#abLogo').src = F.logoUrl;
+  $('#shieldLogo').src = F.logoUrl;
+  $('#shPopLogo').src = F.logoUrl;
   $('#vChrome').textContent = F.versions.chrome;
   $('#vElectron').textContent = F.versions.electron;
   $('#vNode').textContent = F.versions.node;
