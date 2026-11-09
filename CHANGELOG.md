@@ -2,6 +2,13 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.7.0] – 2026-11-09
+
+### Added
+- **Command palette** (Ctrl+K): search open tabs, bookmarks, history and commands from one box – switch tabs, toggle Game Mode, open any settings page and more, all from the keyboard.
+- **Password generator**: on sign-up and change-password forms, Falcon suggests a strong 18-character password below the field. Nothing is filled in until you click **Use suggested password**; you can also generate a new one. Falcon then offers to save it as usual.
+- **Memory limit**: set a RAM cap under Settings → Performance. When Falcon goes over it, the tabs you haven't used for the longest time are put to sleep. Tabs playing audio stay active, and the limit is shown in the performance meter.
+
 ## [1.6.1] – 2026-11-09
 
 ### Fixed
@@ -88,6 +95,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.7.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.7.0
 [1.6.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.1
 [1.6.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.6.0
 [1.5.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.5.1

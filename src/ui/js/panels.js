@@ -146,7 +146,7 @@ const Perf = (() => {
 
   const fmtMem = (mb) => (mb >= 1024 ? `${(mb / 1024).toLocaleString(I18N.locale, { maximumFractionDigits: 1 })} GB` : `${mb} MB`);
 
-  function draw(canvas, data, max) {
+  function draw(canvas, data, max, limit) {
     const dpr = devicePixelRatio || 1;
     const w = canvas.clientWidth, hgt = canvas.clientHeight;
     if (canvas.width !== w * dpr) { canvas.width = w * dpr; canvas.height = hgt * dpr; }
@@ -178,6 +178,34 @@ const Perf = (() => {
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
     ctx.stroke(line);
+    // RAM-Grenze als gestrichelte Linie
+    if (limit) {
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(240, 88, 91, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, y(limit)); ctx.lineTo(w, y(limit)); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // ---- RAM-Limit: am längsten unbenutzte Tabs schlafen legen ----
+  let lastEnforce = 0;
+  let lastNotice = 0;
+  function enforceRamLimit() {
+    const limit = state.settings.ramLimit;
+    if (!limit || !last || last.memMB <= limit || Date.now() - lastEnforce < 4000) return;
+    const candidates = state.tabs
+      .filter((t) => t.id !== state.activeId && !t.sleeping && !t.audible && t.webview)
+      .sort((a, b) => a.lastActive - b.lastActive);
+    if (!candidates.length) return;
+    lastEnforce = Date.now();
+    const tab = candidates[0];
+    if (!Tabs.sleep(tab)) return;
+    if (Date.now() - lastNotice > 60_000) {
+      lastNotice = Date.now();
+      toast($t('RAM-Grenze erreicht – „{title}“ schläft jetzt', { title: Tabs.displayTitle(tab) }), 'moon');
+    }
   }
 
   function renderPop() {
@@ -191,17 +219,20 @@ const Perf = (() => {
     $('#pGameDesc').textContent = $t('Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.', { n: state.settings.sleepMinutes || 10 });
     $('#pGame').checked = !!state.settings.gameMode;
     draw($('#cpuGraph'), cpu, Math.max(100, ...cpu));
-    draw($('#memGraph'), mem, Math.max(...mem) * 1.25 || 1);
+    const limit = state.settings.ramLimit || 0;
+    draw($('#memGraph'), mem, Math.max(Math.max(...mem) * 1.25, limit * 1.1) || 1, limit);
+    $('#pMemLimit').textContent = limit ? $t('Grenze {n}', { n: fmtMem(limit) }) : '';
   }
 
   async function tick() {
     const open = Popover.isOpen(pop);
-    if (!state.settings.showHud && !open) return;
+    if (!state.settings.showHud && !open && !state.settings.ramLimit) return;
     try { last = await F.metrics(); } catch { return; }
     cpu.push(last.cpu); mem.push(last.memMB);
     if (cpu.length > SAMPLES) { cpu.shift(); mem.shift(); }
     text.textContent = `${String(Math.round(last.cpu)).padStart(2, ' ')} % · ${fmtMem(last.memMB)}`;
     dot.className = `perf-dot${last.cpu > 85 ? ' crit' : last.cpu > 50 ? ' warn' : ''}`;
+    enforceRamLimit();
     if (open) renderPop();
   }
 

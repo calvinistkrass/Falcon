@@ -178,9 +178,47 @@ if (/^https?:$/.test(location.protocol)) {
     return pw && usernameFieldFor(pw) === el ? { pw, user: el } : null;
   }
 
+  // Registrierung / Passwort ändern: ein neues Passwort wird gebraucht
+  const SIGNUP_HINT = /regist|sign.?up|create.?account|new.?account|join|konto.?erstellen|anmelden.?neu|neues.?passwort|new.?password|change.?password|passwort.?(ändern|festlegen)|inscri|crear.?cuenta|kaydol|hesap.?oluştur/i;
+  function newPasswordFields(el) {
+    if (!el || el.tagName !== 'INPUT' || (el.type || '').toLowerCase() !== 'password' || !visible(el) || el.value) return null;
+    const ac = (el.getAttribute('autocomplete') || '').toLowerCase();
+    if (ac.includes('current-password')) return null;
+    const scope = el.form || document;
+    const all = [...scope.querySelectorAll('input[type=password]')].filter(visible);
+    const isNew = ac.includes('new-password') || all.length >= 2 ||
+      SIGNUP_HINT.test([el.name, el.id, el.placeholder, el.getAttribute('aria-label'), el.form && el.form.action, el.form && el.form.id, location.pathname].join(' '));
+    if (!isNew) return null;
+    // Bestätigungsfeld: weitere leere Passwortfelder nach diesem
+    return { pw: el, confirm: all.slice(all.indexOf(el) + 1).filter((f) => !f.value && !(f.getAttribute('autocomplete') || '').includes('current-password')).slice(0, 1) };
+  }
+
+  let genTarget = null;
+  function offerGenerate(el) {
+    const fields = newPasswordFields(el);
+    if (!fields) return false;
+    genTarget = fields;
+    const r = el.getBoundingClientRect();
+    ipcRenderer.sendToHost('pw-generate-offer', { rect: { x: r.left, y: r.top, width: r.width, height: r.height } });
+    return true;
+  }
+
+  ipcRenderer.on('pw-generated', (_e, password) => {
+    const t = genTarget && genTarget.pw.isConnected ? genTarget : null;
+    if (!t || typeof password !== 'string' || !password) return;
+    quietUntil = Date.now() + 1500;
+    for (const f of [t.pw, ...t.confirm]) {
+      setValue(f, password);
+      f.style.backgroundColor = 'rgba(124, 108, 255, 0.10)';
+    }
+    genTarget = null;
+  });
+
   async function offer(el) {
+    if (!document.hasFocus() || Date.now() < quietUntil) return;
+    if (offerGenerate(el)) return;
     const fields = loginFieldsFor(el);
-    if (!fields || !document.hasFocus() || Date.now() < quietUntil) return;
+    if (!fields) return;
     const list = await loadAccounts();
     if (!list.length || document.activeElement !== el) return;
     target = fields;
@@ -191,10 +229,10 @@ if (/^https?:$/.test(location.protocol)) {
   document.addEventListener('focusin', (e) => offer(e.target), true);
   document.addEventListener('mousedown', (e) => { if (e.target === document.activeElement) offer(e.target); }, true);
   document.addEventListener('input', (e) => {
-    if (e.isTrusted && target && (e.target === target.pw || e.target === target.user)) ipcRenderer.sendToHost('pw-fill-hide');
+    if (e.isTrusted && ((target && (e.target === target.pw || e.target === target.user)) || (genTarget && e.target === genTarget.pw))) ipcRenderer.sendToHost('pw-fill-hide');
   }, true);
   document.addEventListener('focusout', () => setTimeout(() => {
-    if (!loginFieldsFor(document.activeElement)) ipcRenderer.sendToHost('pw-fill-hide');
+    if (!loginFieldsFor(document.activeElement) && !newPasswordFields(document.activeElement)) ipcRenderer.sendToHost('pw-fill-hide');
   }, 150), true);
 
   ipcRenderer.on('pw-fill', (_e, cred) => {

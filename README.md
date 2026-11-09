@@ -29,11 +29,13 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **Game Mode**: pauses background tabs after 30 seconds and later puts them to sleep, so your game gets the CPU and memory. Tabs playing audio stay active.
 - **Overlay window**: keep a stream, guide or chat in a small window that stays on top of your game.
 - **Performance meter**: live CPU and memory usage in the toolbar, with a 60-second graph.
+- **Memory limit**: set a RAM cap and Falcon puts the least recently used tabs to sleep when it's reached.
 - **Sidebar apps**: Discord, Twitch, Spotify, YouTube Music, WhatsApp, or any web app you add. They keep running in the background, and the panel is resizable.
 - **Picture-in-picture**: pop any video out into a floating window with one click.
 
 ### 🧭 A browser that stays out of your way
 - **Tabs that behave like Chrome's**: drag to reorder, middle-click to close, duplicate, mute, put to sleep, reopen closed tabs. Your session is restored on startup.
+- **Command palette** (Ctrl+K): jump to any open tab, bookmark, history entry, setting or command from the keyboard.
 - **Smart address bar**: suggestions from history, bookmarks and open tabs, inline autocomplete and domain highlighting.
 - **Bookmark folders** and a searchable **history** (Ctrl+H).
 - **Incognito windows** (Ctrl+Shift+N) with a separate in-memory session.
@@ -47,6 +49,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 ### 🔐 Passwords & security
 - **Password manager**: saves logins encrypted with your Windows account (DPAPI). Passwords are only sent to a page after you pick an account from the list below the login field.
 - **Unlock with passkeys**: confirm with your **iPhone, Android phone or a security key** before passwords are shown, copied, imported or exported. Falcon asks with a small prompt first and falls back to Windows Hello.
+- **Password generator**: suggests a strong password on sign-up forms and fills it in only when you click it.
 - **Import & export** passwords as CSV from Chrome, Edge, Opera, Brave, Firefox or Bitwarden.
 - **Passkeys on websites**: sign in with Windows Hello, a security key or your phone – Falcon uses the Windows passkey API directly.
 - **Google sign-in works**, unlike in most Electron-based browsers.

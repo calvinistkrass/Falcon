@@ -248,10 +248,64 @@ const Passwords = (() => {
   // Ausfüllen anbieten (Liste unter dem Login-Feld)
   // -------------------------------------------------------------------------
   let fillMenu = null;
+
+  // Starkes Passwort: 18 Zeichen aus allen Zeichenklassen, ohne leicht verwechselbare Zeichen
+  const SETS = ['abcdefghijkmnopqrstuvwxyz', 'ABCDEFGHJKLMNPQRSTUVWXYZ', '23456789', '-_!?#%+*.'];
+  function randomIndex(n) {
+    const max = Math.floor(0x100000000 / n) * n; // ohne Modulo-Verzerrung
+    const buf = new Uint32Array(1);
+    do crypto.getRandomValues(buf); while (buf[0] >= max);
+    return buf[0] % n;
+  }
+  function generatePassword(length = 18) {
+    const all = SETS.join('');
+    const chars = SETS.map((s) => s[randomIndex(s.length)]);
+    while (chars.length < length) chars.push(all[randomIndex(all.length)]);
+    for (let i = chars.length - 1; i > 0; i--) { const j = randomIndex(i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+    return chars.join('');
+  }
+
+  function menuPoint(wv, rect) {
+    const box = wv.getBoundingClientRect();
+    const zoom = (() => { try { return wv.getZoomFactor(); } catch { return 1; } })();
+    return { point: { x: box.left + rect.x * zoom, y: box.top + (rect.y + rect.height) * zoom + 4 }, zoom };
+  }
+
+  // Vorschlag unter dem Passwortfeld. Ausgefüllt wird erst nach dem Klick auf „Verwenden“.
+  function suggestPassword(wv, rect) {
+    const { point, zoom } = menuPoint(wv, rect);
+    let password = generatePassword();
+    const value = h('code', { class: 'gen-value', 'data-no-i18n': '' }, password);
+    const regen = h('button', {
+      class: 'tb-btn sm', title: $t('Neu generieren'),
+      onclick: (e) => { e.stopPropagation(); password = generatePassword(); value.textContent = password; wv.focus(); }
+    }, icon('reload'));
+    const card = h('div', { class: 'gen-card' },
+      h('div', { class: 'gen-head' }, icon('key'), h('b', {}, $t('Sicheres Passwort vorschlagen'))),
+      h('div', { class: 'gen-row' }, value, regen),
+      h('p', {}, $t('Falcon speichert es, wenn du dich registrierst.')));
+    fillMenu = showMenu([
+      { element: card },
+      '-',
+      { label: $t('Vorgeschlagenes Passwort verwenden'), icon: 'check', onClick: () => { wv.send('pw-generated', password); wv.focus(); } }
+    ], { point });
+    fillMenu.classList.add('pw-fill', 'pw-gen');
+    fillMenu.dataset.sticky = '';
+    fillMenu.style.minWidth = `${Math.max(280, Math.round(rect.width * zoom))}px`;
+    wv.focus();
+  }
+
   function attachFill(wv) {
     let quietUntil = 0;
     wv.addEventListener('ipc-message', (e) => {
       if (e.channel === 'pw-fill-hide') { if (fillMenu && Popover.current?.el === fillMenu) Popover.close(); return; }
+      if (e.channel === 'pw-generate-offer') {
+        if (Date.now() < quietUntil || (!wv.classList.contains('active') && wv.closest('#views'))) return;
+        if (fillMenu && Popover.current?.el === fillMenu && fillMenu.classList.contains('pw-gen')) return; // schon offen
+        quietUntil = Date.now() + 300;
+        suggestPassword(wv, (e.args[0] || {}).rect || { x: 0, y: 0, width: 0, height: 0 });
+        return;
+      }
       if (e.channel !== 'pw-fill-offer' || Date.now() < quietUntil) return;
       const { accounts, rect } = e.args[0] || {};
       if (!accounts?.length || !wv.classList.contains('active') && wv.closest('#views')) return;
@@ -276,5 +330,5 @@ const Passwords = (() => {
     });
   }
 
-  return { receive, render, attachFill };
+  return { receive, render, attachFill, generatePassword };
 })();

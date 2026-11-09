@@ -127,7 +127,7 @@
         <canvas id="cpuGraph" width="296" height="48"></canvas>
       </div>
       <div class="graph">
-        <div class="graph-head"><span>Arbeitsspeicher</span><b id="pMem">—</b></div>
+        <div class="graph-head"><span>Arbeitsspeicher <i id="pMemLimit" class="mem-limit" data-no-i18n></i></span><b id="pMem">—</b></div>
         <canvas id="memGraph" width="296" height="48"></canvas>
       </div>
     </div>
@@ -315,6 +315,13 @@
                 <option value="15">15 Minuten</option><option value="30">30 Minuten</option><option value="60">1 Stunde</option>
               </select></div>
             </div>
+            <div class="s-row">
+              <div class="s-label"><b>Arbeitsspeicher begrenzen</b><span>Überschreitet Falcon die Grenze, werden die am längsten unbenutzten Tabs schlafen gelegt. Tabs mit Ton bleiben aktiv.</span></div>
+              <div class="select"><select id="sRamLimit">
+                <option value="0">Keine Grenze</option><option value="1024">1 GB</option><option value="2048">2 GB</option>
+                <option value="3072">3 GB</option><option value="4096">4 GB</option><option value="6144">6 GB</option><option value="8192">8 GB</option>
+              </select></div>
+            </div>
           </div>
         </section>
 
@@ -479,6 +486,7 @@
   <script src="js/settings.js"></script>
   <script src="js/history-view.js"></script>
   <script src="js/updates.js"></script>
+  <script src="js/palette.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
