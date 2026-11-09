@@ -545,5 +545,10 @@ I18N.add('es', {
   "Sync-Einstellungen": "Ajustes de sincronización",
   "Los geht’s": "¡Vamos!",
   "Sync wird eingerichtet …": "Configurando la sincronización…",
+  "Update ist bereit. Falcon installiert es beim nächsten Neustart automatisch.": "La actualización está lista. Falcon la instalará automáticamente al reiniciar.",
+  "Falcon startet in {n} s neu, installiert das Update im Hintergrund und öffnet sich danach wieder. Deine Tabs bleiben erhalten.": "Falcon se reinicia en {n} s, instala la actualización en segundo plano y vuelve a abrirse. Tus pestañas se conservan.",
+  "Falcon installiert das Update im Hintergrund und öffnet sich danach wieder. Mit „Später“ wird es beim Schließen von Falcon installiert.": "Falcon instala la actualización en segundo plano y vuelve a abrirse. Con «Más tarde» se instalará al cerrar Falcon.",
+  "Jetzt neu starten": "Reiniciar ahora",
+  "Das Update wird installiert, wenn du Falcon schließt.": "La actualización se instalará cuando cierres Falcon.",
   "Öffnen": "Abrir"
 });

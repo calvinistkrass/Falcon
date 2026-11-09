@@ -66,7 +66,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **Bookmarks bar** with folders, an overflow menu and HTML/JSON import and export.
 - **Start page** with your own background image.
 - **7 accent colors**, native Windows 11 window controls with Snap Layouts.
-- **Automatic updates** from GitHub Releases.
+- **Automatic updates** from GitHub Releases, installed silently in the background.
 
 ## Screenshots
 

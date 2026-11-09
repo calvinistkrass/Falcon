@@ -980,6 +980,7 @@ if (!gotLock) {
     app.on('browser-window-focus', () => updater.checkIfStale());
   });
 
+  app.on('before-quit', () => writeSettingsNow());
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
   app.on('activate', () => { if (uiWindows.size === 0) createWindow(); });
 }

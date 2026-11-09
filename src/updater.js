@@ -122,7 +122,8 @@ function download() {
 }
 
 function install() {
-  if (status.state === 'downloaded') autoUpdater.quitAndInstall(false, true);
+  // Installer unsichtbar ausführen (/S) und Falcon danach automatisch wieder öffnen
+  if (status.state === 'downloaded') setImmediate(() => autoUpdater.quitAndInstall(true, true));
 }
 
 module.exports = { init, check, checkIfStale, download, install, getStatus: () => status, releaseUrl };

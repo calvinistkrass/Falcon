@@ -745,7 +745,7 @@ body.incognito #content { border-top-left-radius: 0; }
 .pal-item.sel .pal-hint { opacity: 1; }
 .pal-empty { padding: 26px; text-align: center; color: var(--text-3); }
 
-.pop-foot { border-top: 1px solid var(--line); padding: 8px 12px; display: flex; justify-content: center; }
+.dl-foot { border-top: 1px solid var(--line); padding: 8px 12px; display: flex; justify-content: center; }
 
 .default-card .s-row { align-items: center; }
 .default-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-weight: 500; white-space: nowrap; }
