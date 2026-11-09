@@ -534,5 +534,16 @@ I18N.add('tr', {
   "Der Sync-Speicher ist noch nicht eingerichtet.": "Senkronizasyon depolaması henüz kurulmadı.",
   "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.": "Oturumunun süresi doldu. Lütfen tekrar giriş yap.",
   "Das hat nicht geklappt ({code}).": "Bu işe yaramadı ({code}).",
+  "Stattdessen anmelden": "Bunun yerine giriş yap",
+  "Willkommen bei Falcon, {name}!": "Falcon’a hoş geldin, {name}!",
+  "Willkommen zurück, {name}!": "Tekrar hoş geldin, {name}!",
+  "Du bist angemeldet als {email}": "{email} olarak giriş yaptın",
+  "Der Sync wird eingerichtet, sobald die Verbindung zum Server steht.": "Sunucuya ulaşılır ulaşılmaz senkronizasyon kurulacak.",
+  "Lesezeichen, Passwörter, Verlauf und Einstellungen werden jetzt synchronisiert.": "Yer imleri, şifreler, geçmiş ve ayarlar şimdi senkronize ediliyor.",
+  "Alles wird auf deinem PC verschlüsselt, bevor es hochgeladen wird.": "Her şey yüklenmeden önce bilgisayarında şifrelenir.",
+  "Wir haben dir eine E-Mail geschickt. Bitte bestätige darin deine Adresse.": "Sana bir e-posta gönderdik. Lütfen adresini orada onayla.",
+  "Sync-Einstellungen": "Senkronizasyon ayarları",
+  "Los geht’s": "Hadi başlayalım",
+  "Sync wird eingerichtet …": "Senkronizasyon kuruluyor…",
   "Öffnen": "Aç"
 });

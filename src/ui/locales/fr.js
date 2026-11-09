@@ -534,5 +534,16 @@ I18N.add('fr', {
   "Der Sync-Speicher ist noch nicht eingerichtet.": "Le stockage de synchronisation n’est pas encore configuré.",
   "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.": "Votre connexion a expiré. Veuillez vous reconnecter.",
   "Das hat nicht geklappt ({code}).": "Cela n’a pas fonctionné ({code}).",
+  "Stattdessen anmelden": "Se connecter à la place",
+  "Willkommen bei Falcon, {name}!": "Bienvenue sur Falcon, {name} !",
+  "Willkommen zurück, {name}!": "Bon retour, {name} !",
+  "Du bist angemeldet als {email}": "Vous êtes connecté en tant que {email}",
+  "Der Sync wird eingerichtet, sobald die Verbindung zum Server steht.": "La synchronisation sera configurée dès que le serveur sera joignable.",
+  "Lesezeichen, Passwörter, Verlauf und Einstellungen werden jetzt synchronisiert.": "Les favoris, mots de passe, l’historique et les paramètres sont maintenant synchronisés.",
+  "Alles wird auf deinem PC verschlüsselt, bevor es hochgeladen wird.": "Tout est chiffré sur votre PC avant l’envoi.",
+  "Wir haben dir eine E-Mail geschickt. Bitte bestätige darin deine Adresse.": "Nous vous avons envoyé un e-mail. Veuillez y confirmer votre adresse.",
+  "Sync-Einstellungen": "Paramètres de synchronisation",
+  "Los geht’s": "C’est parti",
+  "Sync wird eingerichtet …": "Configuration de la synchronisation…",
   "Öffnen": "Ouvrir"
 });

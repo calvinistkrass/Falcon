@@ -65,6 +65,7 @@ const Account = (() => {
   }
   function syncLine() {
     if (acc.needsKey) return h('span', { class: 'sync-line err' }, icon('warning'), $t('Sync pausiert – Schlüssel entsperren'));
+    if (acc.keyPending && !acc.syncing) return h('span', { class: 'sync-line err' }, icon('warning'), $t('Sync wird eingerichtet …'), ' ', errorText(acc.lastError));
     if (acc.syncing) return h('span', { class: 'sync-line' }, h('span', { class: 'spinner sm' }), $t('Wird synchronisiert …'));
     if (acc.lastError) return h('span', { class: 'sync-line err' }, icon('warning'), errorText(acc.lastError));
     return h('span', { class: 'sync-line ok' }, icon('check'), $t('Synchronisiert · {when}', { when: ago(acc.lastSync) }));
@@ -74,8 +75,9 @@ const Account = (() => {
   // Kontomenü
   // ---------------------------------------------------------------------------
   function closePop() { if (pop && Popover.isOpen(pop)) Popover.close(); }
-  function openPop() {
-    pop?.remove();
+  function openPop(rerender = false) {
+    // Beim Neuzeichnen das vorhandene Popover nur füllen – nicht schließen und neu öffnen
+    if (rerender && !(pop && Popover.isOpen(pop))) return;
     const body = acc.signedIn
       ? [
           h('div', { class: 'acc-head' }, avatar(44),
@@ -83,7 +85,7 @@ const Account = (() => {
           !acc.emailVerified ? h('div', { class: 'acc-note' }, icon('info'),
             h('span', {}, $t('Bitte bestätige deine E-Mail-Adresse.')),
             h('button', { class: 'link-btn', onclick: resendVerification }, $t('Erneut senden'))) : null,
-          acc.needsKey ? h('button', { class: 'acc-note err', onclick: () => { closePop(); unlockDialog(); } }, icon('warning'), h('span', {}, $t('Deine Sync-Daten sind gesperrt. Hier entsperren.'))) : null,
+          acc.needsKey || (acc.keyPending && !acc.canUnlock) ? h('button', { class: 'acc-note err', onclick: () => { closePop(); unlockDialog(); } }, icon('warning'), h('span', {}, $t('Deine Sync-Daten sind gesperrt. Hier entsperren.'))) : null,
           h('div', { class: 'acc-sync' }, syncLine(),
             h('button', { class: 'tb-btn sm', title: $t('Jetzt synchronisieren'), disabled: acc.syncing || acc.needsKey, onclick: syncNow }, icon('sync'))),
           h('div', { class: 'menu-sep' }),
@@ -99,10 +101,13 @@ const Account = (() => {
             h('button', { class: 'btn primary', onclick: () => { closePop(); authDialog('signin'); } }, $t('Anmelden')),
             h('button', { class: 'btn ghost', onclick: () => { closePop(); authDialog('signup'); } }, $t('Konto erstellen')))
         ];
+    if (rerender) { pop.replaceChildren(...body.filter(Boolean)); return; }
+    pop?.remove();
     pop = h('section', { class: 'pop account-pop' }, ...body);
     document.body.append(pop);
     const el = pop;
     Popover.open(el, { anchor: btn, onClose: () => { el.remove(); if (pop === el) pop = null; } });
+    // Einmal pro Öffnen nachsehen, ob die E-Mail inzwischen bestätigt wurde
     if (acc.signedIn && !acc.emailVerified) F.account.refreshProfile();
   }
 
@@ -163,17 +168,46 @@ const Account = (() => {
       if (!values.password) { error.textContent = errorText('MISSING_PASSWORD'); return; }
       submit.disabled = true;
       submit.replaceChildren(h('span', { class: 'spinner sm' }));
-      const r = mode === 'signup' ? await F.account.signUp(values) : await F.account.signIn(values);
+      const wasSignup = mode === 'signup';
+      let r;
+      try { r = wasSignup ? await F.account.signUp(values) : await F.account.signIn(values); } catch { r = { ok: false, error: 'UNKNOWN' }; }
       submit.disabled = false;
       setMode(mode);
-      if (!r.ok) { error.textContent = errorText(r.error); return; }
+      if (!r.ok) {
+        error.replaceChildren(errorText(r.error));
+        // Konto gibt es schon (z. B. nach einem abgebrochenen Versuch) → direkt anmelden anbieten
+        if (r.error === 'EMAIL_EXISTS') {
+          error.append(' ', h('button', { type: 'button', class: 'link-btn', onclick: () => { setMode('signin'); pass.input.value = values.password; pass.input.focus(); } }, $t('Stattdessen anmelden')));
+        }
+        return;
+      }
       close();
       await refresh();
-      if (mode === 'signup') toast($t('Willkommen bei Falcon! Wir haben dir eine E-Mail zur Bestätigung geschickt.'), 'check');
-      else toast($t('Angemeldet als {email}', { email: values.email }), 'check');
       if (r.needsKey) unlockDialog();
+      else welcomeDialog(wasSignup);
     });
     setMode(mode);
+  }
+
+  // Bestätigung nach Registrierung bzw. Anmeldung
+  function welcomeDialog(isNew) {
+    const name = acc.displayName || (acc.email || '').split('@')[0];
+    const box = h('div', { class: 'dialog welcome-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' },
+        h('div', { class: 'welcome-avatar' }, avatar(64), h('span', { class: 'welcome-check' }, icon('check'))),
+        h('h3', {}, isNew ? $t('Willkommen bei Falcon, {name}!', { name }) : $t('Willkommen zurück, {name}!', { name })),
+        h('p', { class: 'welcome-mail', 'data-no-i18n': '' }, $t('Du bist angemeldet als {email}', { email: acc.email })),
+        h('ul', { class: 'welcome-list' },
+          h('li', {}, icon('sync'), h('span', {}, acc.keyPending
+            ? $t('Der Sync wird eingerichtet, sobald die Verbindung zum Server steht.')
+            : $t('Lesezeichen, Passwörter, Verlauf und Einstellungen werden jetzt synchronisiert.'))),
+          h('li', {}, icon('lock'), h('span', {}, $t('Alles wird auf deinem PC verschlüsselt, bevor es hochgeladen wird.'))),
+          isNew && !acc.emailVerified ? h('li', {}, icon('info'), h('span', {}, $t('Wir haben dir eine E-Mail geschickt. Bitte bestätige darin deine Adresse.'))) : null)),
+      h('div', { class: 'dialog-foot' },
+        h('button', { class: 'btn ghost', onclick: () => { close(); Settings.open('account'); } }, $t('Sync-Einstellungen')),
+        h('button', { class: 'btn primary', onclick: () => close() }, $t('Los geht’s'))));
+    const close = dialogShell(box);
+    box.querySelector('.btn.primary').focus();
   }
 
   async function forgotPassword(prefill = '') {
@@ -193,8 +227,20 @@ const Account = (() => {
   // Nach „Passwort vergessen“ sind die Sync-Daten noch mit dem alten Passwort verschlüsselt
   function unlockDialog() {
     if (!acc.canUnlock) {
-      confirmDialog({ title: $t('Sync-Daten gesperrt'), message: $t('Bitte melde dich ab und noch einmal an, um deine Sync-Daten zu entsperren.'), confirmLabel: $t('Abmelden') })
-        .then((ok) => { if (ok) signOut(true); });
+      // Erst mit dem aktuellen Passwort bestätigen – oft reicht das schon, um den Sync einzurichten
+      openForm({
+        title: $t('Sync einrichten'),
+        description: $t('Gib dein Falcon-Passwort ein, um den Sync auf diesem PC einzurichten.'),
+        fields: [{ name: 'password', label: $t('Passwort'), type: 'password' }],
+        submitLabel: $t('Weiter'),
+        onSubmit: async ({ password }) => {
+          const r = await F.account.signIn({ email: acc.email, password });
+          if (!r.ok) return errorText(r.error);
+          await refresh();
+          if (r.needsKey) setTimeout(unlockDialog, 50);
+          else toast($t('Sync ist eingerichtet'), 'check');
+        }
+      });
       return;
     }
     const error = h('p', { class: 'dialog-error' });
@@ -366,7 +412,7 @@ const Account = (() => {
   function renderAll() {
     renderButton();
     if (Settings.section === 'account') renderSettings();
-    if (pop && Popover.isOpen(pop)) openPop();
+    openPop(true);
   }
   async function refresh() { acc = await F.account.state(); renderAll(); }
 
@@ -380,7 +426,7 @@ const Account = (() => {
   on('settings', () => { renderButton(); if (Settings.section === 'account') renderSettings(); });
   if (!INCOGNITO) refresh(); else renderButton();
   // Relative Zeitangabe aktuell halten
-  setInterval(() => { if (pop && Popover.isOpen(pop) && !acc.syncing) openPop(); }, 30_000);
+  setInterval(() => { if (!acc.syncing) openPop(true); }, 30_000);
 
   return { open: openPop, renderSettings, authDialog, refresh, get state() { return acc; } };
 })();

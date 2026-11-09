@@ -534,5 +534,16 @@ I18N.add('en', {
   "Der Sync-Speicher ist noch nicht eingerichtet.": "Sync storage isn’t set up yet.",
   "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.": "Your sign-in has expired. Please sign in again.",
   "Das hat nicht geklappt ({code}).": "That didn’t work ({code}).",
+  "Stattdessen anmelden": "Sign in instead",
+  "Willkommen bei Falcon, {name}!": "Welcome to Falcon, {name}!",
+  "Willkommen zurück, {name}!": "Welcome back, {name}!",
+  "Du bist angemeldet als {email}": "You’re signed in as {email}",
+  "Der Sync wird eingerichtet, sobald die Verbindung zum Server steht.": "Sync will be set up as soon as the server can be reached.",
+  "Lesezeichen, Passwörter, Verlauf und Einstellungen werden jetzt synchronisiert.": "Bookmarks, passwords, history and settings are now being synced.",
+  "Alles wird auf deinem PC verschlüsselt, bevor es hochgeladen wird.": "Everything is encrypted on your PC before it’s uploaded.",
+  "Wir haben dir eine E-Mail geschickt. Bitte bestätige darin deine Adresse.": "We sent you an email. Please confirm your address there.",
+  "Sync-Einstellungen": "Sync settings",
+  "Los geht’s": "Let’s go",
+  "Sync wird eingerichtet …": "Setting up sync…",
   "Öffnen": "Open"
 });
