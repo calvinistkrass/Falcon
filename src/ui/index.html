@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src * data: file:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>Falcon</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Tableiste -->
+  <header id="tabstrip">
+    <div id="tabs" role="tablist" aria-label="Tabs">
+      <button id="newTab" class="strip-btn" data-icon="plus" title="Neuer Tab (Strg+T)" aria-label="Neuer Tab"></button>
+    </div>
+    <div class="strip-drag"></div>
+  </header>
+
+  <!-- Symbolleiste -->
+  <nav id="toolbar">
+    <button id="back" class="tb-btn" data-icon="arrowLeft" title="Zurück (Alt+←)" aria-label="Zurück"></button>
+    <button id="forward" class="tb-btn" data-icon="arrowRight" title="Vorwärts (Alt+→)" aria-label="Vorwärts"></button>
+    <button id="reload" class="tb-btn" title="Neu laden (F5)" aria-label="Neu laden"></button>
+
+    <div id="omnibox">
+      <button id="siteInfo" class="omni-btn" data-icon="search" aria-label="Seiteninformationen"></button>
+      <div class="omni-field">
+        <input id="url" spellcheck="false" autocomplete="off" placeholder="Suchen oder Adresse eingeben" aria-label="Adressleiste" />
+        <div id="urlDisplay" aria-hidden="true"></div>
+      </div>
+      <button id="zoomChip" class="omni-chip hidden" title="Zoom zurücksetzen"></button>
+      <button id="pwKey" class="omni-btn accent hidden" data-icon="key" title="Passwort speichern"></button>
+      <button id="bookmarkBtn" class="omni-btn" data-icon="star" title="Lesezeichen für diese Seite (Strg+D)" aria-label="Lesezeichen"></button>
+      <div id="suggest" class="suggest hidden" role="listbox"></div>
+    </div>
+
+    <button id="perfBtn" class="perf-btn" title="Leistung">
+      <span class="perf-dot"></span><span id="perfText">—</span>
+    </button>
+    <button id="gameBtn" class="tb-btn" data-icon="gamepad" title="Game Mode (Strg+Umschalt+G)" aria-label="Game Mode"></button>
+    <button id="pipBtn" class="tb-btn" data-icon="pip" title="Bild-in-Bild" aria-label="Bild-in-Bild"></button>
+    <button id="downloadsBtn" class="tb-btn" data-icon="download" title="Downloads (Strg+J)" aria-label="Downloads">
+      <svg class="dl-ring hidden" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" /></svg>
+    </button>
+    <button id="updateBtn" class="update-btn hidden" title="Update verfügbar"><span data-icon="download"></span><span>Update</span></button>
+    <span class="tb-sep"></span>
+    <button id="menuBtn" class="tb-btn" data-icon="more" title="Falcon anpassen und einstellen" aria-label="Menü"></button>
+  </nav>
+
+  <div id="bookmarks" aria-label="Lesezeichenleiste"></div>
+
+  <div id="workspace">
+    <aside id="sidebar" aria-label="Seitenleiste">
+      <div id="sideApps"></div>
+      <div class="sb-spacer"></div>
+      <button id="sbSettings" class="sb-btn" data-icon="settings" title="Einstellungen (Strg+,)"></button>
+    </aside>
+
+    <section id="sidepanel" class="hidden">
+      <header class="sp-head">
+        <img id="spIcon" alt="" />
+        <span id="spTitle"></span>
+        <button id="spReload" class="tb-btn sm" data-icon="reload" title="Neu laden"></button>
+        <button id="spOpen" class="tb-btn sm" data-icon="external" title="In neuem Tab öffnen"></button>
+        <button id="spClose" class="tb-btn sm" data-icon="x" title="Schließen"></button>
+      </header>
+      <div id="spBody"></div>
+      <div id="spResize" title="Breite ändern"></div>
+    </section>
+
+    <main id="content">
+      <div id="views"></div>
+      <div id="pageError" class="page-error hidden">
+        <div class="pe-icon" data-icon="cloudOff"></div>
+        <h2>Diese Seite ist nicht erreichbar</h2>
+        <p id="peText"></p>
+        <code id="peCode"></code>
+        <button id="peRetry" class="btn primary">Neu laden</button>
+      </div>
+      <div id="findbar" class="findbar hidden">
+        <input id="findInput" placeholder="Auf Seite suchen" spellcheck="false" />
+        <span id="findCount"></span>
+        <span class="find-sep"></span>
+        <button id="findPrev" class="tb-btn sm" data-icon="chevronUp" title="Vorheriger Treffer (Umschalt+Enter)"></button>
+        <button id="findNext" class="tb-btn sm" data-icon="chevronDown" title="Nächster Treffer (Enter)"></button>
+        <button id="findClose" class="tb-btn sm" data-icon="x" title="Schließen (Esc)"></button>
+      </div>
+      <div id="statusBubble" class="hidden"></div>
+    </main>
+  </div>
+
+  <!-- Popover: Downloads -->
+  <section id="downloadsPop" class="pop downloads hidden">
+    <header class="pop-head">
+      <h3>Downloads</h3>
+      <button id="dlClear" class="link-btn">Liste leeren</button>
+    </header>
+    <div id="dlList" class="dl-list"></div>
+  </section>
+
+  <!-- Popover: Leistung -->
+  <section id="perfPop" class="pop perf hidden">
+    <header class="pop-head"><h3>Leistung</h3><span class="pop-sub">Falcon gesamt</span></header>
+    <div class="perf-graphs">
+      <div class="graph">
+        <div class="graph-head"><span>CPU</span><b id="pCpu">—</b></div>
+        <canvas id="cpuGraph" width="296" height="48"></canvas>
+      </div>
+      <div class="graph">
+        <div class="graph-head"><span>Arbeitsspeicher</span><b id="pMem">—</b></div>
+        <canvas id="memGraph" width="296" height="48"></canvas>
+      </div>
+    </div>
+    <dl class="perf-stats">
+      <div><dt>Prozesse</dt><dd id="pProc">—</dd></div>
+      <div><dt>Aktive Tabs</dt><dd id="pTabs">—</dd></div>
+      <div><dt>Schlafend</dt><dd id="pSleep">—</dd></div>
+      <div><dt>Blockiert</dt><dd id="pBlocked">—</dd></div>
+    </dl>
+    <div class="perf-game">
+      <div>
+        <b>Game Mode</b>
+        <p id="pGameDesc"></p>
+      </div>
+      <label class="switch"><input type="checkbox" id="pGame" /><span></span></label>
+    </div>
+    <button id="pSleepNow" class="btn block">Inaktive Tabs jetzt schlafen legen</button>
+  </section>
+
+  <!-- Popover: Update -->
+  <section id="updatePop" class="pop update-pop hidden" data-sticky>
+    <header class="pop-head"><h3 id="upTitle"></h3><span class="pop-sub" id="upCurrent" data-no-i18n></span></header>
+    <pre id="upNotes" class="up-notes hidden" data-no-i18n></pre>
+    <div id="upProgress" class="up-progress hidden"><i></i></div>
+    <p id="upHint" class="up-hint hidden" data-no-i18n></p>
+    <footer class="pop-foot">
+      <button class="btn ghost" id="upLater">Später</button>
+      <button class="btn primary" id="upAction" data-no-i18n></button>
+    </footer>
+  </section>
+
+  <!-- Popover: Passwort speichern -->
+  <section id="pwOffer" class="pop pw-offer hidden" data-sticky>
+    <header class="pop-head">
+      <h3 id="pwOfferTitle">Passwort speichern?</h3>
+      <button id="pwOfferClose" class="tb-btn sm" data-icon="x" title="Nicht jetzt"></button>
+    </header>
+    <div class="pw-offer-body">
+      <div class="pw-offer-field"><span>Webseite</span><b id="pwOfferSite"></b></div>
+      <div class="pw-offer-field"><span>Benutzername</span><b id="pwOfferUser"></b></div>
+      <div class="pw-offer-field"><span>Passwort</span><b>••••••••••</b></div>
+    </div>
+    <footer class="pop-foot">
+      <button class="btn ghost" data-pw="never">Nie für diese Seite</button>
+      <button class="btn primary" data-pw="save" id="pwOfferSave">Speichern</button>
+    </footer>
+  </section>
+
+  <!-- Einstellungen -->
+  <div id="settings" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Einstellungen">
+    <div class="settings">
+      <aside class="s-nav">
+        <div class="s-brand"><img id="sLogo" alt="" /><span>Einstellungen</span></div>
+        <button class="s-tab" data-section="general" data-icon="sliders">Allgemein</button>
+        <button class="s-tab" data-section="appearance" data-icon="palette">Darstellung</button>
+        <button class="s-tab" data-section="performance" data-icon="gamepad">Leistung &amp; Game Mode</button>
+        <button class="s-tab" data-section="privacy" data-icon="shield">Datenschutz</button>
+        <button class="s-tab" data-section="passwords" data-icon="key">Passwörter</button>
+        <button class="s-tab" data-section="bookmarks" data-icon="bookmark">Lesezeichen</button>
+        <button class="s-tab" data-section="shortcuts" data-icon="keyboard">Tastenkürzel</button>
+        <button class="s-tab" data-section="about" data-icon="info">Über Falcon</button>
+      </aside>
+
+      <div class="s-main">
+        <button id="settingsClose" class="tb-btn s-close" data-icon="x" title="Schließen (Esc)"></button>
+
+        <section class="s-section" data-section="general">
+          <h2>Allgemein</h2>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Sprache</b><span>Sprache der Falcon-Oberfläche.</span></div>
+              <div class="select" data-no-i18n><select id="sLanguage"></select></div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Suchmaschine</b><span>Wird in der Adressleiste und auf der Startseite verwendet.</span></div>
+              <div class="select"><select id="sEngine"></select></div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Beim Start</b><span>Was Falcon nach dem Öffnen anzeigt.</span></div>
+              <div class="segmented" id="sStartup">
+                <button data-value="restore">Letzte Sitzung</button>
+                <button data-value="newtab">Neuer Tab</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="s-section" data-section="appearance">
+          <h2>Darstellung</h2>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Akzentfarbe</b><span>Für Hervorhebungen, Schalter und den aktiven Tab.</span></div>
+              <div id="sAccents" class="swatches"></div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Lesezeichenleiste</b><span>Unter der Adressleiste anzeigen (Strg+Umschalt+B).</span></div>
+              <label class="switch"><input type="checkbox" id="sBookmarksBar" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Seitenleiste</b><span>Discord, Twitch, Spotify und mehr neben der Seite.</span></div>
+              <label class="switch"><input type="checkbox" id="sSidebar" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Leistungsanzeige</b><span>CPU und Arbeitsspeicher in der Symbolleiste.</span></div>
+              <label class="switch"><input type="checkbox" id="sHud" /><span></span></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="s-section" data-section="performance">
+          <h2>Leistung &amp; Game Mode</h2>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Game Mode</b><span>Gibt Arbeitsspeicher und CPU für Spiele frei: inaktive Tabs werden schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben wach.</span></div>
+              <label class="switch"><input type="checkbox" id="sGame" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Tabs schlafen legen nach</b><span>Gilt, solange Game Mode aktiv ist.</span></div>
+              <div class="select"><select id="sSleep">
+                <option value="1">1 Minute</option><option value="5">5 Minuten</option><option value="10">10 Minuten</option>
+                <option value="15">15 Minuten</option><option value="30">30 Minuten</option><option value="60">1 Stunde</option>
+              </select></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="s-section" data-section="privacy">
+          <h2>Datenschutz</h2>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Werbe- und Trackerblocker</b><span>Blockiert Anfragen an bekannte Werbe- und Tracking-Dienste.</span></div>
+              <label class="switch"><input type="checkbox" id="sAdblock" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Verlauf löschen</b><span>Entfernt besuchte Seiten aus den Vorschlägen der Adressleiste.</span></div>
+              <button id="sClearHistory" class="btn">Löschen</button>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Browserdaten löschen</b><span>Cache, Cookies und Website-Daten. Du wirst auf allen Seiten abgemeldet.</span></div>
+              <button id="sClearData" class="btn danger">Löschen …</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="s-section" data-section="passwords">
+          <h2>Passwörter</h2>
+          <div class="s-card" id="pwAuthRow">
+            <div class="s-row">
+              <div class="s-label"><b>Passwörter schützen</b><span id="pwAuthDesc" data-no-i18n></span></div>
+              <label class="switch"><input type="checkbox" id="sPwAuth" /><span></span></label>
+            </div>
+            <div class="s-row hidden" id="pwAuthNote" data-no-i18n>
+              <p class="notice warn" id="pwAuthNoteText"></p>
+            </div>
+          </div>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Passkeys</b><span>Entsperre deine Passwörter mit dem iPhone, einem Android-Smartphone oder einem Sicherheitsschlüssel.</span></div>
+              <button id="pkAdd" class="btn">Passkey hinzufügen</button>
+            </div>
+            <div id="pkList"></div>
+          </div>
+          <div class="s-toolbar">
+            <div class="s-search" data-icon="search"><input id="pwSearch" placeholder="Passwörter durchsuchen" spellcheck="false" /></div>
+            <button id="pwAdd" class="btn primary">Hinzufügen</button>
+            <button id="pwMore" class="btn icon" data-icon="more" title="Importieren / Exportieren"></button>
+          </div>
+          <p id="pwWarn" class="notice warn hidden">Verschlüsselung ist auf diesem System nicht verfügbar. Passwörter werden unverschlüsselt gespeichert.</p>
+          <div id="pwList" class="s-card pw-list"></div>
+          <div id="pwNeverWrap" class="hidden">
+            <h4 class="s-sub">Nie speichern für</h4>
+            <div id="pwNever" class="s-card"></div>
+          </div>
+        </section>
+
+        <section class="s-section" data-section="bookmarks">
+          <h2>Lesezeichen</h2>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Importieren</b><span>HTML-Datei aus Chrome, Edge, Firefox oder Opera, oder JSON.</span></div>
+              <button id="bmImport" class="btn">Datei wählen …</button>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Exportieren</b><span>Als HTML-Datei, die jeder Browser einlesen kann.</span></div>
+              <button id="bmExport" class="btn">Exportieren …</button>
+            </div>
+          </div>
+          <h4 class="s-sub">Gespeichert <span id="bmCount" class="count"></span></h4>
+          <div id="bmList" class="s-card"></div>
+        </section>
+
+        <section class="s-section" data-section="shortcuts">
+          <h2>Tastenkürzel</h2>
+          <div class="s-card keys" id="sKeys"></div>
+        </section>
+
+        <section class="s-section" data-section="about">
+          <h2>Über Falcon</h2>
+          <div class="s-card about">
+            <img id="aboutLogo" alt="" />
+            <div>
+              <b>Falcon</b>
+              <span id="aboutVersion"></span>
+            </div>
+          </div>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Updates</b><span id="upStatus" data-no-i18n></span></div>
+              <button id="upCheck" class="btn">Nach Updates suchen</button>
+            </div>
+            <div class="s-row"><div class="s-label"><b>Chromium</b></div><code id="vChrome"></code></div>
+            <div class="s-row"><div class="s-label"><b>Electron</b></div><code id="vElectron"></code></div>
+            <div class="s-row"><div class="s-label"><b>Node.js</b></div><code id="vNode"></code></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/core.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="locales/en.js"></script>
+  <script src="locales/fr.js"></script>
+  <script src="locales/es.js"></script>
+  <script src="locales/tr.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/tabs.js"></script>
+  <script src="js/omnibox.js"></script>
+  <script src="js/bookmarks.js"></script>
+  <script src="js/panels.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/passwords.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/updates.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

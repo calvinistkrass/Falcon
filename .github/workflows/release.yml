@@ -1,0 +1,39 @@
+# Baut Falcon für Windows und veröffentlicht ein GitHub-Release, sobald ein Versions-Tag
+# (z. B. v1.2.0) gepusht wird. Falcon erkennt das neue Release dann als Update.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Version prüfen
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Tag v$TAG passt nicht zur Version $PKG in package.json"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Bauen und veröffentlichen
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

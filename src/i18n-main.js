@@ -1,0 +1,149 @@
+'use strict';
+// Übersetzungen für Texte des Hauptprozesses (Systemdialoge). Ausgangssprache ist Deutsch.
+
+const { app } = require('electron');
+
+const STRINGS = {
+  en: {
+    'Passkey hinzufügen': 'Add passkey',
+    'Mit Passkey bestätigen': 'Confirm with passkey',
+    'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'In the Windows window that opens, choose your iPhone or Android device (scan the QR code with your phone camera), a security key or this PC.',
+    'iPhone / Android': 'iPhone / Android',
+    'Sicherheitsschlüssel': 'Security key',
+    'Dieser PC': 'This PC',
+    'Warte auf deinen Passkey …': 'Waiting for your passkey…',
+    'Abgebrochen oder Zeit abgelaufen.': 'Cancelled or timed out.',
+    'Das hat nicht geklappt: {error}': 'That didn’t work: {error}',
+    'Bestätigt': 'Confirmed',
+    'Erneut versuchen': 'Try again',
+    'Falcon möchte den Passwortschutz ausschalten.': 'Falcon wants to turn off password protection.',
+    'Falcon möchte einen neuen Passkey hinzufügen.': 'Falcon wants to add a new passkey.',
+    'Falcon möchte einen Passkey entfernen.': 'Falcon wants to remove a passkey.',
+    'Lesezeichen exportieren': 'Export bookmarks',
+    'Lesezeichen importieren': 'Import bookmarks',
+    'Lesezeichen (HTML)': 'Bookmarks (HTML)',
+    'Lesezeichen (HTML, JSON)': 'Bookmarks (HTML, JSON)',
+    'falcon-lesezeichen.html': 'falcon-bookmarks.html',
+    'Passwörter importieren (CSV aus Chrome, Edge, Opera, Firefox, Brave …)': 'Import passwords (CSV from Chrome, Edge, Opera, Firefox, Brave…)',
+    'Passwörter exportieren': 'Export passwords',
+    'Passwörter als unverschlüsselte Datei exportieren?': 'Export passwords as an unencrypted file?',
+    'Jeder, der Zugriff auf die CSV-Datei hat, kann deine Passwörter lesen. Lösche die Datei, sobald du sie nicht mehr brauchst.': 'Anyone with access to the CSV file can read your passwords. Delete the file as soon as you no longer need it.',
+    'Abbrechen': 'Cancel',
+    'Exportieren': 'Export',
+    'falcon-passwoerter.csv': 'falcon-passwords.csv',
+    'Unbekanntes CSV-Format: Spalten „url“ und „password“ wurden nicht gefunden.': 'Unknown CSV format: the columns “url” and “password” were not found.',
+    'Falcon möchte deine gespeicherten Passwörter exportieren.': 'Falcon wants to export your saved passwords.',
+    'Falcon möchte Passwörter importieren.': 'Falcon wants to import passwords.',
+    'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon wants to show a saved password.'
+  },
+  fr: {
+    'Passkey hinzufügen': 'Ajouter une clé d’accès',
+    'Mit Passkey bestätigen': 'Confirmer avec une clé d’accès',
+    'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'Dans la fenêtre Windows qui s’ouvre, choisissez votre iPhone ou appareil Android (scannez le code QR avec l’appareil photo), une clé de sécurité ou ce PC.',
+    'iPhone / Android': 'iPhone / Android',
+    'Sicherheitsschlüssel': 'Clé de sécurité',
+    'Dieser PC': 'Ce PC',
+    'Warte auf deinen Passkey …': 'En attente de votre clé d’accès…',
+    'Abgebrochen oder Zeit abgelaufen.': 'Annulé ou délai dépassé.',
+    'Das hat nicht geklappt: {error}': 'Cela n’a pas fonctionné : {error}',
+    'Bestätigt': 'Confirmé',
+    'Erneut versuchen': 'Réessayer',
+    'Falcon möchte den Passwortschutz ausschalten.': 'Falcon souhaite désactiver la protection des mots de passe.',
+    'Falcon möchte einen neuen Passkey hinzufügen.': 'Falcon souhaite ajouter une nouvelle clé d’accès.',
+    'Falcon möchte einen Passkey entfernen.': 'Falcon souhaite supprimer une clé d’accès.',
+    'Lesezeichen exportieren': 'Exporter les favoris',
+    'Lesezeichen importieren': 'Importer des favoris',
+    'Lesezeichen (HTML)': 'Favoris (HTML)',
+    'Lesezeichen (HTML, JSON)': 'Favoris (HTML, JSON)',
+    'falcon-lesezeichen.html': 'falcon-favoris.html',
+    'Passwörter importieren (CSV aus Chrome, Edge, Opera, Firefox, Brave …)': 'Importer des mots de passe (CSV de Chrome, Edge, Opera, Firefox, Brave…)',
+    'Passwörter exportieren': 'Exporter les mots de passe',
+    'Passwörter als unverschlüsselte Datei exportieren?': 'Exporter les mots de passe dans un fichier non chiffré ?',
+    'Jeder, der Zugriff auf die CSV-Datei hat, kann deine Passwörter lesen. Lösche die Datei, sobald du sie nicht mehr brauchst.': 'Toute personne ayant accès au fichier CSV peut lire vos mots de passe. Supprimez le fichier dès que vous n’en avez plus besoin.',
+    'Abbrechen': 'Annuler',
+    'Exportieren': 'Exporter',
+    'falcon-passwoerter.csv': 'falcon-mots-de-passe.csv',
+    'Unbekanntes CSV-Format: Spalten „url“ und „password“ wurden nicht gefunden.': 'Format CSV inconnu : les colonnes « url » et « password » sont introuvables.',
+    'Falcon möchte deine gespeicherten Passwörter exportieren.': 'Falcon souhaite exporter vos mots de passe enregistrés.',
+    'Falcon möchte Passwörter importieren.': 'Falcon souhaite importer des mots de passe.',
+    'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon souhaite afficher un mot de passe enregistré.'
+  },
+  es: {
+    'Passkey hinzufügen': 'Añadir llave de acceso',
+    'Mit Passkey bestätigen': 'Confirmar con llave de acceso',
+    'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'En la ventana de Windows que se abre, elige tu iPhone o dispositivo Android (escanea el código QR con la cámara), una llave de seguridad o este PC.',
+    'iPhone / Android': 'iPhone / Android',
+    'Sicherheitsschlüssel': 'Llave de seguridad',
+    'Dieser PC': 'Este PC',
+    'Warte auf deinen Passkey …': 'Esperando tu llave de acceso…',
+    'Abgebrochen oder Zeit abgelaufen.': 'Cancelado o tiempo agotado.',
+    'Das hat nicht geklappt: {error}': 'No ha funcionado: {error}',
+    'Bestätigt': 'Confirmado',
+    'Erneut versuchen': 'Reintentar',
+    'Falcon möchte den Passwortschutz ausschalten.': 'Falcon quiere desactivar la protección de contraseñas.',
+    'Falcon möchte einen neuen Passkey hinzufügen.': 'Falcon quiere añadir una nueva llave de acceso.',
+    'Falcon möchte einen Passkey entfernen.': 'Falcon quiere quitar una llave de acceso.',
+    'Lesezeichen exportieren': 'Exportar marcadores',
+    'Lesezeichen importieren': 'Importar marcadores',
+    'Lesezeichen (HTML)': 'Marcadores (HTML)',
+    'Lesezeichen (HTML, JSON)': 'Marcadores (HTML, JSON)',
+    'falcon-lesezeichen.html': 'falcon-marcadores.html',
+    'Passwörter importieren (CSV aus Chrome, Edge, Opera, Firefox, Brave …)': 'Importar contraseñas (CSV de Chrome, Edge, Opera, Firefox, Brave…)',
+    'Passwörter exportieren': 'Exportar contraseñas',
+    'Passwörter als unverschlüsselte Datei exportieren?': '¿Exportar las contraseñas a un archivo sin cifrar?',
+    'Jeder, der Zugriff auf die CSV-Datei hat, kann deine Passwörter lesen. Lösche die Datei, sobald du sie nicht mehr brauchst.': 'Cualquiera que tenga acceso al archivo CSV podrá leer tus contraseñas. Elimínalo en cuanto ya no lo necesites.',
+    'Abbrechen': 'Cancelar',
+    'Exportieren': 'Exportar',
+    'falcon-passwoerter.csv': 'falcon-contrasenas.csv',
+    'Unbekanntes CSV-Format: Spalten „url“ und „password“ wurden nicht gefunden.': 'Formato CSV desconocido: no se encontraron las columnas «url» y «password».',
+    'Falcon möchte deine gespeicherten Passwörter exportieren.': 'Falcon quiere exportar tus contraseñas guardadas.',
+    'Falcon möchte Passwörter importieren.': 'Falcon quiere importar contraseñas.',
+    'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon quiere mostrar una contraseña guardada.'
+  },
+  tr: {
+    'Passkey hinzufügen': 'Geçiş anahtarı ekle',
+    'Mit Passkey bestätigen': 'Geçiş anahtarıyla onayla',
+    'Wähle im folgenden Windows-Fenster dein iPhone oder Android-Gerät (QR-Code mit der Handykamera scannen), einen Sicherheitsschlüssel oder diesen PC.': 'Açılan Windows penceresinde iPhone veya Android cihazınızı (QR kodunu telefon kamerasıyla tarayın), bir güvenlik anahtarını ya da bu bilgisayarı seçin.',
+    'iPhone / Android': 'iPhone / Android',
+    'Sicherheitsschlüssel': 'Güvenlik anahtarı',
+    'Dieser PC': 'Bu bilgisayar',
+    'Warte auf deinen Passkey …': 'Geçiş anahtarınız bekleniyor…',
+    'Abgebrochen oder Zeit abgelaufen.': 'İptal edildi veya süre doldu.',
+    'Das hat nicht geklappt: {error}': 'Bu işe yaramadı: {error}',
+    'Bestätigt': 'Onaylandı',
+    'Erneut versuchen': 'Tekrar dene',
+    'Falcon möchte den Passwortschutz ausschalten.': 'Falcon şifre korumasını kapatmak istiyor.',
+    'Falcon möchte einen neuen Passkey hinzufügen.': 'Falcon yeni bir geçiş anahtarı eklemek istiyor.',
+    'Falcon möchte einen Passkey entfernen.': 'Falcon bir geçiş anahtarını kaldırmak istiyor.',
+    'Lesezeichen exportieren': 'Yer imlerini dışa aktar',
+    'Lesezeichen importieren': 'Yer imlerini içe aktar',
+    'Lesezeichen (HTML)': 'Yer imleri (HTML)',
+    'Lesezeichen (HTML, JSON)': 'Yer imleri (HTML, JSON)',
+    'falcon-lesezeichen.html': 'falcon-yer-imleri.html',
+    'Passwörter importieren (CSV aus Chrome, Edge, Opera, Firefox, Brave …)': 'Şifreleri içe aktar (Chrome, Edge, Opera, Firefox, Brave CSV dosyası…)',
+    'Passwörter exportieren': 'Şifreleri dışa aktar',
+    'Passwörter als unverschlüsselte Datei exportieren?': 'Şifreler şifrelenmemiş bir dosyaya aktarılsın mı?',
+    'Jeder, der Zugriff auf die CSV-Datei hat, kann deine Passwörter lesen. Lösche die Datei, sobald du sie nicht mehr brauchst.': 'CSV dosyasına erişimi olan herkes şifrelerinizi okuyabilir. Artık ihtiyacınız olmadığında dosyayı silin.',
+    'Abbrechen': 'İptal',
+    'Exportieren': 'Dışa aktar',
+    'falcon-passwoerter.csv': 'falcon-sifreler.csv',
+    'Unbekanntes CSV-Format: Spalten „url“ und „password“ wurden nicht gefunden.': 'Bilinmeyen CSV biçimi: “url” ve “password” sütunları bulunamadı.',
+    'Falcon möchte deine gespeicherten Passwörter exportieren.': 'Falcon kayıtlı şifrelerinizi dışa aktarmak istiyor.',
+    'Falcon möchte Passwörter importieren.': 'Falcon şifreleri içe aktarmak istiyor.',
+    'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon kayıtlı bir şifreyi göstermek istiyor.'
+  }
+};
+const SUPPORTED = ['de', ...Object.keys(STRINGS)];
+
+function language(setting) {
+  if (setting && setting !== 'auto' && SUPPORTED.includes(setting)) return setting;
+  const sys = (app.getLocale() || 'en').slice(0, 2).toLowerCase();
+  return SUPPORTED.includes(sys) ? sys : 'en';
+}
+
+function translator(setting) {
+  const dict = STRINGS[language(setting)] || {};
+  return (src) => dict[src] || src;
+}
+
+module.exports = { translator };

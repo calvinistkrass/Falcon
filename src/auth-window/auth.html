@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Falcon</title>
+<style>
+  :root { --accent: #7c6cff; --bg: #17181b; --raised: #1f2023; --line: rgb(255 255 255 / .08); --text: #ececee; --text-2: #a3a3ab; --text-3: #6e6e77; --danger: #f0585b; --success: #3dd68c; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column; padding: 22px 24px 20px; background: var(--bg); color: var(--text);
+    font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    user-select: none; -webkit-app-region: drag; border: 1px solid var(--line);
+  }
+  header { display: flex; align-items: center; gap: 12px; }
+  header img { width: 36px; height: 36px; border-radius: 9px; }
+  h1 { margin: 0; font: 600 16px/1.3 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+  #reason { margin: 2px 0 0; color: var(--text-3); font-size: 12px; }
+  .hint { margin: 18px 0 0; color: var(--text-2); }
+  .devices { display: flex; gap: 8px; margin-top: 14px; }
+  .device { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-radius: 10px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-size: 11.5px; text-align: center; }
+  .device svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; color: var(--text); }
+  #status { display: flex; align-items: center; gap: 8px; min-height: 20px; margin-top: auto; padding-top: 14px; color: var(--text-2); font-size: 12.5px; }
+  #status.err { color: var(--danger); }
+  #status.ok { color: var(--success); }
+  .spinner { width: 13px; height: 13px; border-radius: 50%; border: 1.75px solid rgb(255 255 255 / .12); border-top-color: var(--accent); animation: spin .7s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; -webkit-app-region: no-drag; }
+  button { height: 30px; padding: 0 14px; border: 0; border-radius: 6px; font: 500 13px "Segoe UI", system-ui, sans-serif; color: var(--text-2); background: transparent; }
+  button:hover { background: rgb(255 255 255 / .06); color: var(--text); }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: color-mix(in oklab, var(--accent) 86%, white); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <header>
+    <img id="logo" alt="" />
+    <div><h1 id="title"></h1><p id="reason"></p></div>
+  </header>
+  <p class="hint" id="hint"></p>
+  <div class="devices">
+    <div class="device"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span id="dPhone"></span></div>
+    <div class="device"><svg viewBox="0 0 24 24"><rect x="8" y="9" width="8" height="12.5" rx="2"/><path d="M10 9V4.5a2 2 0 0 1 4 0V9M12 13v3"/></svg><span id="dKey"></span></div>
+    <div class="device"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20.5h8M12 16.5v4"/></svg><span id="dDevice"></span></div>
+  </div>
+  <div id="status"></div>
+  <footer>
+    <button id="cancel"></button>
+    <button id="retry" class="primary hidden"></button>
+  </footer>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const b64uToBuf = (s) => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, (c) => c.charCodeAt(0)).buffer; };
+const bufToB64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+let req;
+
+function status(text, kind) {
+  const el = $('status');
+  el.className = kind || '';
+  el.replaceChildren();
+  if (kind === 'busy') el.append(Object.assign(document.createElement('span'), { className: 'spinner' }));
+  el.append(text);
+}
+
+async function run() {
+  $('retry').classList.add('hidden');
+  status(req.strings.waiting, 'busy');
+  const pk = structuredClone(req.publicKey);
+  pk.challenge = b64uToBuf(pk.challenge);
+  for (const c of pk.excludeCredentials || []) c.id = b64uToBuf(c.id);
+  for (const c of pk.allowCredentials || []) c.id = b64uToBuf(c.id);
+  if (pk.user) pk.user.id = b64uToBuf(pk.user.id);
+
+  let result;
+  try {
+    if (req.mode === 'register') {
+      const cred = await navigator.credentials.create({ publicKey: pk });
+      const r = cred.response;
+      const spki = r.getPublicKey && r.getPublicKey();
+      result = {
+        rawId: bufToB64u(cred.rawId),
+        clientDataJSON: bufToB64u(r.clientDataJSON),
+        authenticatorData: bufToB64u(r.getAuthenticatorData()),
+        publicKey: spki ? bufToB64u(spki) : null,
+        alg: r.getPublicKeyAlgorithm(),
+        transports: r.getTransports ? r.getTransports() : []
+      };
+    } else {
+      const cred = await navigator.credentials.get({ publicKey: pk });
+      const r = cred.response;
+      result = {
+        rawId: bufToB64u(cred.rawId),
+        clientDataJSON: bufToB64u(r.clientDataJSON),
+        authenticatorData: bufToB64u(r.authenticatorData),
+        signature: bufToB64u(r.signature)
+      };
+    }
+  } catch (err) {
+    status(err && err.name === 'NotAllowedError' ? req.strings.cancelled : req.strings.failed.replace('{error}', err.message || err.name), 'err');
+    $('retry').classList.remove('hidden');
+    return;
+  }
+
+  const outcome = await window.falconAuth.finish(result);
+  if (outcome.ok) {
+    status(req.strings.success, 'ok');
+  } else {
+    status(req.strings.failed.replace('{error}', outcome.error || '?'), 'err');
+    $('retry').classList.remove('hidden');
+  }
+}
+
+(async () => {
+  req = await window.falconAuth.request();
+  if (!req) return window.close();
+  const s = req.strings;
+  document.documentElement.lang = s.lang;
+  $('logo').src = req.logo;
+  $('title').textContent = req.mode === 'register' ? s.titleRegister : s.titleVerify;
+  $('reason').textContent = req.reason || '';
+  $('hint').textContent = s.hint;
+  $('dPhone').textContent = s.phone;
+  $('dKey').textContent = s.key;
+  $('dDevice').textContent = s.device;
+  $('cancel').textContent = s.cancel;
+  $('retry').textContent = s.retry;
+  $('cancel').onclick = () => window.falconAuth.cancel();
+  $('retry').onclick = run;
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.falconAuth.cancel(); });
+  run();
+})();
+</script>
+</body>
+</html>

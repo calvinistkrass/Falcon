@@ -1,0 +1,67 @@
+{
+  "name": "falcon-browser",
+  "productName": "Falcon",
+  "version": "1.2.0",
+  "description": "Falcon – der Browser für Gamer",
+  "main": "src/main.js",
+  "author": "Calvin Bandle",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "dist:all": "electron-builder -wml",
+    "release": "electron-builder --win --publish always"
+  },
+  "build": {
+    "appId": "com.falcon.browser",
+    "productName": "Falcon",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/falcon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Falcon",
+      "installerIcon": "assets/falcon.ico",
+      "uninstallerIcon": "assets/falcon.ico"
+    },
+    "mac": {
+      "icon": "assets/falcon.png",
+      "category": "public.app-category.games"
+    },
+    "linux": {
+      "icon": "assets/falcon.png",
+      "target": [
+        "AppImage"
+      ],
+      "category": "Network"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "repository": "github:DEIN-GITHUB-NAME/falcon"
+}
