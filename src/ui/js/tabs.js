@@ -400,14 +400,17 @@ const Tabs = (() => {
   // -------------------------------------------------------------------------
   // Sitzung
   // -------------------------------------------------------------------------
-  const saveSession = debounce(() => {
+  const saveSessionNow = () => {
     if (INCOGNITO) return;
     const saved = state.tabs.filter((t) => !isInternal(t.url));
     store.set(SESSION_KEY, {
       tabs: saved.map((t) => ({ url: t.url, title: t.title })),
       active: saved.indexOf(active())
     });
-  }, 400);
+  };
+  const saveSession = debounce(saveSessionNow, 400);
+  // Vor dem Beenden (z. B. Neustart für ein Update) sofort speichern
+  window.addEventListener('beforeunload', saveSessionNow);
 
   function restoreSession() {
     if (INCOGNITO) return false;

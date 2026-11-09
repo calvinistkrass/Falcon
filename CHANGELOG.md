@@ -2,6 +2,15 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.8.2] – 2026-11-10
+
+### Changed
+- **Updates install silently**: after the download, Falcon restarts after a 5-second countdown, installs the update in the background without the installer window and opens again with your tabs. Choose "Later" and the update is installed silently when you close Falcon.
+
+### Fixed
+- The buttons in the update window were centered and had an extra line since 1.8.0.
+- Open tabs and settings are saved immediately before Falcon quits.
+
 ## [1.8.1] – 2026-11-10
 
 ### Fixed
@@ -114,6 +123,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.8.2]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.2
 [1.8.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.1
 [1.8.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.0
 [1.7.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.7.0

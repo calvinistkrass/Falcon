@@ -545,5 +545,10 @@ I18N.add('tr', {
   "Sync-Einstellungen": "Senkronizasyon ayarları",
   "Los geht’s": "Hadi başlayalım",
   "Sync wird eingerichtet …": "Senkronizasyon kuruluyor…",
+  "Update ist bereit. Falcon installiert es beim nächsten Neustart automatisch.": "Güncelleme hazır. Falcon bir sonraki yeniden başlatmada otomatik olarak yükler.",
+  "Falcon startet in {n} s neu, installiert das Update im Hintergrund und öffnet sich danach wieder. Deine Tabs bleiben erhalten.": "Falcon {n} sn içinde yeniden başlar, güncellemeyi arka planda yükler ve tekrar açılır. Sekmelerin korunur.",
+  "Falcon installiert das Update im Hintergrund und öffnet sich danach wieder. Mit „Später“ wird es beim Schließen von Falcon installiert.": "Falcon güncellemeyi arka planda yükler ve tekrar açılır. “Sonra” dersen Falcon’u kapattığında yüklenir.",
+  "Jetzt neu starten": "Şimdi yeniden başlat",
+  "Das Update wird installiert, wenn du Falcon schließt.": "Güncelleme Falcon’u kapattığında yüklenecek.",
   "Öffnen": "Aç"
 });
