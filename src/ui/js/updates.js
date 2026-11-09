@@ -54,7 +54,8 @@ const Updates = (() => {
     if (Popover.isOpen(pop)) renderPop();
     if (status.state === 'available' && announced !== status.available) {
       announced = status.available;
-      toast($t('Falcon {v} ist verfügbar', { v: status.available }), 'download', { label: $t('Ansehen'), onClick: open });
+      // Kurz warten, bis die Oberfläche steht, dann den Hinweis gut sichtbar öffnen
+      setTimeout(() => { if (!Popover.current && !Settings.isOpen()) open(); }, 600);
     }
   }
 

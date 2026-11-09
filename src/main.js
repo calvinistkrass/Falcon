@@ -735,8 +735,14 @@ if (!gotLock) {
         cb(['media', 'fullscreen', 'notifications', 'clipboard-sanitized-write', 'pointerLock', 'display-capture'].includes(permission));
       });
     }
-    createWindow();
-    updater.init((channel, data) => broadcast(channel, data));
+    const first = createWindow();
+    updater.init((channel, data) => broadcast(channel, data), {
+      get: () => settings.pendingUpdate || null,
+      set: (v) => { settings.pendingUpdate = v; saveSettings(); }
+    });
+    // Sofort prüfen, sobald die Oberfläche geladen ist – nicht erst nach einer Wartezeit
+    first.webContents.once('did-finish-load', () => updater.check());
+    app.on('browser-window-focus', () => updater.checkIfStale());
   });
 
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
