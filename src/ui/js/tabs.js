@@ -12,6 +12,11 @@ const Tabs = (() => {
   const byId = (id) => state.tabs.find((t) => t.id === id);
   const active = () => byId(state.activeId);
   const isActive = (tab) => tab.id === state.activeId;
+  // Geteilte Ansicht: zwei Tabs nebeneinander. Beide gelten als sichtbar.
+  let split = null; // { a, b, ratio }
+  const inSplit = (tab) => !!split && (tab.id === split.a || tab.id === split.b);
+  const splitShown = () => !!split && (state.activeId === split.a || state.activeId === split.b);
+  const isShown = (tab) => isActive(tab) || (splitShown() && inSplit(tab));
 
   // -------------------------------------------------------------------------
   // Anlegen
@@ -27,6 +32,7 @@ const Tabs = (() => {
       ready: false,
       audible: false,
       muted: false,
+      volume: 1,
       sleeping: false,
       error: null,
       lastActive: Date.now(),
@@ -59,7 +65,7 @@ const Tabs = (() => {
       h('div', { class: 'tab-inner' },
         h('span', { class: 'tab-icon' }),
         h('span', { class: 'tab-title' }),
-        h('button', { class: 'tab-audio hidden', onclick: (e) => { e.stopPropagation(); toggleMute(tab); } }),
+        h('button', { class: 'tab-audio hidden', onclick: (e) => { e.stopPropagation(); toggleMute(tab); }, oncontextmenu: (e) => { e.preventDefault(); e.stopPropagation(); volumePopover(tab); } }),
         h('button', { class: 'tab-close', title: $t('Tab schließen (Strg+W)'), onclick: (e) => { e.stopPropagation(); close(tab.id); } }, icon('x'))));
 
     el.addEventListener('mousedown', (e) => {
@@ -104,8 +110,9 @@ const Tabs = (() => {
     bind(tab, wv);
     PasskeyPrompt.attach(wv, () => tab);
     Passwords.attachFill(wv);
-    if (isActive(tab)) wv.classList.add('active');
+    if (isShown(tab)) wv.classList.add('active');
     views.append(wv);
+    applySplit();
   }
 
   function bind(tab, wv) {
@@ -116,6 +123,7 @@ const Tabs = (() => {
         tab.ready = true;
         if (tab.muted) wv.setAudioMuted(true);
       }
+      if (tab.volume !== 1) wv.send('tab-volume', tab.volume);
       Zoom.restore(tab);
       navChanged();
     });
@@ -193,6 +201,7 @@ const Tabs = (() => {
     if (key === 'error') return icon('warning');
     if (key === 'globe') return icon('globe');
     if (key === 'download') return icon('download');
+    if (key === 'bug') return icon('bug');
     const img = h('img', { src: key, alt: '' });
     img.addEventListener('error', () => img.replaceWith(icon('globe')), { once: true });
     return img;
@@ -217,6 +226,7 @@ const Tabs = (() => {
     else if (isNewTab(tab.url)) key = 'newtab';
     else if (tab.error) key = 'error';
     else if (tab.url && tab.url.startsWith('falcon://downloads')) key = 'download';
+    else if (tab.url && tab.url.startsWith('falcon://reports')) key = 'bug';
     else key = tab.favicon || (isInternal(tab.url) ? 'globe' : faviconFor(tab.url));
     if (el.dataset.iconKey !== key) {
       el.dataset.iconKey = key;
@@ -229,8 +239,11 @@ const Tabs = (() => {
     if (showAudio) {
       const name = tab.muted ? 'volumeX' : 'volume';
       if (audio.dataset.icon !== name) setIcon(audio, name);
-      audio.title = tab.muted ? $t('Ton einschalten') : $t('Tab stummschalten');
+      audio.title = (tab.muted ? $t('Ton einschalten') : $t('Tab stummschalten')) +
+        (tab.volume !== 1 ? ` · ${Math.round(tab.volume * 100)} %` : '') + `\n${$t('Rechtsklick: Lautstärke')}`;
     }
+    el.classList.toggle('split-pair', inSplit(tab));
+    el.classList.toggle('split-shown', splitShown() && inSplit(tab) && !isActive(tab));
   }
 
   // -------------------------------------------------------------------------
@@ -246,10 +259,13 @@ const Tabs = (() => {
     if (tab.sleeping) wake(tab);
     if (tab.frozen) freeze(tab, false);
 
+    // Partner der geteilten Ansicht mitwecken
+    if (inSplit(tab)) { const other = byId(tab.id === split.a ? split.b : split.a); if (other?.sleeping) wake(other); if (other?.frozen) freeze(other, false); }
     for (const t of state.tabs) {
-      t.webview?.classList.toggle('active', t === tab);
+      t.webview?.classList.toggle('active', isShown(t));
       render(t);
     }
+    applySplit();
     document.title = `${displayTitle(tab)} – ${APP_TITLE}`;
     tab.el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
@@ -268,6 +284,7 @@ const Tabs = (() => {
       closedTabs.push({ url: tab.url, title: tab.title, index: i });
       if (closedTabs.length > 25) closedTabs.shift();
     }
+    if (inSplit(tab)) endSplit(false);
     state.tabs.splice(i, 1);
     tab.webview?.remove();
     tab.webview = null;
@@ -335,7 +352,7 @@ const Tabs = (() => {
   // Tab-Schlaf
   // -------------------------------------------------------------------------
   function sleep(tab) {
-    if (tab.sleeping || isActive(tab) || tab.audible || !tab.webview) return false;
+    if (tab.sleeping || isShown(tab) || tab.audible || !tab.webview) return false;
     tab.webview.remove();
     tab.webview = null;
     tab.ready = false;
@@ -354,7 +371,7 @@ const Tabs = (() => {
   function sleepInactive(minIdleMs = 0) {
     const now = Date.now();
     let count = 0;
-    for (const t of state.tabs) if (!isActive(t) && now - t.lastActive >= minIdleMs && sleep(t)) count++;
+    for (const t of state.tabs) if (!isShown(t) && now - t.lastActive >= minIdleMs && sleep(t)) count++;
     return count;
   }
   // Game Mode: erst einfrieren (Seite bleibt geladen, keine CPU), später schlafen legen (Speicher frei)
@@ -369,11 +386,94 @@ const Tabs = (() => {
     if (!state.settings.gameMode) return;
     const now = Date.now();
     for (const t of state.tabs) {
-      if (!isActive(t) && !t.audible && !t.sleeping && now - t.lastActive > FREEZE_AFTER_MS) freeze(t, true);
+      if (!isShown(t) && !t.audible && !t.sleeping && now - t.lastActive > FREEZE_AFTER_MS) freeze(t, true);
     }
     sleepInactive((state.settings.sleepMinutes || 10) * 60_000);
   }, 10_000);
   on('settings', (s) => { if (!s.gameMode) for (const t of state.tabs) if (t.frozen) freeze(t, false); });
+
+  // -------------------------------------------------------------------------
+  // Geteilte Ansicht
+  // -------------------------------------------------------------------------
+  const divider = h('div', { id: 'splitDivider', class: 'hidden', title: $t('Ziehen zum Ändern der Breite') },
+    h('div', { class: 'split-tools' },
+      h('button', { class: 'tb-btn sm', title: $t('Seiten tauschen'), onclick: () => swapSplit() }, icon('swap')),
+      h('button', { class: 'tb-btn sm', title: $t('Geteilte Ansicht beenden'), onclick: () => endSplit() }, icon('x'))));
+  views.append(divider);
+
+  function applySplit() {
+    const on = splitShown();
+    views.classList.toggle('split', on);
+    divider.classList.toggle('hidden', !on);
+    for (const t of state.tabs) {
+      if (!t.webview) continue;
+      t.webview.classList.toggle('split-l', on && t.id === split.a);
+      t.webview.classList.toggle('split-r', on && t.id === split.b);
+      t.webview.classList.toggle('focused', on && isActive(t));
+    }
+    if (on) views.style.setProperty('--split', `${(split.ratio * 100).toFixed(2)}%`);
+  }
+  function startSplit(left, right) {
+    if (!left || !right || left === right) return;
+    split = { a: left.id, b: right.id, ratio: 0.5 };
+    activate(right.id);
+  }
+  function splitWithNew() {
+    const cur = active();
+    const t = create(null, { index: state.tabs.indexOf(cur) + 1, activate: false });
+    startSplit(cur, t);
+  }
+  function endSplit(reactivate = true) {
+    if (!split) return;
+    split = null;
+    for (const t of state.tabs) { t.webview?.classList.remove('split-l', 'split-r', 'focused'); render(t); }
+    if (reactivate && active()) activate(state.activeId); else applySplit();
+  }
+  function swapSplit() {
+    if (!split) return;
+    split = { a: split.b, b: split.a, ratio: 1 - split.ratio };
+    applySplit();
+  }
+  // Breite per Ziehen
+  divider.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button')) return;
+    e.preventDefault();
+    document.body.classList.add('resizing');
+    const box = views.getBoundingClientRect();
+    const move = (ev) => { split.ratio = Math.min(0.8, Math.max(0.2, (ev.clientX - box.left) / box.width)); applySplit(); };
+    const up = () => { document.body.classList.remove('resizing'); window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  });
+  // Klick in die andere Hälfte macht sie zum aktiven Tab (Adressleiste folgt)
+  views.addEventListener('focusin', (e) => {
+    if (!splitShown() || e.target.tagName !== 'WEBVIEW') return;
+    const t = state.tabs.find((x) => x.webview === e.target);
+    if (t && !isActive(t)) activate(t.id);
+  });
+
+  // -------------------------------------------------------------------------
+  // Lautstärke pro Tab
+  // -------------------------------------------------------------------------
+  function setVolume(tab, v) {
+    tab.volume = Math.max(0, Math.min(1, v));
+    if (tab.webview && tab.ready) tab.webview.send('tab-volume', tab.volume);
+    render(tab);
+  }
+  function volumePopover(tab) {
+    const value = h('b', { class: 'vol-value' }, `${Math.round(tab.volume * 100)} %`);
+    const range = h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(tab.volume * 100), class: 'vol-range' });
+    range.addEventListener('input', () => { setVolume(tab, range.value / 100); value.textContent = `${range.value} %`; });
+    const mute = h('button', { class: 'tb-btn sm', title: tab.muted ? $t('Ton einschalten') : $t('Tab stummschalten'), onclick: () => { toggleMute(tab); mute.replaceChildren(icon(tab.muted ? 'volumeX' : 'volume')); } });
+    mute.replaceChildren(icon(tab.muted ? 'volumeX' : 'volume'));
+    const pop = h('div', { class: 'pop vol-pop' },
+      h('div', { class: 'vol-head' }, h('span', {}, $t('Lautstärke')), value),
+      h('div', { class: 'vol-row' }, mute, range),
+      h('p', { class: 'vol-hint', 'data-no-i18n': '' }, displayTitle(tab)));
+    document.body.append(pop);
+    Popover.open(pop, { anchor: tab.el, align: 'start', onClose: () => pop.remove() });
+    range.focus();
+  }
 
   // -------------------------------------------------------------------------
   // Kontextmenü
@@ -387,7 +487,13 @@ const Tabs = (() => {
       { label: $t('Duplizieren'), icon: 'duplicate', onClick: () => duplicate(tab.id) },
       { label: $t('Als Overlay öffnen'), icon: 'pip', disabled: !/^https?:/.test(tab.url), onClick: () => F.openOverlay(tab.url) },
       { label: tab.muted ? $t('Ton einschalten') : $t('Tab stummschalten'), icon: tab.muted ? 'volume' : 'volumeX', onClick: () => toggleMute(tab) },
-      { label: $t('Schlafen legen'), icon: 'moon', disabled: isActive(tab) || tab.sleeping || tab.audible, onClick: () => sleep(tab) },
+      { label: $t('Lautstärke: {n} %', { n: Math.round(tab.volume * 100) }), icon: 'volume', onClick: () => volumePopover(tab) },
+      { label: $t('Schlafen legen'), icon: 'moon', disabled: isShown(tab) || tab.sleeping || tab.audible, onClick: () => sleep(tab) },
+      '-',
+      inSplit(tab)
+        ? { label: $t('Geteilte Ansicht beenden'), icon: 'split', onClick: () => endSplit() }
+        : { label: isActive(tab) ? $t('Geteilte Ansicht mit neuem Tab') : $t('Neben aktuellem Tab anzeigen'), icon: 'split', onClick: () => (isActive(tab) ? splitWithNew() : startSplit(active(), tab)) },
+      inSplit(tab) ? { label: $t('Seiten tauschen'), icon: 'swap', onClick: swapSplit } : null,
       '-',
       { label: $t('Schließen'), icon: 'x', shortcut: kb('Strg+W'), onClick: () => close(tab.id) },
       { label: $t('Andere Tabs schließen'), disabled: state.tabs.length < 2, onClick: () => closeOthers(tab.id) },
@@ -425,7 +531,8 @@ const Tabs = (() => {
 
   return {
     create, activate, close, closeOthers, closeRight, duplicate, reopen, navigate, reload, toggleMute,
-    cycle, goTo, sleep, sleepInactive, restoreSession, displayTitle, active, byId,
+    cycle, goTo, sleep, sleepInactive, restoreSession, displayTitle, active, byId, isShown,
+    startSplit, splitWithNew, endSplit, swapSplit, setVolume, volumePopover, get split() { return split ? { ...split } : null; },
     get closedCount() { return closedTabs.length; }
   };
 })();

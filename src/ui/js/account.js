@@ -10,7 +10,8 @@ const Account = (() => {
     ['bookmarks', 'Lesezeichen', 'bookmark'],
     ['passwords', 'Passwörter', 'key'],
     ['history', 'Verlauf', 'clock'],
-    ['settings', 'Einstellungen', 'sliders']
+    ['settings', 'Einstellungen', 'sliders'],
+    ['tabs', 'Offene Tabs für andere PCs', 'devices']
   ];
   const ERRORS = {
     EMAIL_EXISTS: 'Für diese E-Mail-Adresse gibt es schon ein Konto.',
@@ -48,7 +49,18 @@ const Account = (() => {
       class: 'avatar', style: { width: `${size}px`, height: `${size}px`, background: color(), fontSize: `${Math.round(size * 0.42)}px` }
     }, initials());
   }
+  let lastCoins = null;
   function renderButton() {
+    // Kleines „+1“, wenn ein FalCoin dazukommt
+    if (acc.signedIn && lastCoins != null && acc.coins > lastCoins && !(pop && Popover.isOpen(pop))) {
+      const plus = h('span', { class: 'coin-plus' }, `+${acc.coins - lastCoins}`);
+      document.body.append(plus);
+      const r = btn.getBoundingClientRect();
+      plus.style.left = `${r.left + r.width / 2}px`;
+      plus.style.top = `${r.bottom - 4}px`;
+      plus.addEventListener('animationend', () => plus.remove(), { once: true });
+    }
+    lastCoins = acc.signedIn ? acc.coins || 0 : null;
     btn.replaceChildren(avatar(22));
     const dot = acc.signedIn && (acc.lastError || acc.needsKey || !acc.emailVerified);
     if (dot) btn.append(h('i', { class: `profile-dot${acc.lastError || acc.needsKey ? ' err' : ''}` }));
@@ -86,9 +98,13 @@ const Account = (() => {
             h('span', {}, $t('Bitte bestätige deine E-Mail-Adresse.')),
             h('button', { class: 'link-btn', onclick: resendVerification }, $t('Erneut senden'))) : null,
           acc.needsKey || (acc.keyPending && !acc.canUnlock) ? h('button', { class: 'acc-note err', onclick: () => { closePop(); unlockDialog(); } }, icon('warning'), h('span', {}, $t('Deine Sync-Daten sind gesperrt. Hier entsperren.'))) : null,
+          h('div', { class: 'acc-coins', title: $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.') },
+            h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale)), h('span', {}, $t('FalCoins')),
+            h('small', { class: 'coin-soon' }, $t('Bald eintauschbar'))),
           h('div', { class: 'acc-sync' }, syncLine(),
             h('button', { class: 'tb-btn sm', title: $t('Jetzt synchronisieren'), disabled: acc.syncing || acc.needsKey, onclick: syncNow }, icon('sync'))),
           h('div', { class: 'menu-sep' }),
+          h('button', { class: 'menu-item', onclick: () => { closePop(); remoteTabsDialog(); } }, icon('devices'), h('span', { class: 'menu-label' }, $t('Tabs von anderen PCs'))),
           h('button', { class: 'menu-item', onclick: () => { closePop(); Settings.open('account'); } }, icon('user'), h('span', { class: 'menu-label' }, $t('Konto & Sync verwalten'))),
           h('button', { class: 'menu-item', onclick: () => { closePop(); signOut(); } }, icon('logout'), h('span', { class: 'menu-label' }, $t('Abmelden')))
         ]
@@ -274,6 +290,55 @@ const Account = (() => {
   }
 
   // ---------------------------------------------------------------------------
+  // Tabs von anderen PCs
+  // ---------------------------------------------------------------------------
+  let remoteCache = null; // { at, devices }
+  async function loadRemoteTabs(maxAge = 60_000) {
+    if (!acc.signedIn || acc.needsKey || acc.keyPending) return [];
+    if (remoteCache && Date.now() - remoteCache.at < maxAge) return remoteCache.devices;
+    const r = await F.account.remoteTabs();
+    if (!r.ok) throw new Error(r.error);
+    remoteCache = { at: Date.now(), devices: r.devices };
+    return r.devices;
+  }
+  function openUrl(url, background = false) {
+    const t = Tabs.active();
+    if (!background && t && isNewTab(t.url)) Tabs.navigate(url, t);
+    else Tabs.create(url, { background, index: state.tabs.indexOf(t) + 1 });
+  }
+  async function remoteTabsDialog() {
+    if (!acc.signedIn) return authDialog('signin');
+    const list = h('div', { class: 'rt-list' }, h('div', { class: 'rt-empty' }, h('span', { class: 'spinner' })));
+    const box = h('div', { class: 'dialog rt-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' }, h('h3', {}, $t('Tabs von anderen PCs')), list),
+      h('div', { class: 'dialog-foot' },
+        h('button', { class: 'btn ghost', onclick: async () => { remoteCache = null; render(); } }, icon('sync'), $t('Aktualisieren')),
+        h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
+    const close = dialogShell(box);
+    async function render() {
+      let devices;
+      try { devices = await loadRemoteTabs(0); } catch (e) {
+        list.replaceChildren(h('div', { class: 'rt-empty' }, errorText(e.message)));
+        return;
+      }
+      if (!devices.length) {
+        list.replaceChildren(h('div', { class: 'rt-empty' }, icon('devices'),
+          h('b', {}, $t('Noch keine anderen PCs')),
+          h('span', {}, $t('Melde dich auf einem anderen PC bei Falcon an. Dessen offene Tabs erscheinen dann hier.'))));
+        return;
+      }
+      list.replaceChildren(...devices.map((d) => h('section', { class: 'rt-device' },
+        h('header', {}, icon('devices'), h('b', { 'data-no-i18n': '' }, d.name), h('span', {}, ago(d.at)),
+          d.tabs.length > 1 ? h('button', { class: 'link-btn', onclick: () => { close(); d.tabs.forEach((t, i) => openUrl(t.url, i > 0)); } }, $t('Alle öffnen')) : null),
+        d.tabs.length
+          ? h('div', { class: 'rt-tabs' }, d.tabs.map((t) => h('button', { class: 'rt-tab', title: t.url, onclick: (e) => { close(); openUrl(t.url, e.ctrlKey || e.button === 1); } },
+              faviconEl(t.url, 16), h('span', { 'data-no-i18n': '' }, t.title || t.url), h('small', {}, hostOf(t.url)))))
+          : h('p', { class: 'rt-none' }, $t('Keine offenen Tabs')))));
+    }
+    render();
+  }
+
+  // ---------------------------------------------------------------------------
   // Aktionen
   // ---------------------------------------------------------------------------
   async function syncNow() {
@@ -383,7 +448,9 @@ const Account = (() => {
       h('div', { class: 's-card' },
         row($t('Name'), acc.displayName || $t('Nicht festgelegt'), h('button', { class: 'btn ghost', onclick: editName }, $t('Ändern'))),
         row($t('Profilfarbe'), $t('Farbe deines Profilbilds.'), swatches),
-        row($t('Dieser PC'), acc.deviceName, h('button', { class: 'btn ghost', onclick: editDevice }, $t('Umbenennen')))),
+        row($t('Dieser PC'), acc.deviceName, h('button', { class: 'btn ghost', onclick: editDevice }, $t('Umbenennen'))),
+        row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Bald kannst du sie gegen Belohnungen wie Beta-Features eintauschen.'),
+          h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale))))),
 
       h('h3', { class: 's-sub' }, $t('Synchronisierung')),
       h('div', { class: 's-card' },
@@ -393,7 +460,7 @@ const Account = (() => {
           h('button', { class: 'btn ghost', disabled: acc.syncing || acc.needsKey, onclick: syncNow }, icon('sync'), $t('Jetzt synchronisieren'))),
         ...KINDS.map(([kind, label, ic]) => {
           const input = h('input', { type: 'checkbox' });
-          input.checked = !!acc.kinds?.[kind];
+          input.checked = acc.kinds?.[kind] !== false;
           input.addEventListener('change', async () => { acc = await F.account.setKinds({ [kind]: input.checked }); renderAll(); });
           return h('div', { class: 's-row' },
             h('div', { class: 's-label s-label-icon' }, icon(ic), h('b', {}, $t(label))),
@@ -428,5 +495,10 @@ const Account = (() => {
   // Relative Zeitangabe aktuell halten
   setInterval(() => { if (!acc.syncing) openPop(true); }, 30_000);
 
-  return { open: openPop, renderSettings, authDialog, refresh, get state() { return acc; } };
+  // Eigene Tabs melden, wenn sich etwas ändert (der Hauptprozess wartet ohnehin eine Minute)
+  const tabsDirty = debounce(() => { if (acc.signedIn && !INCOGNITO) F.account.dirty('tabs'); }, 5000);
+  on('tabs-changed', tabsDirty);
+  on('tab-loaded', tabsDirty);
+
+  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, get state() { return acc; } };
 })();

@@ -14,6 +14,16 @@ const config = require('./firebase-config');
 
 const pbkdf2 = promisify(crypto.pbkdf2);
 const KINDS = ['bookmarks', 'passwords', 'history', 'settings'];
+const ALL_KINDS = [...KINDS, 'tabs']; // „tabs“: eigene offene Tabs für andere PCs bereitstellen (wird nicht zusammengeführt)
+
+// Feste Kennung dieser Installation – unabhängig vom Konto
+function deviceId() {
+  const file = path.join(app.getPath('userData'), 'device-id');
+  try { const id = fs.readFileSync(file, 'utf8').trim(); if (/^[0-9a-f-]{36}$/.test(id)) return id; } catch { /* neu anlegen */ }
+  const id = crypto.randomUUID();
+  try { fs.writeFileSync(file, id); } catch { /* egal */ }
+  return id;
+}
 const PBKDF2_ITER = 310000;
 
 // In der Entwicklung kann ein lokaler Firebase-Emulator genutzt werden
@@ -83,7 +93,9 @@ function publicState() {
     lastError: data.lastError || null,
     needsKey: !secret.dataKey && !data.keyError,
     keyPending: !secret.dataKey && !!data.keyError,
-    canUnlock: !!pendingPassword
+    canUnlock: !!pendingPassword,
+    coins: (data.coins?.balance || 0) + (data.coins?.pending || 0),
+    admin: !!data.admin
   };
 }
 const changed = () => notify(publicState());
@@ -236,7 +248,7 @@ async function setupKey(password) {
 function startSession(r, email) {
   data = {
     v: 1, uid: r.localId, email: r.email || email, displayName: r.displayName || '', emailVerified: false,
-    deviceName: os.hostname(), kinds: Object.fromEntries(KINDS.map((k) => [k, true])), sync: {}, lastSync: 0, lastError: null
+    deviceName: os.hostname(), kinds: Object.fromEntries(ALL_KINDS.map((k) => [k, true])), sync: {}, lastSync: 0, lastError: null
   };
   secret = { refreshToken: r.refreshToken, dataKey: null };
   setTokens(r);
@@ -265,6 +277,7 @@ async function finishSignIn(password) {
   changed();
   scheduleSync(key ? 500 : 20_000);
   startPeriodic();
+  loadCoins().then(checkAdmin).catch(() => {});
 }
 
 const safe = (fn) => async (...args) => {
@@ -304,7 +317,12 @@ function clearLocal() {
   data = null; secret = null; idToken = null; idTokenExp = 0; pendingPassword = null;
   persist();
 }
-const signOut = safe(async () => { clearLocal(); changed(); return {}; });
+const signOut = safe(async () => {
+  try { await flushCoins(); } catch { /* egal */ }
+  // Eigene offenen Tabs vom Server entfernen (wenn möglich)
+  try { if (secret?.dataKey) await deleteDoc(devicePath()); } catch { /* offline – egal */ }
+  clearLocal(); changed(); return {};
+});
 
 const resetPassword = safe(async ({ email }) => {
   await auth('sendOobCode', { requestType: 'PASSWORD_RESET', email }, localeHeader());
@@ -368,6 +386,10 @@ const deleteAccount = safe(async ({ password }) => {
   const r = await auth('signInWithPassword', { email: data.email, password, returnSecureToken: true });
   setTokens(r);
   for (const k of KINDS) await deleteDoc(syncPath(k));
+  try {
+    const res = await request(`${STORE}/users/${data.uid}/devices?pageSize=50`, { token: await token() });
+    for (const doc of res.documents || []) await deleteDoc(`users/${data.uid}/devices/${doc.name.split('/').pop()}`);
+  } catch { /* keine Geräte */ }
   await deleteDoc(keyPath());
   await auth('delete', { idToken });
   clearLocal(); changed();
@@ -491,6 +513,9 @@ async function syncNow() {
       if (!data) break; // abgemeldet
     }
   }
+  if (data) {
+    try { await pushTabs(); } catch (e) { if (!(e instanceof AccountError)) console.error('Sync tabs:', e); error = error || e.code || 'UNKNOWN'; }
+  }
   syncing = false;
   if (data) { data.lastError = error; if (!error) data.lastSync = Date.now(); persist(); }
   changed();
@@ -509,14 +534,157 @@ function startPeriodic() {
 
 /** Lokale Änderung – nach kurzer Pause hochladen. */
 function markDirty(kind) {
-  if (!load() || !KINDS.includes(kind) || !data.kinds[kind]) return;
+  if (!load() || !ALL_KINDS.includes(kind) || data.kinds[kind] === false) return;
   const st = data.sync[kind] || (data.sync[kind] = { rev: null, dirty: true });
   if (!st.dirty) { st.dirty = true; persist(); }
-  scheduleSync(kind === 'history' ? 120_000 : 15_000);
+  scheduleSync(kind === 'history' ? 120_000 : kind === 'tabs' ? 60_000 : 15_000);
+}
+
+// ---------------------------------------------------------------------------
+// Offene Tabs auf anderen PCs
+// ---------------------------------------------------------------------------
+const devicePath = () => `users/${data.uid}/devices/${deviceId()}`;
+let lastTabsHash = null;
+async function pushTabs(force = false) {
+  if (!data || !secret?.dataKey || !providers.openTabs) return;
+  if (data.kinds.tabs === false) {
+    if (lastTabsHash !== 'off') { await deleteDoc(devicePath()); lastTabsHash = 'off'; }
+    return;
+  }
+  const tabs = (await providers.openTabs.get()).slice(0, 60);
+  const hash = crypto.createHash('sha1').update(JSON.stringify(tabs)).digest('hex');
+  // Spätestens alle 6 Stunden neu hochladen, damit der PC als „aktiv“ gilt
+  if (!force && hash === lastTabsHash && Date.now() - (data.tabsAt || 0) < 6 * 3600_000) return;
+  const id = deviceId();
+  await putDoc(devicePath(), {
+    data: str(encrypt(secret.dataKey, { name: data.deviceName || os.hostname(), tabs }, `${data.uid}:device:${id}`)),
+    at: int(Date.now()), v: int(1)
+  });
+  lastTabsHash = hash;
+  data.tabsAt = Date.now();
+  if (data.sync.tabs) data.sync.tabs.dirty = false;
+}
+const remoteTabs = safe(async () => {
+  if (!load() || !secret?.dataKey) return { devices: [] };
+  const res = await request(`${STORE}/users/${data.uid}/devices?pageSize=50`, { token: await token() });
+  const own = deviceId();
+  const devices = [];
+  for (const doc of res.documents || []) {
+    const id = doc.name.split('/').pop();
+    if (id === own) continue;
+    const at = Number(doc.fields?.at?.integerValue) || 0;
+    if (Date.now() - at > 30 * 86400_000) continue; // seit 30 Tagen nicht gesehen
+    try {
+      const d = decrypt(secret.dataKey, doc.fields.data.stringValue, `${data.uid}:device:${id}`);
+      devices.push({ id, name: d.name || '?', at, tabs: Array.isArray(d.tabs) ? d.tabs : [] });
+    } catch { /* anderer Schlüssel (alter PC) – überspringen */ }
+  }
+  devices.sort((a, b) => b.at - a.at);
+  return { devices };
+});
+
+// ---------------------------------------------------------------------------
+// Fehlermeldungen (für alle, auch ohne Konto) und Übersicht für den Admin
+// ---------------------------------------------------------------------------
+const toFields = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) =>
+  [k, typeof v === 'number' ? int(v) : k === 'created' ? { timestampValue: v } : str(v)]));
+const fromFields = (f = {}) => Object.fromEntries(Object.entries(f).map(([k, v]) =>
+  [k, v.stringValue ?? (v.integerValue != null ? Number(v.integerValue) : v.timestampValue ?? v.booleanValue ?? null)]));
+
+const submitReport = safe(async (r) => {
+  const signedIn = !!load();
+  const body = {
+    text: String(r.text || '').trim().slice(0, 5000),
+    category: String(r.category || 'bug').slice(0, 40),
+    version: app.getVersion(),
+    os: `${os.type()} ${os.release()} (${process.arch})`,
+    url: r.url ? String(r.url).slice(0, 1000) : undefined,
+    screenshot: r.screenshot && r.screenshot.length <= 900000 ? r.screenshot : undefined,
+    email: r.email ? String(r.email).trim().slice(0, 200) : undefined,
+    uid: signedIn ? data.uid : undefined,
+    created: new Date().toISOString(),
+    status: 'new'
+  };
+  if (!body.text) throw new AccountError('EMPTY');
+  const opts = { method: 'POST', body: { fields: toFields(body) } };
+  if (signedIn) opts.token = await token();
+  await request(`${STORE}/reports?key=${config.apiKey}`, opts);
+  return {};
+});
+
+// Nur der Admin (siehe Firestore-Regeln) darf Meldungen lesen
+const listReports = safe(async () => {
+  const res = await request(`${STORE}/reports?pageSize=200`, { token: await token() });
+  const reports = (res.documents || []).map((d) => ({ id: d.name.split('/').pop(), ...fromFields(d.fields) }))
+    .sort((a, b) => String(b.created).localeCompare(String(a.created)));
+  if (data && !data.admin) { data.admin = true; persist(); changed(); }
+  return { reports };
+});
+async function checkAdmin() {
+  if (!load()) return false;
+  try {
+    await request(`${STORE}/reports?pageSize=1`, { token: await token() });
+    data.admin = true;
+  } catch (e) {
+    if (e.status === 403 || e.code === 'PERMISSION_DENIED') data.admin = false;
+  }
+  persist(); changed();
+  return !!data?.admin;
+}
+const updateReport = safe(async ({ id, status }) => {
+  if (!/^[\w-]{10,40}$/.test(String(id)) || !['new', 'progress', 'done'].includes(status)) throw new AccountError('INVALID');
+  await request(`${STORE}/reports/${id}?updateMask.fieldPaths=status`, { method: 'PATCH', token: await token(), body: { fields: { status: str(status) } } });
+  return {};
+});
+const deleteReport = safe(async ({ id }) => {
+  if (!/^[\w-]{10,40}$/.test(String(id))) throw new AccountError('INVALID');
+  await deleteDoc(`reports/${id}`);
+  return {};
+});
+
+// ---------------------------------------------------------------------------
+// FalCoins: 1 Coin pro Website-Besuch, solange man angemeldet ist
+// ---------------------------------------------------------------------------
+const coinsPath = () => `users/${data.uid}/meta/coins`;
+let coinTimer = null;
+let coinNotify = null;
+function addCoin(n = 1) {
+  if (!load()) return;
+  data.coins = data.coins || { balance: 0, pending: 0 };
+  data.coins.pending += n;
+  // Zustand höchstens einmal pro Sekunde melden
+  if (!coinNotify) coinNotify = setTimeout(() => { coinNotify = null; persist(); changed(); }, 1000);
+  if (!coinTimer) coinTimer = setTimeout(() => { coinTimer = null; flushCoins(); }, 30_000);
+}
+async function flushCoins() {
+  if (!load() || !data.coins?.pending) return;
+  const n = data.coins.pending;
+  try {
+    const res = await request(`${STORE.replace(/\/documents$/, '')}/documents:commit`, {
+      method: 'POST', token: await token(),
+      body: { writes: [{ transform: {
+        document: `projects/${config.projectId}/databases/(default)/documents/${coinsPath()}`,
+        fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(n) } }]
+      } }] }
+    });
+    const balance = Number(res.writeResults?.[0]?.transformResults?.[0]?.integerValue);
+    data.coins.pending -= n;
+    if (Number.isFinite(balance)) data.coins.balance = balance;
+    persist(); changed();
+  } catch { /* später erneut */ }
+}
+async function loadCoins() {
+  if (!load()) return;
+  try {
+    const doc = await getDoc(coinsPath());
+    data.coins = { balance: Number(doc?.fields?.balance?.integerValue) || 0, pending: data.coins?.pending || 0 };
+    persist(); changed();
+  } catch { /* offline */ }
 }
 
 function setKinds(kinds) {
   if (!load()) return publicState();
+  if (typeof kinds?.tabs === 'boolean') { data.kinds.tabs = kinds.tabs; lastTabsHash = null; }
   for (const k of KINDS) if (typeof kinds?.[k] === 'boolean') {
     if (kinds[k] && !data.kinds[k]) data.sync[k] = { rev: null, dirty: true }; // wieder eingeschaltet: zusammenführen
     data.kinds[k] = kinds[k];
@@ -530,6 +698,8 @@ function init(opts) {
   providers = opts.providers || {};
   locale = opts.locale || locale;
   if (load() && secret.dataKey) { scheduleSync(4000); startPeriodic(); }
+  if (load()) setTimeout(() => { loadCoins().then(flushCoins).then(checkAdmin).catch(() => {}); }, 5000);
+  app.on('before-quit', () => { flushCoins(); });
 }
 function syncIfStale() {
   if (load() && secret?.dataKey && Date.now() - (data.lastSync || 0) > 5 * 60_000) scheduleSync(1000);
@@ -537,6 +707,7 @@ function syncIfStale() {
 
 module.exports = {
   KINDS, init, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
-  updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale,
+  updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale, remoteTabs,
+  submitReport, listReports, updateReport, deleteReport, addCoin, flushCoins,
   _test: { encrypt, decrypt, MERGE }
 };

@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src * data: file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src * data: file: blob: falcon:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
   <title>Falcon</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -46,6 +46,7 @@
     </button>
     <button id="updateBtn" class="update-btn hidden" title="Update verfügbar"><span data-icon="download"></span><span>Update</span></button>
     <span class="tb-sep"></span>
+    <button id="extBtn" class="tb-btn hidden" data-icon="puzzle" title="Erweiterungen" aria-label="Erweiterungen"></button>
     <button id="profileBtn" class="tb-btn profile-btn" title="Bei Falcon anmelden" aria-label="Konto"></button>
     <button id="menuBtn" class="tb-btn" data-icon="more" title="Falcon anpassen und einstellen" aria-label="Menü"></button>
   </nav>
@@ -123,6 +124,7 @@
   <!-- Popover: Leistung -->
   <section id="perfPop" class="pop perf hidden">
     <header class="pop-head"><h3>Leistung</h3><span class="pop-sub">Falcon gesamt</span></header>
+    <p id="pNetLimit" class="perf-net hidden" data-no-i18n></p>
     <div class="perf-graphs">
       <div class="graph">
         <div class="graph-head"><span>CPU</span><b id="pCpu">—</b></div>
@@ -232,6 +234,7 @@
         <button class="s-tab" data-section="privacy" data-icon="shield">Datenschutz</button>
         <button class="s-tab" data-section="passwords" data-icon="key">Passwörter</button>
         <button class="s-tab" data-section="bookmarks" data-icon="bookmark">Lesezeichen</button>
+        <button class="s-tab" data-section="extensions" data-icon="puzzle">Erweiterungen</button>
         <button class="s-tab" data-section="shortcuts" data-icon="keyboard">Tastenkürzel</button>
         <button class="s-tab" data-section="about" data-icon="info">Über Falcon</button>
       </aside>
@@ -242,6 +245,22 @@
         <section class="s-section" data-section="account">
           <h2>Konto &amp; Sync</h2>
           <div id="accountSettings"></div>
+        </section>
+
+        <section class="s-section" data-section="extensions">
+          <h2>Erweiterungen</h2>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Aus dem Chrome Web Store</b><span>Füge den Link einer Erweiterung aus dem Chrome Web Store ein, z. B. Bitwarden oder Dark Reader.</span></div>
+              <button id="extStore" class="btn primary">Installieren …</button>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Entpackte Erweiterung</b><span>Einen Ordner mit einer manifest.json laden – für eigene oder heruntergeladene Erweiterungen.</span></div>
+              <button id="extFolder" class="btn">Ordner wählen …</button>
+            </div>
+          </div>
+          <p class="notice">Falcon basiert auf Electron und unterstützt nur einen Teil der Chrome-Erweiterungs-APIs. Viele Erweiterungen funktionieren, manche nur teilweise oder gar nicht. Für Werbung nutzt du am besten den eingebauten Werbeblocker.</p>
+          <div id="extList" class="s-card"></div>
         </section>
 
         <section class="s-section" data-section="general">
@@ -302,6 +321,10 @@
               <label class="switch"><input type="checkbox" id="sNtClock" /><span></span></label>
             </div>
             <div class="s-row">
+              <div class="s-label"><b>Gratis-Spiele &amp; Angebote</b><span>Aktuell kostenlose Spiele und gute Angebote von Steam, Epic und GOG auf der Startseite. Daten von GamerPower und CheapShark.</span></div>
+              <label class="switch"><input type="checkbox" id="sNtDeals" /><span></span></label>
+            </div>
+            <div class="s-row">
               <div class="s-label"><b>Lesezeichenleiste</b><span>Unter der Adressleiste anzeigen (Strg+Umschalt+B).</span></div>
               <label class="switch"><input type="checkbox" id="sBookmarksBar" /><span></span></label>
             </div>
@@ -336,6 +359,17 @@
                 <option value="0">Keine Grenze</option><option value="1024">1 GB</option><option value="2048">2 GB</option>
                 <option value="3072">3 GB</option><option value="4096">4 GB</option><option value="6144">6 GB</option><option value="8192">8 GB</option>
               </select></div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Netzwerk-Limiter</b><span>Begrenzt Downloads und Webseiten, damit Spiele genug Bandbreite und einen stabilen Ping haben.</span></div>
+              <div class="select"><select id="sNetLimit">
+                <option value="0">Aus</option><option value="2">2 Mbit/s</option><option value="5">5 Mbit/s</option><option value="10">10 Mbit/s</option>
+                <option value="25">25 Mbit/s</option><option value="50">50 Mbit/s</option><option value="100">100 Mbit/s</option>
+              </select></div>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Limiter nur im Game Mode</b><span>Sonst gilt die Begrenzung immer.</span></div>
+              <label class="switch"><input type="checkbox" id="sNetGameOnly" /><span></span></label>
             </div>
           </div>
         </section>
@@ -424,6 +458,13 @@
             </div>
             <div id="pkList"></div>
           </div>
+          <div class="s-card">
+            <div class="s-row">
+              <div class="s-label"><b>Passwort-Check</b><span id="pwCheckText">Prüft, ob deine Passwörter in bekannten Datenlecks auftauchen, mehrfach verwendet werden oder zu schwach sind. Dein Passwort verlässt dabei nie deinen PC.</span></div>
+              <button id="pwCheckBtn" class="btn">Jetzt prüfen</button>
+            </div>
+            <div id="pwCheckSummary" class="pw-check hidden" data-no-i18n></div>
+          </div>
           <div class="s-toolbar">
             <div class="s-search" data-icon="search"><input id="pwSearch" placeholder="Passwörter durchsuchen" spellcheck="false" /></div>
             <button id="pwAdd" class="btn primary">Hinzufügen</button>
@@ -500,6 +541,8 @@
   <script src="js/passwords.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/account.js"></script>
+  <script src="js/extensions.js"></script>
+  <script src="js/report.js"></script>
   <script src="js/history-view.js"></script>
   <script src="js/updates.js"></script>
   <script src="js/palette.js"></script>

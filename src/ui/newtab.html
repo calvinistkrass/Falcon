@@ -106,6 +106,27 @@
   .row .primary { background: var(--accent); color: var(--accent-fg, #fff); }
   .row .primary:hover { background: color-mix(in oklab, var(--accent) 86%, white); color: var(--accent-fg, #fff); }
 
+  /* Gratis-Spiele & Angebote */
+  #deals { position: relative; width: 100%; max-width: 980px; margin: 44px 0 72px; }
+  #deals[hidden] { display: none; }
+  .deal-group + .deal-group { margin-top: 26px; }
+  .deal-group h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px 4px; font: 600 13px var(--font); color: var(--text-2); letter-spacing: .01em; }
+  .deal-group h2 i { width: 7px; height: 7px; border-radius: 50%; background: #3dd68c; box-shadow: 0 0 0 3px rgb(61 214 140 / .18); }
+  .deal-group h2 i.sale { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent); }
+  .deal-row { display: grid; grid-auto-flow: column; grid-auto-columns: 216px; gap: 12px; overflow-x: auto; padding: 2px 4px 10px; scroll-snap-type: x mandatory; }
+  .deal-row::-webkit-scrollbar { height: 8px; }
+  .deal { scroll-snap-align: start; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: var(--tile); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); text-decoration: none; transition: transform .15s, box-shadow .15s; }
+  .deal:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px var(--line-2), 0 10px 24px -12px rgb(0 0 0 / .7); }
+  .deal .img { position: relative; aspect-ratio: 16 / 7.5; background: #0b0c0e center / cover no-repeat; }
+  .deal .badge { position: absolute; left: 8px; top: 8px; padding: 2px 7px; border-radius: 6px; font: 700 11px var(--font); background: #3dd68c; color: #06150d; }
+  .deal .badge.sale { background: var(--accent); color: var(--accent-fg, #fff); }
+  .deal .body { display: grid; gap: 3px; padding: 10px 12px 12px; }
+  .deal b { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deal .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--text-3); }
+  .deal .meta s { color: var(--text-3); }
+  .deal .meta .price { color: var(--text); font-weight: 600; }
+  body.has-bg .deal { background: rgb(20 21 24 / .55); backdrop-filter: blur(8px); }
+
   footer { position: fixed; right: 20px; bottom: 16px; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
   footer b { color: var(--text-2); font-weight: 500; }
 </style>
@@ -123,6 +144,11 @@
 
     <nav class="shortcuts" id="grid"></nav>
   </main>
+
+  <section id="deals" hidden>
+    <div class="deal-group" id="freeGroup" hidden><h2><i></i><span data-t="Gerade kostenlos"></span></h2><div class="deal-row" id="freeRow"></div></div>
+    <div class="deal-group" id="saleGroup" hidden><h2><i class="sale"></i><span data-t="Angebote"></span></h2><div class="deal-row" id="saleRow"></div></div>
+  </section>
 
   <footer id="clock"></footer>
 
@@ -161,10 +187,10 @@ const [engineName, engineUrl] = ENGINES[params.get('engine')] || ENGINES.google;
 // ----- Sprache -----
 const LOCALES = { de: 'de-DE', en: 'en-US', fr: 'fr-FR', es: 'es-ES', tr: 'tr-TR' };
 const STRINGS = {
-  en: { 'Neuer Tab': 'New tab', 'Im Web suchen oder Adresse eingeben': 'Search the web or enter address', 'Verknüpfungen': 'Shortcuts', 'Verknüpfung hinzufügen': 'Add shortcut', 'Verknüpfung bearbeiten': 'Edit shortcut', 'Name': 'Name', 'Adresse': 'URL', 'Abbrechen': 'Cancel', 'Fertig': 'Done', 'Verknüpfung': 'Add shortcut', 'Bearbeiten': 'Edit', 'Entfernen': 'Remove', 'Du bist inkognito.': "You're incognito.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "History, cookies and site data are deleted as soon as you close all incognito windows." },
-  fr: { 'Neuer Tab': 'Nouvel onglet', 'Im Web suchen oder Adresse eingeben': 'Rechercher sur le Web ou saisir une adresse', 'Verknüpfungen': 'Raccourcis', 'Verknüpfung hinzufügen': 'Ajouter un raccourci', 'Verknüpfung bearbeiten': 'Modifier le raccourci', 'Name': 'Nom', 'Adresse': 'URL', 'Abbrechen': 'Annuler', 'Fertig': 'OK', 'Verknüpfung': 'Raccourci', 'Bearbeiten': 'Modifier', 'Entfernen': 'Retirer', 'Du bist inkognito.': "Vous êtes en navigation privée.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "L’historique, les cookies et les données des sites sont supprimés dès que vous fermez toutes les fenêtres privées." },
-  es: { 'Neuer Tab': 'Nueva pestaña', 'Im Web suchen oder Adresse eingeben': 'Busca en la Web o escribe una dirección', 'Verknüpfungen': 'Accesos directos', 'Verknüpfung hinzufügen': 'Añadir acceso directo', 'Verknüpfung bearbeiten': 'Editar acceso directo', 'Name': 'Nombre', 'Adresse': 'URL', 'Abbrechen': 'Cancelar', 'Fertig': 'Listo', 'Verknüpfung': 'Acceso directo', 'Bearbeiten': 'Editar', 'Entfernen': 'Quitar', 'Du bist inkognito.': "Estás en modo incógnito.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "El historial, las cookies y los datos de sitios se eliminan en cuanto cierras todas las ventanas de incógnito." },
-  tr: { 'Neuer Tab': 'Yeni sekme', 'Im Web suchen oder Adresse eingeben': 'Web\'de arayın veya adres girin', 'Verknüpfungen': 'Kısayollar', 'Verknüpfung hinzufügen': 'Kısayol ekle', 'Verknüpfung bearbeiten': 'Kısayolu düzenle', 'Name': 'Ad', 'Adresse': 'URL', 'Abbrechen': 'İptal', 'Fertig': 'Bitti', 'Verknüpfung': 'Kısayol', 'Bearbeiten': 'Düzenle', 'Entfernen': 'Kaldır', 'Du bist inkognito.': "Gizli moddasınız.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "Tüm gizli pencereleri kapattığınızda geçmiş, çerezler ve site verileri silinir." }
+  en: { 'Gerade kostenlos': 'Free right now', 'Angebote': 'Deals', 'Kostenlos': 'Free', 'statt {p}': 'was {p}', 'noch {n} Tage': '{n} days left', 'nur noch heute': 'last day', 'Neuer Tab': 'New tab', 'Im Web suchen oder Adresse eingeben': 'Search the web or enter address', 'Verknüpfungen': 'Shortcuts', 'Verknüpfung hinzufügen': 'Add shortcut', 'Verknüpfung bearbeiten': 'Edit shortcut', 'Name': 'Name', 'Adresse': 'URL', 'Abbrechen': 'Cancel', 'Fertig': 'Done', 'Verknüpfung': 'Add shortcut', 'Bearbeiten': 'Edit', 'Entfernen': 'Remove', 'Du bist inkognito.': "You're incognito.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "History, cookies and site data are deleted as soon as you close all incognito windows." },
+  fr: { 'Gerade kostenlos': 'Gratuit en ce moment', 'Angebote': 'Promotions', 'Kostenlos': 'Gratuit', 'statt {p}': 'au lieu de {p}', 'noch {n} Tage': 'encore {n} jours', 'nur noch heute': 'dernier jour', 'Neuer Tab': 'Nouvel onglet', 'Im Web suchen oder Adresse eingeben': 'Rechercher sur le Web ou saisir une adresse', 'Verknüpfungen': 'Raccourcis', 'Verknüpfung hinzufügen': 'Ajouter un raccourci', 'Verknüpfung bearbeiten': 'Modifier le raccourci', 'Name': 'Nom', 'Adresse': 'URL', 'Abbrechen': 'Annuler', 'Fertig': 'OK', 'Verknüpfung': 'Raccourci', 'Bearbeiten': 'Modifier', 'Entfernen': 'Retirer', 'Du bist inkognito.': "Vous êtes en navigation privée.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "L’historique, les cookies et les données des sites sont supprimés dès que vous fermez toutes les fenêtres privées." },
+  es: { 'Gerade kostenlos': 'Gratis ahora', 'Angebote': 'Ofertas', 'Kostenlos': 'Gratis', 'statt {p}': 'antes {p}', 'noch {n} Tage': 'quedan {n} días', 'nur noch heute': 'último día', 'Neuer Tab': 'Nueva pestaña', 'Im Web suchen oder Adresse eingeben': 'Busca en la Web o escribe una dirección', 'Verknüpfungen': 'Accesos directos', 'Verknüpfung hinzufügen': 'Añadir acceso directo', 'Verknüpfung bearbeiten': 'Editar acceso directo', 'Name': 'Nombre', 'Adresse': 'URL', 'Abbrechen': 'Cancelar', 'Fertig': 'Listo', 'Verknüpfung': 'Acceso directo', 'Bearbeiten': 'Editar', 'Entfernen': 'Quitar', 'Du bist inkognito.': "Estás en modo incógnito.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "El historial, las cookies y los datos de sitios se eliminan en cuanto cierras todas las ventanas de incógnito." },
+  tr: { 'Gerade kostenlos': 'Şu an ücretsiz', 'Angebote': 'Fırsatlar', 'Kostenlos': 'Ücretsiz', 'statt {p}': 'normalde {p}', 'noch {n} Tage': '{n} gün kaldı', 'nur noch heute': 'son gün', 'Neuer Tab': 'Yeni sekme', 'Im Web suchen oder Adresse eingeben': 'Web\'de arayın veya adres girin', 'Verknüpfungen': 'Kısayollar', 'Verknüpfung hinzufügen': 'Kısayol ekle', 'Verknüpfung bearbeiten': 'Kısayolu düzenle', 'Name': 'Ad', 'Adresse': 'URL', 'Abbrechen': 'İptal', 'Fertig': 'Bitti', 'Verknüpfung': 'Kısayol', 'Bearbeiten': 'Düzenle', 'Entfernen': 'Kaldır', 'Du bist inkognito.': "Gizli moddasınız.", 'Verlauf, Cookies und Website-Daten werden gelöscht, sobald du alle Inkognito-Fenster schließt.': "Tüm gizli pencereleri kapattığınızda geçmiş, çerezler ve site verileri silinir." }
 };
 const lang = LOCALES[params.get('lang')] ? params.get('lang') : 'de';
 const T = (s) => (STRINGS[lang] && STRINGS[lang][s]) || s;
@@ -269,6 +295,42 @@ document.getElementById('tileForm').addEventListener('submit', () => {
 });
 
 render();
+
+// ----- Gratis-Spiele & Angebote -----
+const Tp = (s, p) => Object.entries(p).reduce((acc, [k, v]) => acc.replace(`{${k}}`, v), T(s));
+function dealCard({ url, image, title, badge, sale, left, right }) {
+  const img = el('div', { className: 'img' }, el('span', { className: `badge${sale ? ' sale' : ''}` }, badge));
+  if (image) img.style.backgroundImage = `url("${image.replace(/"/g, '%22')}")`;
+  const meta = el('div', { className: 'meta' }, left, right);
+  return el('a', { className: 'deal', href: url, title }, img, el('div', { className: 'body' }, el('b', {}, title), meta));
+}
+function daysLeft(end) {
+  const t = Date.parse(end.replace(' ', 'T'));
+  if (!Number.isFinite(t)) return '';
+  const d = Math.ceil((t - Date.now()) / 86400000);
+  return d <= 1 ? T('nur noch heute') : Tp('noch {n} Tage', { n: d });
+}
+const money = (n) => (Number.isFinite(n) ? n.toLocaleString(LOCALES[lang], { style: 'currency', currency: 'USD' }) : '');
+async function loadDeals() {
+  if (CONFIG.showDeals === false || INCOGNITO || typeof window.falconDeals !== 'function') return;
+  let data;
+  try { data = await window.falconDeals(); } catch { return; }
+  if (!data) return;
+  const freeRow = document.getElementById('freeRow');
+  const saleRow = document.getElementById('saleRow');
+  freeRow.append(...data.free.map((g) => dealCard({
+    url: g.url, image: g.image, title: g.title, badge: T('Kostenlos'),
+    left: el('span', {}, g.platform), right: el('span', {}, g.ends ? daysLeft(g.ends) : (g.worth ? Tp('statt {p}', { p: g.worth }) : ''))
+  })));
+  saleRow.append(...data.deals.map((d) => dealCard({
+    url: d.url, image: d.image, title: d.title, badge: `−${d.savings} %`, sale: true,
+    left: el('span', {}, d.store), right: el('span', {}, el('s', {}, money(d.normal)), ' ', el('span', { className: 'price' }, money(d.price)))
+  })));
+  document.getElementById('freeGroup').hidden = !data.free.length;
+  document.getElementById('saleGroup').hidden = !data.deals.length;
+  document.getElementById('deals').hidden = !data.free.length && !data.deals.length;
+}
+loadDeals();
 
 // ----- Uhr -----
 function tick() {

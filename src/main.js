@@ -18,6 +18,7 @@ const updater = require('./updater');
 const { translator } = require('./i18n-main');
 const defaultBrowser = require('./default-browser');
 const account = require('./account');
+const extensions = require('./extensions');
 
 const IS_MAC = process.platform === 'darwin';
 const ICON = path.join(__dirname, '..', 'assets', process.platform === 'win32' ? 'falcon.ico' : 'falcon.png');
@@ -57,6 +58,8 @@ const DEFAULTS = {
   restoreSession: true,
   mouseButtons: 'history',
   ramLimit: 0,
+  netLimit: 0,           // Mbit/s, 0 = aus
+  netLimitGameOnly: true,
   downloadDir: '',
   downloadAsk: false,
   sidePanelWidth: 380,
@@ -64,7 +67,7 @@ const DEFAULTS = {
   pwRequireAuth: true,
   adblockAnnoyances: false,
   adblockAllow: [],
-  newtab: { image: '', showShortcuts: true, showClock: true },
+  newtab: { image: '', showShortcuts: true, showClock: true, showDeals: true },
   profileColor: '',
   window: null,
   bookmarks: [
@@ -301,9 +304,11 @@ ipcMain.handle('tab:set-frozen', async (e, id, frozen) => {
     if (frozen) {
       if (!wc.debugger.isAttached()) wc.debugger.attach('1.3');
       await wc.debugger.sendCommand('Page.setWebLifecycleState', { state: 'frozen' });
+      wc.falconFrozen = true;
     } else if (wc.debugger.isAttached()) {
       await wc.debugger.sendCommand('Page.setWebLifecycleState', { state: 'active' });
-      wc.debugger.detach();
+      wc.falconFrozen = false;
+      cdpRelease(wc);
     }
     return true;
   } catch {
@@ -396,6 +401,20 @@ function setupDownloads(ses) {
       }
     };
     report('started');
+    // Netzwerk-Limiter für Downloads: kurz pausieren, sobald der Download schneller als erlaubt ist
+    let windowStart = Date.now(), windowBytes = item.getReceivedBytes(), throttled = false;
+    item.on('updated', () => {
+      if (!netLimitBytes || throttled || item.isPaused()) return;
+      const elapsed = (Date.now() - windowStart) / 1000;
+      const got = item.getReceivedBytes() - windowBytes;
+      const allowed = (netLimitBytes / 1.5) * elapsed;
+      if (got > allowed) {
+        throttled = true;
+        item.pause();
+        setTimeout(() => { throttled = false; if (item.getState() === 'progressing' && item.isPaused() && !item.userPaused) item.resume(); }, Math.min(2000, ((got - allowed) / netLimitBytes) * 1000));
+      }
+      if (elapsed > 3) { windowStart = Date.now(); windowBytes = item.getReceivedBytes(); }
+    });
     item.on('updated', (_ev, state) => report(state));
     item.once('done', (_ev, state) => {
       downloadItems.delete(id);
@@ -421,8 +440,8 @@ ipcMain.handle('dlpage', async (e, action, id) => {
     case 'list': return dlEntries().map(dlView);
     case 'open': if (d?.path && fs.existsSync(d.path)) shell.openPath(d.path); return true;
     case 'show': if (d?.path) shell.showItemInFolder(d.path); return true;
-    case 'pause': item?.pause(); if (item && d) { d.paused = true; pushToDownloadPages(dlView(d)); } return true;
-    case 'resume': if (item?.canResume()) item.resume(); if (item && d) { d.paused = false; pushToDownloadPages(dlView(d)); } return true;
+    case 'pause': if (item) item.userPaused = true; item?.pause(); if (item && d) { d.paused = true; pushToDownloadPages(dlView(d)); } return true;
+    case 'resume': if (item) item.userPaused = false; if (item?.canResume()) item.resume(); if (item && d) { d.paused = false; pushToDownloadPages(dlView(d)); } return true;
     case 'cancel': item?.cancel(); return true;
     case 'retry': if (d && /^(https?|data|blob):/i.test(d.url)) session.defaultSession.downloadURL(d.url); return true;
     case 'source': if (d && /^https?:/i.test(d.url)) toHost(e.sender, 'open-tab', { url: d.url, background: false }); return true;
@@ -442,9 +461,41 @@ ipcMain.handle('dlpage', async (e, action, id) => {
   return null;
 });
 
+// Netzwerk-Limiter: begrenzt Downloads und Seiten, damit der Ping im Spiel stabil bleibt.
+// Seiten werden pro Tab über das DevTools-Protokoll gedrosselt, Downloads über kurzes Pausieren.
+let netLimitBytes = 0;
+function cdpRelease(wc) {
+  if (!wc.falconFrozen && !wc.falconThrottled && wc.debugger.isAttached()) { try { wc.debugger.detach(); } catch { /* egal */ } }
+}
+async function throttleWebview(wc, bytes) {
+  if (!wc || wc.isDestroyed() || wc.getType() !== 'webview') return;
+  try {
+    if (bytes) {
+      if (!wc.debugger.isAttached()) wc.debugger.attach('1.3');
+      await wc.debugger.sendCommand('Network.enable');
+      await wc.debugger.sendCommand('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: bytes, uploadThroughput: bytes });
+      wc.falconThrottled = true;
+    } else if (wc.falconThrottled) {
+      wc.falconThrottled = false;
+      if (wc.debugger.isAttached()) {
+        await wc.debugger.sendCommand('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+        await wc.debugger.sendCommand('Network.disable');
+      }
+      cdpRelease(wc);
+    }
+  } catch { /* z. B. wenn die Entwicklertools offen sind */ }
+}
+function applyNetLimit() {
+  const mbps = Number(settings.netLimit) || 0;
+  const active = mbps > 0 && (!settings.netLimitGameOnly || settings.gameMode);
+  // Chromiums Drosselung erreicht nur ~65 % des Werts (Protokoll-Overhead) – daher ausgleichen
+  netLimitBytes = active ? Math.round(mbps * 125000 * 1.5) : 0;
+  for (const wc of webContents.getAllWebContents()) throttleWebview(wc, netLimitBytes);
+}
+
 // falcon://<seite>/ liefert Dateien aus src/ui (Seite selbst aus src/ui/pages)
 const UI_DIR = path.join(__dirname, 'ui');
-const FALCON_PAGES = { downloads: 'pages/downloads.html' };
+const FALCON_PAGES = { downloads: 'pages/downloads.html', reports: 'pages/reports.html' };
 function setupFalconProtocol(ses) {
   if (ses.protocol.isProtocolHandled('falcon')) return;
   ses.protocol.handle('falcon', (req) => {
@@ -497,6 +548,18 @@ const syncProviders = {
     }
   },
   passwords: { get: () => pw.all(), set: (list) => pw.replaceAll(list) },
+  openTabs: {
+    get: async () => {
+      const out = [];
+      for (const w of uiWindows) {
+        if (!alive(w) || w.falconIncognito) continue;
+        const list = await w.webContents.executeJavaScript(
+          `state.tabs.filter((t) => /^https?:/.test(t.url)).map((t) => ({ url: t.url, title: Tabs.displayTitle(t) }))`).catch(() => []);
+        if (Array.isArray(list)) out.push(...list);
+      }
+      return out;
+    }
+  },
   history: {
     get: async () => {
       const w = [...uiWindows].find((x) => alive(x) && !x.falconIncognito);
@@ -524,13 +587,159 @@ const accountHandlers = {
   deleteAccount: (a) => account.deleteAccount(a),
   syncNow: () => account.syncNow(),
   setKinds: (a) => account.setKinds(a),
-  dirty: (kind) => { if (kind === 'history') account.markDirty('history'); return true; }
+  dirty: (kind) => { if (kind === 'history' || kind === 'tabs') account.markDirty(kind); return true; },
+  remoteTabs: () => account.remoteTabs(),
+  submitReport: (a) => account.submitReport(a)
 };
 ipcMain.handle('account', async (e, action, arg) => {
   const w = BrowserWindow.fromWebContents(e.sender);
-  if (!uiWindows.has(w) || w.falconIncognito) return { ok: false, error: 'FORBIDDEN' };
+  // Fehler melden geht auch aus Inkognito-Fenstern
+  if (!uiWindows.has(w) || (w.falconIncognito && action !== 'submitReport')) return { ok: false, error: 'FORBIDDEN' };
   const fn = accountHandlers[action];
   return fn ? fn(arg && typeof arg === 'object' ? { ...arg } : arg) : { ok: false, error: 'UNKNOWN_ACTION' };
+});
+
+// ---------------------------------------------------------------------------
+// Startseite: kostenlose Spiele und Angebote (öffentliche APIs, ohne Konto)
+// ---------------------------------------------------------------------------
+let dealsCache = null;
+async function fetchJson(url) {
+  const res = await session.defaultSession.fetch(url, { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+async function loadDeals() {
+  if (dealsCache && Date.now() - dealsCache.at < 60 * 60_000) return dealsCache.data;
+  const [free, deals] = await Promise.allSettled([
+    fetchJson('https://www.gamerpower.com/api/giveaways?platform=pc&type=game&sort-by=popularity'),
+    fetchJson('https://www.cheapshark.com/api/1.0/deals?storeID=1,25,7&onSale=1&sortBy=Deal%20Rating&pageSize=12&AAA=1')
+  ]);
+  const https = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : '');
+  const STORES = { 1: 'Steam', 7: 'GOG', 25: 'Epic Games' };
+  const data = {
+    free: free.status === 'fulfilled' && Array.isArray(free.value) ? free.value.slice(0, 8).map((g) => ({
+      title: String(g.title || '').replace(/\s*\((Steam|Epic Games|GOG|Itch\.io|PC)\)\s*Giveaway$/i, '').replace(/\s*Giveaway$/i, ''),
+      image: https(g.thumbnail), url: https(g.open_giveaway_url) || https(g.gamerpower_url),
+      platform: String(g.platforms || '').split(',').map((s) => s.trim()).filter((s) => s && s !== 'PC').join(', ') || 'PC',
+      worth: g.worth && g.worth !== 'N/A' ? String(g.worth) : '', ends: g.end_date && g.end_date !== 'N/A' ? String(g.end_date) : ''
+    })).filter((g) => g.url) : [],
+    deals: deals.status === 'fulfilled' && Array.isArray(deals.value) ? deals.value.filter((d) => Number(d.savings) >= 30).slice(0, 8).map((d) => ({
+      title: String(d.title || ''), image: https(d.thumb),
+      url: d.steamAppID ? `https://store.steampowered.com/app/${encodeURIComponent(d.steamAppID)}` : `https://www.cheapshark.com/redirect?dealID=${encodeURIComponent(d.dealID)}`,
+      price: Number(d.salePrice), normal: Number(d.normalPrice), savings: Math.round(Number(d.savings)), store: STORES[d.storeID] || ''
+    })) : []
+  };
+  if (data.free.length || data.deals.length) dealsCache = { at: Date.now(), data };
+  return data;
+}
+ipcMain.handle('newtab:deals', async (e) => {
+  if (!/^file:.*\/ui\/newtab\.html/.test(e.senderFrame?.url || '')) return null;
+  if (settings.newtab?.showDeals === false) return null;
+  try { return await loadDeals(); } catch { return { free: [], deals: [] }; }
+});
+
+// ---------------------------------------------------------------------------
+// Passwort-Check: Datenlecks (Have I Been Pwned, k-Anonymität), doppelte und schwache Passwörter
+// Nur die ersten 5 Zeichen des SHA-1-Hashs verlassen den PC – nie das Passwort selbst.
+// ---------------------------------------------------------------------------
+const PWNED_API = process.env.FALCON_PWNED_API && !app.isPackaged ? process.env.FALCON_PWNED_API : 'https://api.pwnedpasswords.com';
+function passwordStrength(p) {
+  const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z0-9]/].filter((r) => r.test(p)).length;
+  const common = /^(password|passwort|123456|qwertz|qwerty|111111|abc123|letmein|iloveyou|admin|welcome|hallo)/i.test(p);
+  return !common && (p.length >= 12 || (p.length >= 8 && classes >= 3));
+}
+ipcMain.handle('pw:check', async (e) => {
+  if (!isUi(e)) return null;
+  const list = pw.all();
+  const hashes = new Map(); // SHA-1 → ids
+  const counts = new Map(); // Passwort-Hash → Anzahl (für Wiederverwendung)
+  for (const entry of list) {
+    const h = crypto.createHash('sha1').update(entry.password, 'utf8').digest('hex').toUpperCase();
+    if (!hashes.has(h)) hashes.set(h, []);
+    hashes.get(h).push(entry.id);
+    counts.set(h, (counts.get(h) || 0) + 1);
+  }
+  const breached = new Map();
+  let failed = false;
+  const prefixes = [...new Set([...hashes.keys()].map((h) => h.slice(0, 5)))];
+  for (let i = 0; i < prefixes.length; i += 6) {
+    await Promise.all(prefixes.slice(i, i + 6).map(async (prefix) => {
+      try {
+        const res = await net.fetch(`${PWNED_API}/range/${prefix}`, { headers: { 'Add-Padding': 'true', 'User-Agent': 'Falcon-Browser' } });
+        if (!res.ok) throw new Error(String(res.status));
+        for (const line of (await res.text()).split('\n')) {
+          const [suffix, n] = line.trim().split(':');
+          const count = Number(n);
+          if (count > 0 && hashes.has(prefix + suffix)) breached.set(prefix + suffix, count);
+        }
+      } catch { failed = true; }
+    }));
+  }
+  const results = [];
+  for (const [h, ids] of hashes) {
+    for (const id of ids) {
+      const entry = list.find((x) => x.id === id);
+      results.push({ id, breached: breached.get(h) || 0, reused: counts.get(h) > 1 ? counts.get(h) : 0, weak: !passwordStrength(entry.password) });
+    }
+  }
+  return { checked: list.length, at: Date.now(), failed, results };
+});
+
+// ---------------------------------------------------------------------------
+// Chrome-Erweiterungen
+// ---------------------------------------------------------------------------
+const fromNormalUi = (e) => { const w = BrowserWindow.fromWebContents(e.sender); return uiWindows.has(w) && !w.falconIncognito; };
+const extChanged = () => broadcast('extensions-changed', extensions.list());
+ipcMain.handle('ext:list', (e) => (isUi(e) ? extensions.list() : []));
+ipcMain.handle('ext:install-store', async (e, input) => {
+  if (!fromNormalUi(e)) return { ok: false, error: 'FORBIDDEN' };
+  const r = await extensions.installFromStore(input);
+  extChanged();
+  return r;
+});
+ipcMain.handle('ext:install-folder', async (e) => {
+  if (!fromNormalUi(e)) return { ok: false, error: 'FORBIDDEN' };
+  const { canceled, filePaths } = await dialog.showOpenDialog(parentFor(e), { title: tr('Entpackte Erweiterung laden'), properties: ['openDirectory'] });
+  if (canceled || !filePaths[0]) return { ok: false, error: 'CANCELLED' };
+  const r = await extensions.installFolder(filePaths[0]);
+  extChanged();
+  return r;
+});
+ipcMain.handle('ext:remove', async (e, key) => { if (!fromNormalUi(e)) return false; const r = await extensions.remove(String(key)); extChanged(); return r; });
+ipcMain.handle('ext:enable', async (e, key, on) => { if (!fromNormalUi(e)) return null; const r = await extensions.setEnabled(String(key), !!on); extChanged(); return r; });
+ipcMain.handle('ext:popup', (e, key, anchor) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (!uiWindows.has(w) || w.falconIncognito || !anchor) return false;
+  return extensions.openPopup(String(key), w, { right: Number(anchor.right) || 0, bottom: Number(anchor.bottom) || 0 });
+});
+ipcMain.handle('ext:options', (e, key) => (fromNormalUi(e) ? extensions.optionsUrl(String(key)) : null));
+
+// Screenshot der aktuellen Seite für eine Fehlermeldung (verkleinert, JPEG)
+ipcMain.handle('report:screenshot', async (e, id) => {
+  if (!isUi(e)) return null;
+  const wc = webContents.fromId(Number(id));
+  if (!wc || wc.isDestroyed() || wc.getType() !== 'webview') return null;
+  try {
+    let img = await wc.capturePage();
+    const { width } = img.getSize();
+    if (width > 1280) img = img.resize({ width: 1280, quality: 'good' });
+    for (const q of [60, 45, 30]) {
+      const url = `data:image/jpeg;base64,${img.toJPEG(q).toString('base64')}`;
+      if (url.length <= 880000) return url;
+    }
+    return null;
+  } catch { return null; }
+});
+
+// Übersicht der Meldungen (falcon://reports) – nur von dieser Seite aus
+ipcMain.handle('reports', async (e, action, arg) => {
+  if (!fromFalconPage(e, 'reports')) return null;
+  if (action === 'info') return { lang: pageLanguage(), accent: settings.accent, signedIn: account.state().signedIn };
+  if (action === 'list') return account.listReports();
+  if (action === 'status') return account.updateReport(arg || {});
+  if (action === 'delete') return account.deleteReport(arg || {});
+  if (action === 'open' && /^https?:\/\//i.test(String(arg))) { toHost(e.sender, 'open-tab', { url: String(arg), background: false }); return true; }
+  return null;
 });
 
 ipcMain.handle('default-browser:status', async () => ({ supported: defaultBrowser.supported(), isDefault: await defaultBrowser.isDefault() }));
@@ -543,6 +752,19 @@ ipcMain.handle('downloads:open-dir', () => shell.openPath(downloadDir()));
 const SHORTCUT_KEYS_CTRL = ['k', 't', 'w', 'l', 'r', 'd', 'h', 'j', 'tab', '+', '=', '-', '0', 'f', 'p', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 app.on('web-contents-created', (_e, contents) => {
+  // Neue Tabs sofort in den Netzwerk-Limiter aufnehmen
+  if (netLimitBytes) setImmediate(() => throttleWebview(contents, netLimitBytes));
+  // FalCoins: neue Seite im Tab (kein Neuladen, keine Inkognito-Tabs, höchstens alle 5 Sekunden)
+  if (contents.getType() === 'webview') {
+    let lastUrl = '', lastAt = 0;
+    contents.on('did-navigate', (_ev, url) => {
+      if (!/^https?:/i.test(url) || contents.session === incognitoSession()) return;
+      const clean = url.replace(/#.*$/, '');
+      if (clean === lastUrl || Date.now() - lastAt < 5000) { lastUrl = clean; return; }
+      lastUrl = clean; lastAt = Date.now();
+      account.addCoin(1);
+    });
+  }
   if (contents.getType() !== 'webview') return;
 
   // Neue Seite im Tab → Werbeblocker-Zähler zurücksetzen
@@ -618,6 +840,7 @@ ipcMain.handle('settings:set', async (e, patch) => {
     delete safe.pwRequireAuth;
   }
   settings = { ...settings, ...safe };
+  if ('netLimit' in safe || 'netLimitGameOnly' in safe || 'gameMode' in safe) applyNetLimit();
   if ('bookmarks' in safe) account.markDirty('bookmarks');
   if (SYNC_SETTINGS.some((k) => k in safe)) account.markDirty('settings');
   if ('adblock' in safe || 'adblockAnnoyances' in safe || 'adblockAllow' in safe) {
@@ -834,9 +1057,9 @@ ipcMain.handle('reader:extract', async (e, id) => {
 
 // ---------- Startseite ----------
 const newtabConfig = () => {
-  const n = { image: '', showShortcuts: true, showClock: true, ...(settings.newtab || {}) };
+  const n = { image: '', showShortcuts: true, showClock: true, showDeals: true, ...(settings.newtab || {}) };
   const image = n.image && fs.existsSync(n.image) ? `${require('url').pathToFileURL(n.image).href}?v=${fs.statSync(n.image).mtimeMs}` : '';
-  return { image, showShortcuts: n.showShortcuts !== false, showClock: n.showClock !== false };
+  return { image, showShortcuts: n.showShortcuts !== false, showClock: n.showClock !== false, showDeals: n.showDeals !== false };
 };
 ipcMain.on('newtab:config', (e) => {
   const url = e.senderFrame?.url || '';
@@ -948,7 +1171,7 @@ if (!gotLock) {
     if (url) win.webContents.send('open-tab', url);
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     loadSettings();
     Menu.setApplicationMenu(null);
     setupAdblock(session.defaultSession);
@@ -962,6 +1185,9 @@ if (!gotLock) {
         cb(['media', 'fullscreen', 'notifications', 'clipboard-sanitized-write', 'pointerLock', 'display-capture'].includes(permission));
       });
     }
+    applyNetLimit();
+    // Erweiterungen laden, bevor die ersten Seiten öffnen
+    await extensions.loadAll().catch((err) => console.error('Erweiterungen:', err));
     const first = createWindow();
     updater.init((channel, data) => broadcast(channel, data), {
       get: () => settings.pendingUpdate || null,

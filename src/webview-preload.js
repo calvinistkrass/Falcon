@@ -5,6 +5,7 @@ const { ipcRenderer, webFrame, contextBridge } = require('electron');
 // Falcon-Startseite: Einstellungen (Hintergrundbild, Uhr, Verknüpfungen) bereitstellen
 if (location.protocol === 'file:' && /\/ui\/newtab\.html$/.test(location.pathname)) {
   try { contextBridge.exposeInMainWorld('falconNewTab', ipcRenderer.sendSync('newtab:config')); } catch { /* ältere Seite */ }
+  try { contextBridge.exposeInMainWorld('falconDeals', () => ipcRenderer.invoke('newtab:deals')); } catch { /* egal */ }
 }
 
 // Google-Anmeldung: Seite soll Firefox sehen statt Electron/Chromium (siehe google-signin.js).
@@ -27,6 +28,45 @@ if (location.hostname === 'accounts.google.com' || location.hostname === 'accoun
 // 2. Erst nach „Passkey verwenden“ geht die Anfrage weiter – unter Windows über webauthn.dll
 //    (Electron selbst kann kein WebAuthn), sonst an die normale Browser-Schnittstelle.
 // Die Seite kann nur ihren eigenen Ursprung anfragen: den prüft der Hauptprozess anhand des echten Frames.
+// Lautstärke pro Tab: Seiten-Lautstärke × Tab-Faktor (wird erst bei Bedarf eingebaut)
+const VOLUME_SRC = `(function (f) {
+  if (!window.__falconVolume) {
+    const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');
+    const intended = new WeakMap();
+    let factor = 1;
+    const real = (el, v) => desc.set.call(el, Math.max(0, Math.min(1, v * factor)));
+    const apply = (el) => { if (!intended.has(el)) intended.set(el, desc.get.call(el)); real(el, intended.get(el)); };
+    Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
+      configurable: true, enumerable: desc.enumerable,
+      get() { return intended.has(this) ? intended.get(this) : desc.get.call(this); },
+      set(v) { intended.set(this, Number(v)); real(this, Number(v)); }
+    });
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () { apply(this); return play.apply(this, arguments); };
+    document.addEventListener('play', (e) => { if (e.target instanceof HTMLMediaElement) apply(e.target); }, true);
+    Object.defineProperty(window, '__falconVolume', { value: (x) => { factor = x; document.querySelectorAll('audio, video').forEach(apply); } });
+  }
+  window.__falconVolume(f);
+})`;
+if (/^https?:$/.test(location.protocol)) {
+  ipcRenderer.on('tab-volume', (_e, v) => {
+    const f = Number(v);
+    if (Number.isFinite(f)) webFrame.executeJavaScript(`${VOLUME_SRC}(${Math.max(0, Math.min(1, f))})`).catch(() => {});
+  });
+}
+
+// falcon://reports (Übersicht der Fehlermeldungen für den Admin)
+if (location.protocol === 'falcon:' && location.hostname === 'reports') {
+  const call = (action, arg) => ipcRenderer.invoke('reports', action, arg);
+  contextBridge.exposeInMainWorld('falconReports', {
+    info: () => call('info'),
+    list: () => call('list'),
+    setStatus: (id, status) => call('status', { id, status }),
+    remove: (id) => call('delete', { id }),
+    open: (url) => call('open', url)
+  });
+}
+
 // falcon://downloads
 if (location.protocol === 'falcon:' && location.hostname === 'downloads') {
   const call = (action, id) => ipcRenderer.invoke('dlpage', action, id);
