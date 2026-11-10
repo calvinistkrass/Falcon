@@ -170,6 +170,15 @@ service cloud.firestore {
         && (!('screenshot' in request.resource.data) || request.resource.data.screenshot.size() <= 900000);
       allow read, update, delete: if isAdmin();
     }
+    // Public copy without personal data: readable by everyone, status changes by the developer only
+    match /reportsPublic/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['text', 'category', 'version', 'created', 'status'])
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000
+        && request.resource.data.status == 'new';
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if isAdmin();
+    }
   }
 }
 ```

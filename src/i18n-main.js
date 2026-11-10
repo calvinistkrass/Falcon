@@ -7,6 +7,7 @@ const STRINGS = {
   en: {
     'Entpackte Erweiterung laden': 'Load unpacked extension',
     'Deckkraft': 'Opacity',
+    'Diese Seite gibt es nicht.': 'This page doesn’t exist.',
     'In Tab öffnen': 'Open in tab',
     'Schließen': 'Close',
     'Bilder': 'Images',
@@ -43,6 +44,7 @@ const STRINGS = {
   },
   fr: {
     'Deckkraft': 'Opacité',
+    'Diese Seite gibt es nicht.': 'Cette page n’existe pas.',
     'In Tab öffnen': 'Ouvrir dans un onglet',
     'Schließen': 'Fermer',
     'Bilder': 'Images',
@@ -79,6 +81,7 @@ const STRINGS = {
   },
   es: {
     'Deckkraft': 'Opacidad',
+    'Diese Seite gibt es nicht.': 'Esta página no existe.',
     'In Tab öffnen': 'Abrir en pestaña',
     'Schließen': 'Cerrar',
     'Bilder': 'Imágenes',
@@ -115,6 +118,7 @@ const STRINGS = {
   },
   tr: {
     'Deckkraft': 'Opaklık',
+    'Diese Seite gibt es nicht.': 'Bu sayfa mevcut değil.',
     'In Tab öffnen': 'Sekmede aç',
     'Schließen': 'Kapat',
     'Bilder': 'Resimler',

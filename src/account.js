@@ -608,8 +608,25 @@ const submitReport = safe(async (r) => {
   if (!body.text) throw new AccountError('EMPTY');
   const opts = { method: 'POST', body: { fields: toFields(body) } };
   if (signedIn) opts.token = await token();
-  await request(`${STORE}/reports?key=${config.apiKey}`, opts);
+  const res = await request(`${STORE}/reports?key=${config.apiKey}`, opts);
+  // Öffentliche Kopie mit derselben ID – nur Beschreibung, Art, Version, Datum und Status
+  const id = String(res.name || '').split('/').pop();
+  if (id) {
+    const pub = { text: body.text, category: body.category, version: body.version, created: body.created, status: 'new' };
+    const o = { method: 'PATCH', body: { fields: toFields(pub) } };
+    if (signedIn) o.token = await token();
+    await request(`${STORE}/reportsPublic/${id}?currentDocument.exists=false&key=${config.apiKey}`, o).catch(() => {});
+  }
   return {};
+});
+
+// Öffentliche Liste – für alle lesbar, auch ohne Anmeldung
+const listPublicReports = safe(async () => {
+  const opts = load() ? { token: await token() } : {};
+  const res = await request(`${STORE}/reportsPublic?pageSize=200&key=${config.apiKey}`, opts);
+  const reports = (res.documents || []).map((d) => ({ id: d.name.split('/').pop(), ...fromFields(d.fields) }))
+    .sort((a, b) => String(b.created).localeCompare(String(a.created)));
+  return { reports };
 });
 
 // Nur der Admin (siehe Firestore-Regeln) darf Meldungen lesen
@@ -634,11 +651,13 @@ async function checkAdmin() {
 const updateReport = safe(async ({ id, status }) => {
   if (!/^[\w-]{10,40}$/.test(String(id)) || !['new', 'progress', 'done'].includes(status)) throw new AccountError('INVALID');
   await request(`${STORE}/reports/${id}?updateMask.fieldPaths=status`, { method: 'PATCH', token: await token(), body: { fields: { status: str(status) } } });
+  await request(`${STORE}/reportsPublic/${id}?updateMask.fieldPaths=status&currentDocument.exists=true`, { method: 'PATCH', token: await token(), body: { fields: { status: str(status) } } }).catch(() => {});
   return {};
 });
 const deleteReport = safe(async ({ id }) => {
   if (!/^[\w-]{10,40}$/.test(String(id))) throw new AccountError('INVALID');
   await deleteDoc(`reports/${id}`);
+  await deleteDoc(`reportsPublic/${id}`).catch(() => {});
   return {};
 });
 
@@ -708,6 +727,6 @@ function syncIfStale() {
 module.exports = {
   KINDS, init, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
   updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale, remoteTabs,
-  submitReport, listReports, updateReport, deleteReport, addCoin, flushCoins,
+  submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins,
   _test: { encrypt, decrypt, MERGE }
 };

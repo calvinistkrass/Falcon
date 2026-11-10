@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.9.1] – 2026-11-10
+
+### Changed
+- **Reported problems are public**: everyone can see reports on `falcon://reports` (description, type, status, date and version). Email address, page address, screenshot and system details stay visible to the developer only, and only the developer can change the status or delete reports. The report dialog says so.
+
 ## [1.9.0] – 2026-11-10
 
 ### Added
@@ -144,6 +149,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.9.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.1
 [1.9.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.0
 [1.8.3]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.3
 [1.8.2]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.2

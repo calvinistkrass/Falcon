@@ -913,3 +913,6 @@ body.incognito #content { border-top-left-radius: 0; }
 .report-dialog .dialog-body { max-height: calc(100vh - 140px); overflow-y: auto; }
 
 .coin-soon { margin-left: auto; padding: 1px 7px; border-radius: 6px; background: rgb(245 181 68 / .14); color: #f5b544; font-size: 10.5px; font-weight: 600; }
+
+.report-note { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; font-size: 11.5px; color: var(--text-3); line-height: 1.45; }
+.report-note svg { width: 14px; height: 14px; flex: none; margin-top: 1px; }
