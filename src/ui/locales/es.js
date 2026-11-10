@@ -655,5 +655,6 @@ I18N.add('es', {
   "Sobald jemand einen Fehler meldet, erscheint er hier.": "En cuanto alguien informe de un problema, aparecerá aquí.",
   "Bald eintauschbar": "Canjeables pronto",
   "Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Bald kannst du sie gegen Belohnungen wie Beta-Features eintauschen.": "Recibes un FalCoin por cada web que visitas con la sesión iniciada. Pronto podrás canjearlos por recompensas como funciones beta.",
+  "Deine Beschreibung erscheint öffentlich auf falcon://reports. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.": "Tu descripción aparece públicamente en falcon://reports. Solo el desarrollador ve tu correo, la dirección de la página y la captura.",
   "Öffnen": "Abrir"
 });

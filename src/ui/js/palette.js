@@ -42,7 +42,7 @@ const Palette = (() => {
       { label: 'Vollbild', icon: 'maximize', key: 'F11', words: 'fullscreen', run: () => F.win('fullscreen') },
       { label: 'Entwicklertools', icon: 'code', key: 'F12', words: 'devtools', run: () => t?.webview?.openDevTools(), when: web },
       { label: 'Fehler melden …', icon: 'bug', words: 'bug report feedback', run: () => Report.open() },
-      typeof Account !== 'undefined' && Account.state.admin ? { label: 'Gemeldete Fehler', icon: 'bug', words: 'falcon://reports bugs', run: () => openInternalPage('falcon://reports/') } : null,
+      { label: 'Gemeldete Fehler', icon: 'bug', words: 'falcon://reports bugs', run: () => openInternalPage('falcon://reports/') },
       { label: 'Einstellungen', icon: 'settings', key: 'Strg+,', words: 'settings', run: () => Settings.open() },
       ...SECTIONS.map(([id, name, icon]) => ({
         label: $t('Einstellungen › {name}', { name: $t(name) }), raw: true, icon, words: `settings ${id}`, run: () => Settings.open(id)

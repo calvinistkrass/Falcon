@@ -48,22 +48,28 @@
   }
 
   function row(r) {
-    const status = el('select', { onchange: async (e) => {
-      const res = await api.setStatus(r.id, e.target.value);
-      if (res?.ok) { r.status = e.target.value; render(); }
-    } }, STATUS.map(([v, l]) => el('option', { value: v }, t(l))));
-    status.value = r.status || 'new';
+    let status;
+    if (info.admin) {
+      status = el('select', { onchange: async (e) => {
+        const res = await api.setStatus(r.id, e.target.value);
+        if (res?.ok) { r.status = e.target.value; render(); }
+      } }, STATUS.map(([v, l]) => el('option', { value: v }, t(l))));
+      status.value = r.status || 'new';
+    } else {
+      // Nur anzeigen – ändern darf nur der Entwickler
+      status = el('span', { class: `r-badge ${r.status || 'new'}` }, t((STATUS.find(([v]) => v === (r.status || 'new')) || STATUS[0])[1]));
+    }
     const when = r.created ? new Date(r.created).toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     return el('article', { class: `report${r.status === 'done' ? ' done' : ''}` },
       el('div', { class: 'r-head' },
         el('span', { class: `r-cat ${r.category || 'other'}` }, t(CATS[r.category] || 'Sonstiges')),
         el('span', {}, when),
         el('span', { class: 'r-status' }, status),
-        el('button', { class: 'icon-btn', title: t('Löschen'), html: ICON_TRASH, onclick: async () => {
+        info.admin ? el('button', { class: 'icon-btn', title: t('Löschen'), html: ICON_TRASH, onclick: async () => {
           if (!confirm(t('Diese Meldung endgültig löschen?'))) return;
           const res = await api.remove(r.id);
           if (res?.ok) { reports = reports.filter((x) => x !== r); render(); }
-        } })),
+        } }) : null),
       el('p', { class: 'r-text' }, r.text || ''),
       el('div', { class: 'r-meta' },
         r.email ? el('span', {}, '✉ ', el('a', { href: `mailto:${encodeURIComponent(r.email).replace(/%40/g, '@')}` }, r.email)) : null,
@@ -83,10 +89,7 @@
     $('#summary').textContent = errorCode ? '' : t('{open} offen · {all} insgesamt', { open, all: reports.length });
     const empty = !shown.length;
     $('#empty').classList.toggle('hidden', !empty);
-    if (errorCode === 'PERMISSION_DENIED' || errorCode === 'SIGNED_OUT' || errorCode === 'HTTP_403') {
-      $('#emptyTitle').textContent = t('Kein Zugriff');
-      $('#emptyText').textContent = info.signedIn ? t('Nur der Entwickler-Account darf die Meldungen sehen.') : t('Melde dich mit dem Entwickler-Account an.');
-    } else if (errorCode) {
+    if (errorCode) {
       $('#emptyTitle').textContent = t('Meldungen konnten nicht geladen werden');
       $('#emptyText').textContent = errorCode;
     } else {

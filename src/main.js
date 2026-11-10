@@ -502,7 +502,10 @@ function setupFalconProtocol(ses) {
     let u;
     try { u = new URL(req.url); } catch { return new Response('Bad request', { status: 400 }); }
     const page = FALCON_PAGES[u.hostname];
-    if (!page) return new Response('Not found', { status: 404 });
+    if (!page) {
+      return new Response(`<!doctype html><meta charset="utf-8"><title>falcon://${u.hostname}</title><body style="margin:0;display:grid;place-items:center;height:100vh;background:#101113;color:#6e6e77;font:14px 'Segoe UI',sans-serif">${tr('Diese Seite gibt es nicht.')}</body>`,
+        { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
     const rel = u.pathname === '/' ? page : decodeURIComponent(u.pathname).replace(/^\/+/, '');
     const file = rel === 'falcon.png' ? path.join(__dirname, '..', 'assets', 'falcon.png') : path.resolve(UI_DIR, rel);
     if (rel !== 'falcon.png' && !file.startsWith(UI_DIR + path.sep)) return new Response('Forbidden', { status: 403 });
@@ -734,10 +737,12 @@ ipcMain.handle('report:screenshot', async (e, id) => {
 // Übersicht der Meldungen (falcon://reports) – nur von dieser Seite aus
 ipcMain.handle('reports', async (e, action, arg) => {
   if (!fromFalconPage(e, 'reports')) return null;
-  if (action === 'info') return { lang: pageLanguage(), accent: settings.accent, signedIn: account.state().signedIn };
-  if (action === 'list') return account.listReports();
-  if (action === 'status') return account.updateReport(arg || {});
-  if (action === 'delete') return account.deleteReport(arg || {});
+  const admin = !!account.state().admin;
+  if (action === 'info') return { lang: pageLanguage(), accent: settings.accent, signedIn: account.state().signedIn, admin };
+  // Alle sehen die öffentliche Liste (ohne E-Mail, Adresse, Screenshot) – der Admin die vollständige
+  if (action === 'list') return admin ? account.listReports() : account.listPublicReports();
+  if (action === 'status') return admin ? account.updateReport(arg || {}) : { ok: false, error: 'FORBIDDEN' };
+  if (action === 'delete') return admin ? account.deleteReport(arg || {}) : { ok: false, error: 'FORBIDDEN' };
   if (action === 'open' && /^https?:\/\//i.test(String(arg))) { toHost(e.sender, 'open-tab', { url: String(arg), background: false }); return true; }
   return null;
 });

@@ -377,7 +377,7 @@ function openAppMenu() {
     { label: $t('Entwicklertools'), icon: 'code', shortcut: kb('F12'), disabled: !ready, onClick: () => t.webview.openDevTools() },
     '-',
     { label: $t('Fehler melden …'), icon: 'bug', onClick: () => Report.open() },
-    !INCOGNITO && Account.state.admin ? { label: $t('Gemeldete Fehler'), icon: 'bug', onClick: () => openInternalPage('falcon://reports/') } : null,
+    { label: $t('Gemeldete Fehler'), icon: 'bug', onClick: () => openInternalPage('falcon://reports/') },
     { label: $t('Einstellungen'), icon: 'settings', shortcut: kb('Strg+,'), onClick: () => Settings.open() },
     { label: $t('Über Falcon'), icon: 'info', onClick: () => Settings.open('about') }
   ], { anchor: $('#menuBtn'), align: 'end' });

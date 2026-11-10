@@ -21,3 +21,7 @@
 
 .viewer { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 30px; background: rgb(0 0 0 / .8); cursor: zoom-out; }
 .viewer img { max-width: 100%; max-height: 100%; border-radius: 10px; }
+
+.r-badge { padding: 3px 9px; border-radius: 7px; font-size: 11.5px; font-weight: 600; background: var(--raised); color: var(--text-2); border: 1px solid var(--line-2); }
+.r-badge.progress { color: #f5b544; border-color: rgb(245 181 68 / .35); }
+.r-badge.done { color: var(--success); border-color: rgb(61 214 140 / .35); }
