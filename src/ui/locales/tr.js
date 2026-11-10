@@ -656,5 +656,6 @@ I18N.add('tr', {
   "Bald eintauschbar": "Yakında takas edilebilir",
   "Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Bald kannst du sie gegen Belohnungen wie Beta-Features eintauschen.": "Giriş yapmışken ziyaret ettiğin her web sitesi için bir FalCoin kazanırsın. Yakında bunları beta özellikleri gibi ödüllerle takas edebileceksin.",
   "Deine Beschreibung erscheint öffentlich auf falcon://reports. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.": "Açıklaman falcon://reports adresinde herkese açık görünür. E-posta adresini, sayfa adresini ve ekran görüntüsünü yalnızca geliştirici görür.",
+  "Bitte gib in der Beschreibung keine persönlichen Informationen an (z. B. Namen, Adressen, Passwörter). Die Beschreibung ist auf falcon://reports anonym für alle einsehbar. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.": "Lütfen açıklamaya kişisel bilgi yazma (örn. isim, adres, şifre). Açıklama falcon://reports adresinde herkes tarafından anonim olarak görülebilir. E-posta adresini, sayfa adresini ve ekran görüntüsünü yalnızca geliştirici görür.",
   "Öffnen": "Aç"
 });
