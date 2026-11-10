@@ -656,5 +656,6 @@ I18N.add('es', {
   "Bald eintauschbar": "Canjeables pronto",
   "Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Bald kannst du sie gegen Belohnungen wie Beta-Features eintauschen.": "Recibes un FalCoin por cada web que visitas con la sesión iniciada. Pronto podrás canjearlos por recompensas como funciones beta.",
   "Deine Beschreibung erscheint öffentlich auf falcon://reports. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.": "Tu descripción aparece públicamente en falcon://reports. Solo el desarrollador ve tu correo, la dirección de la página y la captura.",
+  "Bitte gib in der Beschreibung keine persönlichen Informationen an (z. B. Namen, Adressen, Passwörter). Die Beschreibung ist auf falcon://reports anonym für alle einsehbar. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.": "No incluyas información personal en la descripción (p. ej. nombres, direcciones, contraseñas). Cualquiera puede ver la descripción de forma anónima en falcon://reports. Solo el desarrollador ve tu correo, la dirección de la página y la captura.",
   "Öffnen": "Abrir"
 });

@@ -656,5 +656,6 @@ I18N.add('en', {
   "Bald eintauschbar": "Rewards coming soon",
   "Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Bald kannst du sie gegen Belohnungen wie Beta-Features eintauschen.": "You get one FalCoin for every website you visit while signed in. Soon you’ll be able to trade them for rewards like beta features.",
   "Deine Beschreibung erscheint öffentlich auf falcon://reports. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.": "Your description appears publicly on falcon://reports. Only the developer sees your email address, the page address and the screenshot.",
+  "Bitte gib in der Beschreibung keine persönlichen Informationen an (z. B. Namen, Adressen, Passwörter). Die Beschreibung ist auf falcon://reports anonym für alle einsehbar. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.": "Please don’t include personal information in the description (e.g. names, addresses, passwords). The description can be seen anonymously by everyone on falcon://reports. Only the developer sees your email address, the page address and the screenshot.",
   "Öffnen": "Open"
 });

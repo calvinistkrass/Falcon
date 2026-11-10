@@ -38,7 +38,7 @@ const Report = (() => {
         pageUrl ? h('label', { class: 'check-row' }, withUrl, h('span', {}, $t('Adresse der aktuellen Seite mitsenden'), h('small', { 'data-no-i18n': '' }, pageUrl))) : null,
         shot ? h('label', { class: 'check-row' }, withShot, h('span', {}, $t('Screenshot der aktuellen Seite mitsenden'))) : null,
         preview,
-        h('p', { class: 'report-note' }, icon('info'), h('span', {}, $t('Deine Beschreibung erscheint öffentlich auf falcon://reports. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.'))),
+        h('p', { class: 'report-note' }, icon('warning'), h('span', {}, $t('Bitte gib in der Beschreibung keine persönlichen Informationen an (z. B. Namen, Adressen, Passwörter). Die Beschreibung ist auf falcon://reports anonym für alle einsehbar. E-Mail-Adresse, Seitenadresse und Screenshot sieht nur der Entwickler.'))),
         error),
       h('div', { class: 'dialog-foot' },
         h('button', { type: 'button', class: 'btn ghost', onclick: () => close() }, $t('Abbrechen')),
