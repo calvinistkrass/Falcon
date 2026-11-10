@@ -197,7 +197,7 @@ const Perf = (() => {
     const limit = state.settings.ramLimit;
     if (!limit || !last || last.memMB <= limit || Date.now() - lastEnforce < 4000) return;
     const candidates = state.tabs
-      .filter((t) => t.id !== state.activeId && !t.sleeping && !t.audible && t.webview)
+      .filter((t) => !Tabs.isShown(t) && !t.sleeping && !t.audible && t.webview)
       .sort((a, b) => a.lastActive - b.lastActive);
     if (!candidates.length) return;
     lastEnforce = Date.now();
@@ -219,6 +219,10 @@ const Perf = (() => {
     $('#pBlocked').textContent = last.blocked.toLocaleString(I18N.locale);
     $('#pGameDesc').textContent = $t('Pausiert Hintergrund-Tabs nach 30 Sekunden, legt sie nach {n} Min. schlafen und schaltet Animationen ab.', { n: state.settings.sleepMinutes || 10 });
     $('#pGame').checked = !!state.settings.gameMode;
+    const lim = Number(state.settings.netLimit) || 0;
+    const limOn = lim > 0 && (!state.settings.netLimitGameOnly || state.settings.gameMode);
+    $('#pNetLimit').textContent = limOn ? $t('Netzwerk-Limiter aktiv: {n} Mbit/s', { n: lim }) : '';
+    $('#pNetLimit').classList.toggle('hidden', !limOn);
     draw($('#cpuGraph'), cpu, Math.max(100, ...cpu));
     const limit = state.settings.ramLimit || 0;
     draw($('#memGraph'), mem, Math.max(Math.max(...mem) * 1.25, limit * 1.1) || 1, limit);
@@ -363,6 +367,7 @@ function openAppMenu() {
     { label: $t('Downloads'), icon: 'download', shortcut: kb('Strg+J'), onClick: () => openInternalPage(DOWNLOADS_URL) },
     { label: $t('Lesezeichen'), icon: 'bookmark', onClick: () => Settings.open('bookmarks') },
     { label: $t('Passwörter'), icon: 'key', onClick: () => Settings.open('passwords') },
+    !INCOGNITO && Account.state.signedIn ? { label: $t('Tabs von anderen PCs'), icon: 'devices', onClick: () => Account.remoteTabsDialog() } : null,
     '-',
     { element: zoomRow },
     '-',
@@ -371,6 +376,8 @@ function openAppMenu() {
     { label: $t('Drucken …'), icon: 'printer', shortcut: kb('Strg+P'), disabled: !ready, onClick: () => t.webview.print() },
     { label: $t('Entwicklertools'), icon: 'code', shortcut: kb('F12'), disabled: !ready, onClick: () => t.webview.openDevTools() },
     '-',
+    { label: $t('Fehler melden …'), icon: 'bug', onClick: () => Report.open() },
+    !INCOGNITO && Account.state.admin ? { label: $t('Gemeldete Fehler'), icon: 'bug', onClick: () => openInternalPage('falcon://reports/') } : null,
     { label: $t('Einstellungen'), icon: 'settings', shortcut: kb('Strg+,'), onClick: () => Settings.open() },
     { label: $t('Über Falcon'), icon: 'info', onClick: () => Settings.open('about') }
   ], { anchor: $('#menuBtn'), align: 'end' });

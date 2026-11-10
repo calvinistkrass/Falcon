@@ -27,6 +27,9 @@ const Palette = (() => {
       { label: 'Tab schließen', icon: 'x', key: 'Strg+W', run: () => t && Tabs.close(t.id), when: !!t },
       { label: 'Neu laden', icon: 'reload', key: 'F5', run: () => Tabs.reload(t), when: web },
       { label: s.gameMode ? 'Game Mode ausschalten' : 'Game Mode einschalten', icon: 'gamepad', key: 'Strg+Umschalt+G', words: 'game mode gaming', run: () => Perf.setGameMode(!s.gameMode) },
+      Tabs.split
+        ? { label: 'Geteilte Ansicht beenden', icon: 'split', words: 'split screen', run: () => Tabs.endSplit() }
+        : { label: 'Geteilte Ansicht', icon: 'split', words: 'split screen nebeneinander', run: () => Tabs.splitWithNew() },
       { label: 'Inaktive Tabs schlafen legen', icon: 'moon', words: 'sleep ram', run: () => { const n = Tabs.sleepInactive(); toast($t('{n} Tabs schlafen jetzt', { n }), 'moon'); } },
       { label: 'Leseansicht', icon: 'book', key: 'F9', words: 'reader', run: () => Reader.toggle(), when: web },
       { label: 'Bild-in-Bild', icon: 'pip', words: 'pip video', run: () => togglePictureInPicture(), when: web },
@@ -38,12 +41,14 @@ const Palette = (() => {
       { label: 'Verlauf', icon: 'clock', key: 'Strg+H', words: 'history', run: () => Settings.open('history') },
       { label: 'Vollbild', icon: 'maximize', key: 'F11', words: 'fullscreen', run: () => F.win('fullscreen') },
       { label: 'Entwicklertools', icon: 'code', key: 'F12', words: 'devtools', run: () => t?.webview?.openDevTools(), when: web },
+      { label: 'Fehler melden …', icon: 'bug', words: 'bug report feedback', run: () => Report.open() },
+      typeof Account !== 'undefined' && Account.state.admin ? { label: 'Gemeldete Fehler', icon: 'bug', words: 'falcon://reports bugs', run: () => openInternalPage('falcon://reports/') } : null,
       { label: 'Einstellungen', icon: 'settings', key: 'Strg+,', words: 'settings', run: () => Settings.open() },
       ...SECTIONS.map(([id, name, icon]) => ({
         label: $t('Einstellungen › {name}', { name: $t(name) }), raw: true, icon, words: `settings ${id}`, run: () => Settings.open(id)
       }))
     ];
-    return list.filter((c) => c.when !== false).map((c) => ({ ...c, kind: 'cmd', title: c.raw ? c.label : $t(c.label) }));
+    return list.filter((c) => c && c.when !== false).map((c) => ({ ...c, kind: 'cmd', title: c.raw ? c.label : $t(c.label) }));
   }
 
   // Alle Suchwörter müssen vorkommen; Treffer am Wortanfang zählen mehr
@@ -83,15 +88,18 @@ const Palette = (() => {
       .filter((e) => !seen.has(e.url))
       .map((e) => ({ kind: 'history', title: e.title || e.url, sub: e.url, url: e.url }));
 
+    const others = remote.filter((r) => !seen.has(r.url)).map((r) => ({ kind: 'remote', title: r.title || r.url, sub: `${r.device} · ${r.url}`, url: r.url }));
     return [
       ...rank(tabs, (t) => [t.title, t.url], 5),
       ...rank(cmds, (c) => [c.title, c.label, c.words], 6),
+      ...rank(others, (r) => [r.title, r.sub], 4),
       ...rank(bookmarks, (b) => [b.title, b.url], 5),
       ...history
     ];
   }
 
-  const GROUPS = { tab: 'Offene Tabs', cmd: 'Befehle', bookmark: 'Lesezeichen', history: 'Verlauf' };
+  const GROUPS = { tab: 'Offene Tabs', cmd: 'Befehle', remote: 'Andere PCs', bookmark: 'Lesezeichen', history: 'Verlauf' };
+  let remote = []; // [{ title, url, device }]
 
   function render() {
     results = search(input.value);
@@ -155,6 +163,13 @@ const Palette = (() => {
     sel = 0;
     render();
     input.focus();
+    // Tabs anderer PCs im Hintergrund nachladen
+    if (typeof Account !== 'undefined' && Account.state.signedIn && !INCOGNITO) {
+      Account.loadRemoteTabs().then((devices) => {
+        remote = devices.flatMap((d) => d.tabs.map((t) => ({ ...t, device: d.name })));
+        if (overlay && input.value.trim()) render();
+      }).catch(() => {});
+    }
   }
 
   function close() {

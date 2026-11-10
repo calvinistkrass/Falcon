@@ -5,6 +5,7 @@ const { app } = require('electron');
 
 const STRINGS = {
   en: {
+    'Entpackte Erweiterung laden': 'Load unpacked extension',
     'Deckkraft': 'Opacity',
     'In Tab öffnen': 'Open in tab',
     'Schließen': 'Close',

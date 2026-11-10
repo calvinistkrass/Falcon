@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 const pkg = require('../package.json');
 
 const fileUrl = (...p) => pathToFileURL(path.join(__dirname, ...p)).href;
-const CHANNELS = ['account-changed', 'history-replace', 'open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed'];
+const CHANNELS = ['extensions-changed', 'account-changed', 'history-replace', 'open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed'];
 
 contextBridge.exposeInMainWorld('falcon', {
   incognito: new URLSearchParams(location.search).has('incognito'),
@@ -36,8 +36,18 @@ contextBridge.exposeInMainWorld('falcon', {
   },
   clearData: () => ipcRenderer.invoke('clear-data'),
   account: Object.fromEntries(['state', 'signUp', 'signIn', 'signOut', 'resetPassword', 'resendVerification', 'refreshProfile', 'updateProfile',
-    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty']
+    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty', 'remoteTabs', 'submitReport']
     .map((action) => [action, (arg) => ipcRenderer.invoke('account', action, arg)])),
+  extensions: {
+    list: () => ipcRenderer.invoke('ext:list'),
+    installStore: (input) => ipcRenderer.invoke('ext:install-store', input),
+    installFolder: () => ipcRenderer.invoke('ext:install-folder'),
+    remove: (key) => ipcRenderer.invoke('ext:remove', key),
+    enable: (key, on) => ipcRenderer.invoke('ext:enable', key, on),
+    popup: (key, anchor) => ipcRenderer.invoke('ext:popup', key, anchor),
+    options: (key) => ipcRenderer.invoke('ext:options', key)
+  },
+  reportScreenshot: (webContentsId) => ipcRenderer.invoke('report:screenshot', webContentsId),
   defaultBrowser: {
     status: () => ipcRenderer.invoke('default-browser:status'),
     set: () => ipcRenderer.invoke('default-browser:set')
@@ -88,6 +98,7 @@ contextBridge.exposeInMainWorld('falcon', {
     answer: (id, answer) => ipcRenderer.invoke('pw:offer-answer', id, answer),
     removeNever: (origin) => ipcRenderer.invoke('pw:never-remove', origin),
     import: () => ipcRenderer.invoke('pw:import'),
+    check: () => ipcRenderer.invoke('pw:check'),
     export: () => ipcRenderer.invoke('pw:export')
   },
 

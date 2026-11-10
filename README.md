@@ -27,6 +27,9 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 
 ### 🎮 Made for gaming
 - **Game Mode**: pauses background tabs after 30 seconds and later puts them to sleep, so your game gets the CPU and memory. Tabs playing audio stay active.
+- **Network limiter**: caps websites and downloads so your game keeps a stable ping – always or only in Game Mode.
+- **Free games & deals** from Steam, Epic and GOG right on the start page.
+- **Volume per tab**: turn a stream down without touching Discord.
 - **Overlay window**: keep a stream, guide or chat in a small window that stays on top of your game.
 - **Performance meter**: live CPU and memory usage in the toolbar, with a 60-second graph.
 - **Memory limit**: set a RAM cap and Falcon puts the least recently used tabs to sleep when it's reached.
@@ -35,6 +38,8 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 
 ### 🧭 A browser that stays out of your way
 - **Tabs that behave like Chrome's**: drag to reorder, middle-click to close, duplicate, mute, put to sleep, reopen closed tabs. Your session is restored on startup.
+- **Split view**: two tabs side by side with a resizable divider.
+- **Chrome extensions** from the Chrome Web Store or an unpacked folder (Electron supports only part of the extension APIs).
 - **Command palette** (Ctrl+K): jump to any open tab, bookmark, history entry, setting or command from the keyboard.
 - **Smart address bar**: suggestions from history, bookmarks and open tabs, inline autocomplete and domain highlighting.
 - **Bookmark folders** and a searchable **history** (Ctrl+H).
@@ -51,11 +56,14 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 ### ☁️ Falcon account & sync
 - **Sync between your PCs**: bookmarks, passwords, history and settings – pick what you want to sync.
 - **End-to-end encrypted**: data is encrypted on your PC (AES-256-GCM) with a key protected by your password before it's uploaded. The server only ever sees ciphertext.
+- **Tabs from other PCs**: open what you were reading on your other computer.
+- **FalCoins**: earn one coin per website visit while signed in – rewards are coming later.
 - **Profile** with name and color, device names, password reset by email and account deletion.
 
 ### 🔐 Passwords & security
 - **Password manager**: saves logins encrypted with your Windows account (DPAPI). Passwords are only sent to a page after you pick an account from the list below the login field.
 - **Unlock with passkeys**: confirm with your **iPhone, Android phone or a security key** before passwords are shown, copied, imported or exported. Falcon asks with a small prompt first and falls back to Windows Hello.
+- **Password checkup**: warns about breached (Have I Been Pwned, k-anonymity), reused and weak passwords.
 - **Password generator**: suggests a strong password on sign-up forms and fills it in only when you click it.
 - **Import & export** passwords as CSV from Chrome, Edge, Opera, Brave, Firefox or Bitwarden.
 - **Passkeys on websites**: sign in with Windows Hello, a security key or your phone – Falcon uses the Windows passkey API directly.
@@ -122,6 +130,7 @@ npm run dist       # build the installer into dist/
 | `src/updater.js` | Update checks against GitHub Releases |
 | `src/account.js`, `src/firebase-config.js` | Falcon account (Firebase Auth) and end-to-end encrypted sync (Firestore) |
 | `src/default-browser.js` | Registers Falcon as a browser in Windows |
+| `src/extensions.js` | Chrome extensions (CRX/ZIP unpacking, loading, popups) |
 | `src/ui/pages/` | Internal pages such as `falcon://downloads` |
 | `src/google-signin.js` | Makes Google sign-in work |
 | `src/adblock.js` | Ad blocker (Ghostery engine, per-tab statistics, site exceptions) |
@@ -148,6 +157,18 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // Problem reports: anyone may create one, only the developer account may read or manage them
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'you@example.com' && request.auth.token.email_verified == true;
+    }
+    match /reports/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['text', 'category', 'version', 'os', 'url', 'screenshot', 'email', 'uid', 'created', 'status'])
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000
+        && request.resource.data.status == 'new'
+        && (!('uid' in request.resource.data) || (request.auth != null && request.resource.data.uid == request.auth.uid))
+        && (!('screenshot' in request.resource.data) || request.resource.data.screenshot.size() <= 900000);
+      allow read, update, delete: if isAdmin();
     }
   }
 }

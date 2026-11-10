@@ -54,6 +54,55 @@ const Passwords = (() => {
     return p;
   }
 
+  // Ergebnis des Passwort-Checks: id → { breached, reused, weak }
+  let health = new Map();
+  let healthFilter = null; // 'breached' | 'reused' | 'weak'
+  function healthBadges(e) {
+    const r = health.get(e.id);
+    if (!r) return null;
+    const b = [];
+    if (r.breached) b.push(h('span', { class: 'pw-badge bad', title: $t('Dieses Passwort wurde {n}-mal in Datenlecks gefunden. Ändere es so bald wie möglich.', { n: r.breached.toLocaleString(I18N.locale) }) }, icon('warning'), $t('Datenleck')));
+    if (r.reused) b.push(h('span', { class: 'pw-badge warn', title: $t('Wird für {n} Konten verwendet', { n: r.reused }) }, $t('Mehrfach verwendet')));
+    if (r.weak) b.push(h('span', { class: 'pw-badge warn' }, $t('Schwach')));
+    return b.length ? h('span', { class: 'pw-badges' }, b) : null;
+  }
+  function renderHealth(res) {
+    const sum = $('#pwCheckSummary');
+    if (!res) { sum.classList.add('hidden'); return; }
+    const n = (k) => res.results.filter((r) => r[k]).length;
+    const breached = n('breached'), reused = n('reused'), weak = n('weak');
+    const chip = (key, count, label, cls) => h('button', {
+      class: `pw-chip ${cls}${healthFilter === key ? ' sel' : ''}`, disabled: !count,
+      onclick: () => { healthFilter = healthFilter === key ? null : key; renderHealth(res); render(); }
+    }, h('b', {}, String(count)), label);
+    sum.classList.remove('hidden');
+    sum.replaceChildren(
+      !breached && !reused && !weak
+        ? h('p', { class: 'pw-ok' }, icon('check'), $t('Alles in Ordnung – keine Probleme gefunden.'))
+        : h('div', { class: 'pw-chips' },
+          chip('breached', breached, $t('in Datenlecks'), 'bad'),
+          chip('reused', reused, $t('mehrfach verwendet'), 'warn'),
+          chip('weak', weak, $t('schwach'), 'warn')),
+      h('p', { class: 'pw-check-meta' }, res.failed ? $t('Einige Passwörter konnten nicht geprüft werden (keine Verbindung).') : $t('Geprüft: {n} Passwörter · {time}', { n: res.checked, time: new Date(res.at).toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit' }) })));
+  }
+  let lastCheck = null;
+  $('#pwCheckBtn').addEventListener('click', async () => {
+    const b = $('#pwCheckBtn');
+    b.disabled = true;
+    b.replaceChildren(h('span', { class: 'spinner sm' }), ' ', $t('Wird geprüft …'));
+    const res = await F.passwords.check().catch(() => null);
+    b.disabled = false;
+    b.textContent = $t('Erneut prüfen');
+    if (!res) return;
+    lastCheck = res;
+    health = new Map(res.results.map((r) => [r.id, r]));
+    healthFilter = null;
+    renderHealth(res);
+    render();
+    const bad = res.results.filter((r) => r.breached).length;
+    if (bad) toast($t('{n} Passwörter wurden in Datenlecks gefunden', { n: bad }), 'warning');
+  });
+
   function row(e) {
     const secret = h('span', { class: 'secret' }, '••••••••••');
     let shown = false;
@@ -82,6 +131,7 @@ const Passwords = (() => {
     return h('div', { class: 'list-row' },
       faviconEl(e.origin, 18),
       h('div', { class: 'list-main' }, h('b', {}, hostOf(e.origin)), h('span', {}, e.username || $t('Kein Benutzername'))),
+      healthBadges(e),
       secret,
       h('div', { class: 'list-actions' },
         eye,
@@ -98,6 +148,7 @@ const Passwords = (() => {
     const q = search.value.trim().toLowerCase();
     const shown = entries
       .filter((e) => !q || e.origin.toLowerCase().includes(q) || e.username.toLowerCase().includes(q))
+      .filter((e) => !healthFilter || health.get(e.id)?.[healthFilter])
       .sort((a, b) => hostOf(a.origin).localeCompare(hostOf(b.origin)) || a.username.localeCompare(b.username));
 
     if (!entries.length) {

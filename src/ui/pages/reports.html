@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'" />
+  <title>Gemeldete Fehler</title>
+  <link rel="icon" href="falcon.png" />
+  <link rel="stylesheet" href="pages/downloads.css" />
+  <link rel="stylesheet" href="pages/reports.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <h1><img src="falcon.png" alt="" width="26" height="26" /> <span data-t="Gemeldete Fehler">Gemeldete Fehler</span></h1>
+      <label class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+        <input id="q" type="search" spellcheck="false" autocomplete="off" data-tp="Meldungen durchsuchen" placeholder="Meldungen durchsuchen" />
+      </label>
+      <div class="top-actions">
+        <div class="seg" id="filter">
+          <button data-f="open" class="sel" data-t="Offen">Offen</button>
+          <button data-f="done" data-t="Erledigt">Erledigt</button>
+          <button data-f="all" data-t="Alle">Alle</button>
+        </div>
+        <button id="reload" class="btn" type="button" data-t="Aktualisieren">Aktualisieren</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div id="summary" class="summary"></div>
+    <div id="list"></div>
+    <div id="empty" class="empty hidden">
+      <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      <b id="emptyTitle"></b>
+      <span id="emptyText"></span>
+    </div>
+  </main>
+  <div id="viewer" class="viewer hidden"><img alt="" /></div>
+  <script src="pages/reports.js"></script>
+</body>
+</html>

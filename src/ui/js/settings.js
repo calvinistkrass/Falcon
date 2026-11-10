@@ -56,6 +56,7 @@ const Settings = (() => {
   function select(name) {
     if (name === 'general') renderDefaultBrowser();
     if (name === 'account' && typeof Account !== 'undefined') Account.renderSettings();
+    if (name === 'extensions' && typeof Extensions !== 'undefined') Extensions.renderSettings();
     section = name;
     $$('.s-tab', overlay).forEach((t) => t.classList.toggle('sel', t.dataset.section === name));
     $$('.s-section', overlay).forEach((s) => s.classList.toggle('sel', s.dataset.section === name));
@@ -108,7 +109,8 @@ const Settings = (() => {
   $('#dlOpenDir').addEventListener('click', () => F.downloads.openDir());
   on('settings-section', (name) => { if (name === 'downloads') showDir(); });
 
-  const nt = () => ({ image: '', showShortcuts: true, showClock: true, ...(state.settings.newtab || {}) });
+  const nt = () => ({ image: '', showShortcuts: true, showClock: true, showDeals: true, ...(state.settings.newtab || {}) });
+  $('#sNtDeals').addEventListener('change', (e) => updateSettings({ newtab: { ...nt(), showDeals: e.target.checked } }));
   $('#sNtShortcuts').addEventListener('change', (e) => updateSettings({ newtab: { ...nt(), showShortcuts: e.target.checked } }));
   $('#sNtClock').addEventListener('change', (e) => updateSettings({ newtab: { ...nt(), showClock: e.target.checked } }));
   $('#ntBgChoose').addEventListener('click', async () => {
@@ -119,6 +121,8 @@ const Settings = (() => {
 
   $('#sSleep').addEventListener('change', (e) => updateSettings({ sleepMinutes: Number(e.target.value) }));
   $('#sRamLimit').addEventListener('change', (e) => updateSettings({ ramLimit: Number(e.target.value) }));
+  $('#sNetLimit').addEventListener('change', (e) => updateSettings({ netLimit: Number(e.target.value) }));
+  $('#sNetGameOnly').addEventListener('change', (e) => updateSettings({ netLimitGameOnly: e.target.checked }));
 
   $('#sClearHistory').addEventListener('click', async () => {
     const ok = await confirmDialog({ title: $t('Verlauf löschen?'), message: $t('Besuchte Seiten werden nicht mehr in der Adressleiste vorgeschlagen.'), confirmLabel: $t('Löschen'), danger: true });
@@ -149,6 +153,10 @@ const Settings = (() => {
     for (const [id, key] of Object.entries(toggles)) $(`#${id}`).checked = !!s[key];
     $('#sSleep').value = String(s.sleepMinutes);
     $('#sRamLimit').value = String(s.ramLimit || 0);
+    $('#sNetLimit').value = String(s.netLimit || 0);
+    $('#sNetGameOnly').checked = s.netLimitGameOnly !== false;
+    $('#sNetGameOnly').disabled = !s.netLimit;
+    $('#sNtDeals').checked = s.newtab?.showDeals !== false;
     $('#sNtShortcuts').checked = s.newtab?.showShortcuts !== false;
     $('#sNtClock').checked = s.newtab?.showClock !== false;
     $('#ntBgClear').classList.toggle('hidden', !s.newtab?.image);

@@ -2,6 +2,22 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.9.0] – 2026-11-10
+
+### Added
+- **Split view**: show two tabs side by side, resize them by dragging the divider, swap sides or end the split from the tab menu or the command palette.
+- **Volume per tab**: right-click the speaker icon on a tab (or use the tab menu) to turn a single tab down, e.g. a stream next to Discord.
+- **Network limiter** (Settings → Performance): caps the bandwidth of websites and downloads so games keep a stable ping – always or only in Game Mode.
+- **Free games & deals** on the start page: games that are free right now and good deals from Steam, Epic and GOG (data from GamerPower and CheapShark). Can be turned off under Settings → Appearance.
+- **Tabs from other PCs**: see and open the tabs that are open on your other PCs (account menu, main menu or Ctrl+K). End-to-end encrypted like the rest of the sync.
+- **Password checkup**: finds passwords that appear in known data breaches (Have I Been Pwned – only the first 5 characters of a hash leave your PC), reused passwords and weak passwords.
+- **Chrome extensions**: install extensions from the Chrome Web Store by link or load an unpacked folder. Extensions get a toolbar button with their popup, options and an on/off switch. Electron supports only part of the extension APIs, so not every extension works.
+- **Report a problem** (main menu or Ctrl+K): send a description, optionally with the page address and a screenshot. Reports can be viewed on `falcon://reports` by the developer account.
+- **FalCoins**: collect one FalCoin for every website you visit while signed in. Rewards like beta features are coming later.
+
+### Fixed
+- The extension popup now sizes itself to its content.
+
 ## [1.8.3] – 2026-11-10
 
 ### Changed
@@ -128,6 +144,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.9.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.0
 [1.8.3]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.3
 [1.8.2]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.2
 [1.8.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.1
