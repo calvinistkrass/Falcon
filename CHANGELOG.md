@@ -2,7 +2,7 @@
 
 All notable changes to Falcon are documented here.
 
-## [1.10.0] – 2026-11-11
+## [2.0.0] – 2026-11-11
 
 ### Added
 - **Daily reward**: claim 10 FalCoins every day from the account menu; on the 7th day in a row you get 50 extra. Falcon reminds you at startup.
@@ -175,7 +175,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
-[1.10.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.10.0
+[2.0.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v2.0.0
 [1.9.5]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.5
 [1.9.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.1
 [1.9.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.0
