@@ -1,7 +1,7 @@
 {
   "name": "falcon-browser",
   "productName": "Falcon",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "A fast, focused Chromium browser built for gamers.",
   "main": "src/main.js",
   "author": "Calvin Bandle",

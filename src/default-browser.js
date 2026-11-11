@@ -75,9 +75,15 @@ async function makeDefault() {
 
 /** Beim Start der installierten Version: Pfad aktuell halten, falls Falcon schon registriert ist. */
 async function refreshRegistration() {
+  // Falcon bei Windows als Browser eintragen, falls das fehlt oder der Pfad nicht mehr stimmt –
+  // damit Falcon unter „Standard-Apps“ auftaucht (der Installer trägt es ab 1.9.2 ebenfalls ein)
   if (!supported() || !app.isPackaged) return;
-  const out = await reg(['query', 'HKCU\\Software\\RegisteredApplications', '/v', APP_NAME]);
-  if (out) await register();
+  const [cmd, registered] = await Promise.all([
+    reg(['query', `HKCU\\Software\\Classes\\${PROG_URL}\\shell\\open\\command`, '/ve']),
+    reg(['query', 'HKCU\\Software\\RegisteredApplications', '/v', APP_NAME])
+  ]);
+  const current = cmd && (cmd.match(/REG_SZ\s+(.+)/) || [])[1];
+  if (!registered || !current || current.trim().toLowerCase() !== command().toLowerCase()) await register();
 }
 
 /** URL oder Datei aus den Startargumenten (z. B. Link aus einer anderen App). */
