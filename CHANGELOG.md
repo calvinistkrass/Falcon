@@ -4,6 +4,9 @@ All notable changes to Falcon are documented here.
 
 ## [1.9.2] – 2026-11-11
 
+### Added
+- **FalCoin shop**: open it from the coin balance in the account menu, under Settings → Account & sync or with Ctrl+K. The first item is **beta access for 14 days for 1,000 FalCoins**. Buying it deducts the coins on the server and unlocks beta access; buying again extends it by another 14 days. There are no beta features yet – they're coming later.
+
 ### Fixed
 - **Falcon didn't appear in Windows Settings → Default apps**, so it couldn't be chosen for https, http or HTML files. The installer now registers Falcon as a browser, and Falcon checks the registration on every start and repairs it if it's missing or points to an old location.
 - Updating no longer removes the browser registration.

@@ -98,9 +98,10 @@ const Account = (() => {
             h('span', {}, $t('Bitte bestätige deine E-Mail-Adresse.')),
             h('button', { class: 'link-btn', onclick: resendVerification }, $t('Erneut senden'))) : null,
           acc.needsKey || (acc.keyPending && !acc.canUnlock) ? h('button', { class: 'acc-note err', onclick: () => { closePop(); unlockDialog(); } }, icon('warning'), h('span', {}, $t('Deine Sync-Daten sind gesperrt. Hier entsperren.'))) : null,
-          h('div', { class: 'acc-coins', title: $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.') },
+          h('button', { class: 'acc-coins', title: $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.'), onclick: () => { closePop(); shopDialog(); } },
             h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale)), h('span', {}, $t('FalCoins')),
-            h('small', { class: 'coin-soon' }, $t('Bald eintauschbar'))),
+            acc.beta ? h('small', { class: 'beta-badge' }, 'Beta') : null,
+            h('small', { class: 'coin-soon' }, icon('shop'), $t('Shop'))),
           h('div', { class: 'acc-sync' }, syncLine(),
             h('button', { class: 'tb-btn sm', title: $t('Jetzt synchronisieren'), disabled: acc.syncing || acc.needsKey, onclick: syncNow }, icon('sync'))),
           h('div', { class: 'menu-sep' }),
@@ -290,6 +291,67 @@ const Account = (() => {
   }
 
   // ---------------------------------------------------------------------------
+  // FalCoin-Shop
+  // ---------------------------------------------------------------------------
+  const SHOP = [
+    { id: 'beta14', price: 1000, icon: 'flask', title: 'Beta-Zugriff · 14 Tage', text: 'Teste neue Funktionen vor allen anderen. Die ersten Beta-Funktionen folgen bald – dein Zugriff gilt ab dem Kauf 14 Tage lang.' }
+  ];
+  const fmtUntil = (ms) => new Date(ms).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long', year: 'numeric' });
+  function shopDialog() {
+    if (!acc.signedIn) return authDialog('signin');
+    const list = h('div', { class: 'shop-list' });
+    const balance = h('b');
+    const box = h('div', { class: 'dialog shop-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' },
+        h('div', { class: 'shop-head' },
+          h('h3', {}, $t('FalCoin-Shop')),
+          h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), balance)),
+        h('p', { class: 'shop-sub' }, $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.')),
+        list),
+      h('div', { class: 'dialog-foot' }, h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
+    const close = dialogShell(box);
+    // Aktuellen Kontostand vom Server holen
+    F.account.refreshCoins().then(async () => { acc = await F.account.state(); renderAll(); if (box.isConnected) render(); });
+    function render() {
+      balance.textContent = (acc.coins || 0).toLocaleString(I18N.locale);
+      list.replaceChildren(...SHOP.map((item) => {
+        const missing = item.price - (acc.coins || 0);
+        const active = item.id === 'beta14' && acc.beta;
+        const buy = h('button', {
+          class: 'btn primary', disabled: missing > 0,
+          onclick: async () => {
+            const ok = await confirmDialog({
+              title: active ? $t('Beta-Zugriff verlängern?') : $t('Beta-Zugriff kaufen?'),
+              message: $t('{price} FalCoins werden von deinem Guthaben abgezogen.', { price: item.price.toLocaleString(I18N.locale) }),
+              confirmLabel: $t('Für {price} FalCoins kaufen', { price: item.price.toLocaleString(I18N.locale) })
+            });
+            if (!ok) return;
+            buy.disabled = true;
+            const r = await F.account.purchase({ item: item.id });
+            if (!r.ok) {
+              buy.disabled = false;
+              toast(r.error === 'NOT_ENOUGH' ? $t('Nicht genug FalCoins.') : errorText(r.error), 'warning');
+              return;
+            }
+            acc = await F.account.state();
+            renderAll(); render();
+            toast($t('Beta-Zugriff aktiv bis {date}', { date: fmtUntil(r.until) }), 'check');
+          }
+        }, missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : active ? $t('Um 14 Tage verlängern') : $t('Kaufen'));
+        return h('div', { class: `shop-item${active ? ' owned' : ''}` },
+          h('span', { class: 'shop-ic' }, icon(item.icon)),
+          h('div', { class: 'shop-main' },
+            h('b', {}, $t(item.title), active ? h('span', { class: 'beta-badge' }, $t('Aktiv')) : null),
+            h('p', {}, $t(item.text)),
+            active ? h('small', { class: 'shop-until' }, $t('Aktiv bis {date}', { date: fmtUntil(acc.betaUntil) })) : null,
+            h('span', { class: 'shop-price' }, h('span', { class: 'coin-ic' }, icon('coin')), item.price.toLocaleString(I18N.locale))),
+          buy);
+      }));
+    }
+    render();
+  }
+
+  // ---------------------------------------------------------------------------
   // Tabs von anderen PCs
   // ---------------------------------------------------------------------------
   let remoteCache = null; // { at, devices }
@@ -450,7 +512,10 @@ const Account = (() => {
         row($t('Profilfarbe'), $t('Farbe deines Profilbilds.'), swatches),
         row($t('Dieser PC'), acc.deviceName, h('button', { class: 'btn ghost', onclick: editDevice }, $t('Umbenennen'))),
         row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Bald kannst du sie gegen Belohnungen wie Beta-Features eintauschen.'),
-          h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale))))),
+          h('div', { class: 'acc-coin-row' },
+            h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale))),
+            h('button', { class: 'btn ghost', onclick: () => shopDialog() }, icon('shop'), $t('Shop')))),
+        acc.beta ? row($t('Beta-Zugriff'), $t('Aktiv bis {date}', { date: fmtUntil(acc.betaUntil) }), h('span', { class: 'beta-badge big' }, 'Beta')) : null),
 
       h('h3', { class: 's-sub' }, $t('Synchronisierung')),
       h('div', { class: 's-card' },
@@ -500,5 +565,5 @@ const Account = (() => {
   on('tabs-changed', tabsDirty);
   on('tab-loaded', tabsDirty);
 
-  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, get state() { return acc; } };
+  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, shopDialog, get state() { return acc; } };
 })();
