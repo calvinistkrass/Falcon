@@ -41,6 +41,7 @@ const Palette = (() => {
       { label: 'Verlauf', icon: 'clock', key: 'Strg+H', words: 'history', run: () => Settings.open('history') },
       { label: 'Vollbild', icon: 'maximize', key: 'F11', words: 'fullscreen', run: () => F.win('fullscreen') },
       { label: 'Entwicklertools', icon: 'code', key: 'F12', words: 'devtools', run: () => t?.webview?.openDevTools(), when: web },
+      typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'FalCoin-Shop', icon: 'shop', words: 'shop falcoins beta', run: () => Account.shopDialog() } : null,
       { label: 'Fehler melden …', icon: 'bug', words: 'bug report feedback', run: () => Report.open() },
       { label: 'Gemeldete Fehler', icon: 'bug', words: 'falcon://reports bugs', run: () => openInternalPage('falcon://reports/') },
       { label: 'Einstellungen', icon: 'settings', key: 'Strg+,', words: 'settings', run: () => Settings.open() },

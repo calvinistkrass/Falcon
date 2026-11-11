@@ -592,7 +592,9 @@ const accountHandlers = {
   setKinds: (a) => account.setKinds(a),
   dirty: (kind) => { if (kind === 'history' || kind === 'tabs') account.markDirty(kind); return true; },
   remoteTabs: () => account.remoteTabs(),
-  submitReport: (a) => account.submitReport(a)
+  submitReport: (a) => account.submitReport(a),
+  purchase: (a) => account.purchase(a),
+  refreshCoins: () => account.refreshCoins()
 };
 ipcMain.handle('account', async (e, action, arg) => {
   const w = BrowserWindow.fromWebContents(e.sender);

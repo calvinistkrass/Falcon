@@ -57,7 +57,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **Sync between your PCs**: bookmarks, passwords, history and settings – pick what you want to sync.
 - **End-to-end encrypted**: data is encrypted on your PC (AES-256-GCM) with a key protected by your password before it's uploaded. The server only ever sees ciphertext.
 - **Tabs from other PCs**: open what you were reading on your other computer.
-- **FalCoins**: earn one coin per website visit while signed in – rewards are coming later.
+- **FalCoins**: earn one coin per website visit while signed in and spend them in the FalCoin shop, e.g. on 14 days of beta access.
 - **Profile** with name and color, device names, password reset by email and account deletion.
 
 ### 🔐 Passwords & security

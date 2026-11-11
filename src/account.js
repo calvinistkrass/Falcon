@@ -95,6 +95,8 @@ function publicState() {
     keyPending: !secret.dataKey && !!data.keyError,
     canUnlock: !!pendingPassword,
     coins: (data.coins?.balance || 0) + (data.coins?.pending || 0),
+    betaUntil: data.betaUntil || 0,
+    beta: (data.betaUntil || 0) > Date.now(),
     admin: !!data.admin
   };
 }
@@ -697,9 +699,54 @@ async function loadCoins() {
   try {
     const doc = await getDoc(coinsPath());
     data.coins = { balance: Number(doc?.fields?.balance?.integerValue) || 0, pending: data.coins?.pending || 0 };
+    data.betaUntil = Number(doc?.fields?.betaUntil?.integerValue) || 0;
     persist(); changed();
   } catch { /* offline */ }
 }
+
+// ---------------------------------------------------------------------------
+// FalCoin-Shop
+// ---------------------------------------------------------------------------
+const SHOP = { beta14: { price: 1000, days: 14 } };
+// Kontostand vom Server holen (z. B. FalCoins von anderen PCs)
+const refreshCoins = safe(async () => { await flushCoins(); await loadCoins(); return {}; });
+const docName = (p) => `projects/${config.projectId}/databases/(default)/documents/${p}`;
+const purchase = safe(async ({ item }) => {
+  const it = SHOP[item];
+  if (!it) throw new AccountError('INVALID');
+  if (!load()) throw new AccountError('SIGNED_OUT');
+  // Erst offene FalCoins gutschreiben, damit der Kontostand stimmt
+  await flushCoins();
+  if (data.coins?.pending) throw new AccountError('NETWORK');
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const doc = await getDoc(coinsPath());
+    const balance = Number(doc?.fields?.balance?.integerValue) || 0;
+    if (balance < it.price) throw new AccountError('NOT_ENOUGH');
+    const until = Math.max(Date.now(), Number(doc?.fields?.betaUntil?.integerValue) || 0) + it.days * 86400_000;
+    // Abbuchen und Freischalten in einem Schritt – nur wenn sich der Kontostand inzwischen nicht geändert hat
+    const writes = [
+      {
+        update: { name: docName(coinsPath()), fields: { balance: int(balance - it.price), betaUntil: int(until) } },
+        updateMask: { fieldPaths: ['balance', 'betaUntil'] },
+        currentDocument: { updateTime: doc.updateTime }
+      },
+      {
+        update: { name: docName(`users/${data.uid}/purchases/${crypto.randomUUID()}`), fields: { item: str(item), price: int(it.price), at: int(Date.now()), until: int(until) } },
+        currentDocument: { exists: false }
+      }
+    ];
+    try {
+      await request(`${STORE.replace(/\/documents$/, '')}/documents:commit`, { method: 'POST', token: await token(), body: { writes } });
+      data.coins.balance = balance - it.price;
+      data.betaUntil = until;
+      persist(); changed();
+      return { until };
+    } catch (e) {
+      if (!/FAILED_PRECONDITION|ABORTED/.test(e.code) || attempt === 2) throw e;
+    }
+  }
+  throw new AccountError('UNKNOWN');
+});
 
 function setKinds(kinds) {
   if (!load()) return publicState();
@@ -727,6 +774,6 @@ function syncIfStale() {
 module.exports = {
   KINDS, init, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
   updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale, remoteTabs,
-  submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins,
+  submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins, purchase, refreshCoins,
   _test: { encrypt, decrypt, MERGE }
 };
