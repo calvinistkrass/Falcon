@@ -2,6 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.10.0] – 2026-11-11
+
+### Added
+- **Daily reward**: claim 10 FalCoins every day from the account menu; on the 7th day in a row you get 50 extra. Falcon reminds you at startup.
+- **Daily missions**: visit 20 pages, visit 5 different websites and use Game Mode for 30 minutes – each pays out FalCoins. Missions restart at midnight.
+- **FalCoin history**: every website-visit day, reward, mission and purchase with date and amount.
+- **First beta feature – Translate page**: right-click a page (or Ctrl+K) to translate it with Google Translate; "Show original" switches back. Requires beta access from the FalCoin shop.
+- **Screenshot tool** (Ctrl+Shift+S, right-click menu, main menu): select an area, the visible part or the full page. The screenshot goes to the clipboard and can be saved as PNG.
+- **Bookmarks on your phone**: a web app at calvinistkrass.github.io/Falcon/app shows your bookmarks and the open tabs of your PCs. It signs in with your Falcon account and decrypts your data only on the phone. It can be added to the home screen.
+
 ## [1.9.5] – 2026-11-11
 
 ### Added
@@ -165,6 +175,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.10.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.10.0
 [1.9.5]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.5
 [1.9.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.1
 [1.9.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.0

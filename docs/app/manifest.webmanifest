@@ -1,0 +1,11 @@
+{
+  "name": "Falcon",
+  "short_name": "Falcon",
+  "description": "Falcon bookmarks and tabs from your PCs",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101113",
+  "theme_color": "#101113",
+  "icons": [{ "src": "../logo.png", "sizes": "512x512", "type": "image/png" }]
+}

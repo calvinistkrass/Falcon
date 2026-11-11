@@ -53,6 +53,7 @@ function handleShortcut({ key, ctrl, shift, alt }) {
   if (ctrl && shift && key === 't') return Tabs.reopen();
   if (ctrl && shift && key === 'n') return F.newIncognitoWindow();
   if (ctrl && shift && key === 'g') return Perf.setGameMode(!state.settings.gameMode);
+  if (ctrl && shift && key === 's') return Screenshot.capture('area');
   if (ctrl && shift && key === 'b') return updateSettings({ showBookmarksBar: !state.settings.showBookmarksBar });
   if (ctrl && shift && key === 'delete') return Settings.open('privacy');
   if (ctrl && key === 'k') return Palette.toggle();
@@ -85,7 +86,7 @@ window.addEventListener('keydown', (e) => {
   const inField = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
   const global =
     (ctrl && ['k', 't', 'w', 'l', 'f', 'd', 'j', 'h', 'r', 'p', 'tab', '+', '=', '-', '0', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(key)) ||
-    (ctrl && e.shiftKey && ['g', 'b', 'n', 'delete'].includes(key)) ||
+    (ctrl && e.shiftKey && ['g', 'b', 'n', 's', 'delete'].includes(key)) ||
     ['f5', 'f6', 'f9', 'f11', 'f12', 'escape'].includes(key) ||
     (e.altKey && ['arrowleft', 'arrowright', 'home', 'd'].includes(key));
   if (!global) return;

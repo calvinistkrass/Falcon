@@ -6,6 +6,7 @@ const Account = (() => {
   let acc = { signedIn: false };
   let pop = null;
 
+  const MOBILE_URL = 'https://calvinistkrass.github.io/Falcon/app/';
   const KINDS = [
     ['bookmarks', 'Lesezeichen', 'bookmark'],
     ['passwords', 'Passwörter', 'key'],
@@ -98,6 +99,8 @@ const Account = (() => {
             h('span', {}, $t('Bitte bestätige deine E-Mail-Adresse.')),
             h('button', { class: 'link-btn', onclick: resendVerification }, $t('Erneut senden'))) : null,
           acc.needsKey || (acc.keyPending && !acc.canUnlock) ? h('button', { class: 'acc-note err', onclick: () => { closePop(); unlockDialog(); } }, icon('warning'), h('span', {}, $t('Deine Sync-Daten sind gesperrt. Hier entsperren.'))) : null,
+          acc.daily?.available ? h('button', { class: 'acc-daily', onclick: () => claimDaily() }, icon('coin'),
+            h('span', {}, $t('Tägliche Belohnung abholen')), h('b', {}, `+${acc.daily.next}`)) : null,
           h('button', { class: 'acc-coins', title: $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.'), onclick: () => { closePop(); shopDialog(); } },
             h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale)), h('span', {}, $t('FalCoins')),
             acc.beta ? h('small', { class: 'beta-badge' }, 'Beta') : null,
@@ -105,6 +108,9 @@ const Account = (() => {
           h('div', { class: 'acc-sync' }, syncLine(),
             h('button', { class: 'tb-btn sm', title: $t('Jetzt synchronisieren'), disabled: acc.syncing || acc.needsKey, onclick: syncNow }, icon('sync'))),
           h('div', { class: 'menu-sep' }),
+          h('button', { class: 'menu-item', onclick: () => { closePop(); rewardsDialog(); } }, icon('flag'), h('span', { class: 'menu-label' }, $t('Missionen')),
+            missionsReady() ? h('span', { class: 'mission-dot' }, String(missionsReady())) : null),
+          h('button', { class: 'menu-item', onclick: () => { closePop(); historyDialog(); } }, icon('clock'), h('span', { class: 'menu-label' }, $t('FalCoin-Verlauf'))),
           acc.admin ? h('button', { class: 'menu-item', onclick: () => { closePop(); walletAdminDialog(); } }, icon('coin'), h('span', { class: 'menu-label' }, $t('FalCoins der Nutzer verwalten')), h('span', { class: 'admin-tag' }, 'Admin')) : null,
           h('button', { class: 'menu-item', onclick: () => { closePop(); remoteTabsDialog(); } }, icon('devices'), h('span', { class: 'menu-label' }, $t('Tabs von anderen PCs'))),
           h('button', { class: 'menu-item', onclick: () => { closePop(); Settings.open('account'); } }, icon('user'), h('span', { class: 'menu-label' }, $t('Konto & Sync verwalten'))),
@@ -354,6 +360,93 @@ const Account = (() => {
   }
 
   // ---------------------------------------------------------------------------
+  // Tägliche Belohnung, Missionen, Verlauf
+  // ---------------------------------------------------------------------------
+  const MISSION_TEXT = {
+    visits20: 'Besuche heute {goal} Seiten',
+    sites5: 'Besuche {goal} verschiedene Websites',
+    gamemode30: 'Nutze {goal} Minuten den Game Mode'
+  };
+  const missionsReady = () => (acc.missions || []).filter((m) => m.done && !m.claimed).length;
+  async function claimDaily() {
+    const r = await F.account.claimDaily();
+    if (!r.ok) { toast(r.error === 'ALREADY_CLAIMED' ? $t('Heute schon abgeholt – komm morgen wieder!') : errorText(r.error), 'warning'); return; }
+    acc = await F.account.state(); renderAll();
+    toast(r.streak % 7 === 0
+      ? $t('+{n} FalCoins – {days} Tage in Folge, Bonus!', { n: r.reward, days: r.streak })
+      : $t('+{n} FalCoins · Tag {days} in Folge', { n: r.reward, days: r.streak }), 'coin');
+  }
+  function rewardsDialog() {
+    if (!acc.signedIn) return authDialog('signin');
+    const body = h('div', { class: 'rw-body' });
+    const box = h('div', { class: 'dialog rw-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' }, h('h3', {}, $t('Tägliche Belohnung & Missionen')), body),
+      h('div', { class: 'dialog-foot' }, h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
+    const close = dialogShell(box);
+    function render() {
+      const d = acc.daily || {};
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const n = i + 1;
+        const doneDay = (d.streak % 7 || (d.streak && !d.available ? 7 : 0)) >= n;
+        return h('div', { class: `rw-day${doneDay ? ' done' : ''}${n === 7 ? ' bonus' : ''}` }, h('small', {}, $t('Tag {n}', { n })), h('b', {}, `+${n === 7 ? 60 : 10}`));
+      });
+      body.replaceChildren(
+        h('section', { class: 'rw-daily' },
+          h('div', { class: 'rw-row' },
+            h('div', {}, h('b', {}, $t('Tägliche Belohnung')), h('p', {}, $t('Jeden Tag 10 FalCoins – am 7. Tag in Folge gibt es 50 extra.'))),
+            d.available
+              ? h('button', { class: 'btn primary', onclick: async () => { await claimDaily(); render(); } }, $t('+{n} abholen', { n: d.next }))
+              : h('span', { class: 'rw-claimed' }, icon('check'), $t('Heute abgeholt'))),
+          h('div', { class: 'rw-days' }, days),
+          h('p', { class: 'rw-streak' }, d.streak === 1 ? $t('Serie: 1 Tag') : $t('Serie: {n} Tage', { n: d.streak || 0 }))),
+        h('section', { class: 'rw-missions' },
+          h('b', {}, $t('Missionen von heute')),
+          ...(acc.missions || []).map((m) => h('div', { class: `rw-mission${m.claimed ? ' claimed' : ''}` },
+            h('div', { class: 'rw-m-main' },
+              h('span', {}, $t(MISSION_TEXT[m.id] || m.id, { goal: m.goal })),
+              h('div', { class: 'rw-bar' }, h('i', { style: { width: `${(m.progress / m.goal) * 100}%` } })),
+              h('small', {}, `${m.progress} / ${m.goal}`)),
+            m.claimed ? h('span', { class: 'rw-claimed' }, icon('check'), $t('Erledigt'))
+              : h('button', {
+                class: 'btn primary sm', disabled: !m.done,
+                onclick: async () => {
+                  const r = await F.account.claimMission({ id: m.id });
+                  if (!r.ok) { toast(errorText(r.error), 'warning'); return; }
+                  acc = await F.account.state(); renderAll(); render();
+                  toast($t('+{n} FalCoins für die Mission', { n: r.reward }), 'coin');
+                }
+              }, `+${m.reward}`))),
+          h('p', { class: 'rw-note' }, $t('Missionen werden jeden Tag um Mitternacht neu gestartet.'))));
+    }
+    render();
+  }
+  const LOG_TEXT = {
+    visits: (e) => $t('Website-Besuche · {date}', { date: new Date(e.label).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long' }) }),
+    daily: (e) => $t('Tägliche Belohnung · Tag {n}', { n: e.label }),
+    mission: (e) => $t('Mission: {name}', { name: $t(MISSION_TEXT[e.label] || e.label, { goal: { visits20: 20, sites5: 5, gamemode30: 30 }[e.label] || '' }) }),
+    purchase: (e) => $t('Kauf: {item}', { item: e.label === 'gameMode' ? $t('Game Mode · 2 Monate') : e.label === 'beta14' ? $t('Beta-Zugriff · 14 Tage') : e.label })
+  };
+  async function historyDialog() {
+    if (!acc.signedIn) return authDialog('signin');
+    const list = h('div', { class: 'hist-list' }, h('div', { class: 'rt-empty' }, h('span', { class: 'spinner' })));
+    const box = h('div', { class: 'dialog hist-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' },
+        h('div', { class: 'shop-head' }, h('h3', {}, $t('FalCoin-Verlauf')),
+          h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale)))),
+        list),
+      h('div', { class: 'dialog-foot' }, h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
+    const close = dialogShell(box);
+    const r = await F.account.coinLog();
+    if (!r.ok) { list.replaceChildren(h('div', { class: 'rt-empty' }, errorText(r.error))); return; }
+    if (!r.entries.length) { list.replaceChildren(h('div', { class: 'rt-empty' }, $t('Noch keine Einträge'))); return; }
+    list.replaceChildren(...r.entries.map((e) => h('div', { class: 'hist-row' },
+      h('span', { class: `hist-ic ${e.amount < 0 ? 'out' : 'in'}` }, icon(e.type === 'purchase' ? 'shop' : e.type === 'mission' ? 'flag' : e.type === 'daily' ? 'coin' : 'globe')),
+      h('div', { class: 'hist-main' }, h('b', {}, (LOG_TEXT[e.type] || ((x) => x.type))(e)),
+        h('small', {}, new Date(e.at).toLocaleString(I18N.locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))),
+      h('b', { class: `hist-amount ${e.amount < 0 ? 'out' : 'in'}` }, `${e.amount > 0 ? '+' : ''}${e.amount.toLocaleString(I18N.locale)}`))));
+  }
+
+  // ---------------------------------------------------------------------------
   // Admin: FalCoins aller Nutzer bearbeiten
   // ---------------------------------------------------------------------------
   function walletAdminDialog() {
@@ -599,6 +692,13 @@ const Account = (() => {
         }),
         h('div', { class: 's-row acc-e2e' }, icon('lock'), h('span', {}, $t('Ende-zu-Ende-verschlüsselt: Deine Daten werden mit deinem Passwort geschützt, bevor sie deinen PC verlassen.')))),
 
+      h('h3', { class: 's-sub' }, $t('Auf dem Handy')),
+      h('div', { class: 's-card' },
+        row($t('Lesezeichen auf dem Handy'), $t('Öffne die Falcon-Web-App auf deinem Smartphone und melde dich an. Deine Lesezeichen und die Tabs deiner PCs werden erst auf dem Handy entschlüsselt.'),
+          h('div', { class: 'acc-coin-row' },
+            h('code', { class: 'mobile-url', 'data-no-i18n': '' }, MOBILE_URL.replace('https://', '')),
+            h('button', { class: 'btn ghost', onclick: () => { F.copy(MOBILE_URL); toast($t('Link kopiert'), 'copy'); } }, icon('copy'), $t('Kopieren'))))),
+
       h('h3', { class: 's-sub' }, $t('Sicherheit')),
       h('div', { class: 's-card' },
         row($t('Passwort'), $t('Ändert auch den Schlüssel deiner Sync-Daten.'), h('button', { class: 'btn ghost', onclick: changePassword }, $t('Passwort ändern'))),
@@ -643,7 +743,12 @@ const Account = (() => {
   let accountKnown = false;
   F.on('account-changed', () => { if (accountKnown) enforceGameMode(); });
   setInterval(() => { if (accountKnown) { acc = { ...acc, gameModeOwned: (acc.gameModeUntil || 0) > Date.now() }; enforceGameMode(); } }, 60_000);
-  setTimeout(async () => { if (!INCOGNITO) acc = await F.account.state(); accountKnown = true; enforceGameMode(); }, 8000);
+  setTimeout(async () => {
+    if (!INCOGNITO) acc = await F.account.state();
+    accountKnown = true;
+    enforceGameMode();
+    if (acc.signedIn && acc.daily?.available) toast($t('Deine tägliche Belohnung wartet: +{n} FalCoins', { n: acc.daily.next }), 'coin', { label: $t('Abholen'), onClick: () => claimDaily() });
+  }, 8000);
 
-  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, shopDialog, walletAdminDialog, get state() { return acc; } };
+  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, shopDialog, walletAdminDialog, rewardsDialog, historyDialog, get state() { return acc; } };
 })();

@@ -386,6 +386,7 @@ function openAppMenu() {
     { label: $t('Drucken …'), icon: 'printer', shortcut: kb('Strg+P'), disabled: !ready, onClick: () => t.webview.print() },
     { label: $t('Entwicklertools'), icon: 'code', shortcut: kb('F12'), disabled: !ready, onClick: () => t.webview.openDevTools() },
     '-',
+    { label: $t('Screenshot …'), icon: 'scissors', shortcut: kb('Strg+Umschalt+S'), disabled: !ready, onClick: () => Screenshot.menu() },
     { label: $t('Fehler melden …'), icon: 'bug', onClick: () => Report.open() },
     { label: $t('Gemeldete Fehler'), icon: 'bug', onClick: () => openInternalPage('falcon://reports/') },
     { label: $t('Einstellungen'), icon: 'settings', shortcut: kb('Strg+,'), onClick: () => Settings.open() },
@@ -430,6 +431,33 @@ async function copyImage(src) {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Beta-Feature: Seite übersetzen (über Google Übersetzer)
+// ---------------------------------------------------------------------------
+const Translate = (() => {
+  const isTranslated = (url) => { try { return new URL(url).hostname.endsWith('.translate.goog'); } catch { return false; } };
+  // „de-falcon--app.translate.goog“ → „de.falcon-app“
+  function original(url) {
+    const u = new URL(url);
+    const host = u.hostname.replace(/\.translate\.goog$/, '').replace(/--/g, '\u0000').replace(/-/g, '.').replace(/\u0000/g, '-');
+    for (const k of [...u.searchParams.keys()]) if (k.startsWith('_x_tr_')) u.searchParams.delete(k);
+    return `https://${host}${u.pathname}${u.search}${u.hash}`;
+  }
+  function translate(tab = Tabs.active()) {
+    if (!tab || !/^https?:/.test(tab.url)) return;
+    const acc = typeof Account !== 'undefined' ? Account.state : {};
+    if (!acc.beta) {
+      toast($t('„Seite übersetzen“ ist ein Beta-Feature. Schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'flask',
+        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
+      return;
+    }
+    if (isTranslated(tab.url)) return Tabs.navigate(original(tab.url), tab);
+    const lang = I18N.lang || 'de';
+    Tabs.navigate(`https://translate.google.com/translate?sl=auto&tl=${encodeURIComponent(lang)}&u=${encodeURIComponent(tab.url)}`, tab);
+  }
+  return { translate, isTranslated };
+})();
 
 function openPageMenu(p) {
   const wv = webviewByContentsId(p.webContentsId);
@@ -484,6 +512,12 @@ function openPageMenu(p) {
       { label: $t('Zurück'), icon: 'arrowLeft', shortcut: kb('Alt+←'), disabled: !p.canGoBack, onClick: () => wv.goBack() },
       { label: $t('Vorwärts'), icon: 'arrowRight', shortcut: kb('Alt+→'), disabled: !p.canGoForward, onClick: () => wv.goForward() },
       { label: $t('Neu laden'), icon: 'reload', shortcut: kb('Strg+R'), onClick: () => wv.reload() },
+      '-',
+      {
+        label: Translate.isTranslated(p.pageURL) ? $t('Original anzeigen') : $t('Seite übersetzen'), icon: 'globe',
+        shortcut: 'Beta', disabled: !/^https?:/.test(p.pageURL), onClick: () => Translate.translate()
+      },
+      { label: $t('Screenshot …'), icon: 'scissors', shortcut: kb('Strg+Umschalt+S'), onClick: () => Screenshot.menu({ point }) },
       '-',
       { label: $t('Drucken …'), icon: 'printer', shortcut: kb('Strg+P'), onClick: () => wv.print() },
       { label: $t('Seitenquelltext anzeigen'), icon: 'code', disabled: !/^https?:/.test(p.pageURL), onClick: () => Tabs.create(`view-source:${p.pageURL}`) },
