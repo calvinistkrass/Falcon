@@ -2,6 +2,12 @@
 
 All notable changes to Falcon are documented here.
 
+## [1.9.2] – 2026-11-11
+
+### Fixed
+- **Falcon didn't appear in Windows Settings → Default apps**, so it couldn't be chosen for https, http or HTML files. The installer now registers Falcon as a browser, and Falcon checks the registration on every start and repairs it if it's missing or points to an old location.
+- Updating no longer removes the browser registration.
+
 ## [1.9.1] – 2026-11-10
 
 ### Changed
@@ -149,6 +155,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[1.9.2]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.2
 [1.9.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.1
 [1.9.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.0
 [1.8.3]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.3
