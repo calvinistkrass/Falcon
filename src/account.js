@@ -97,6 +97,8 @@ function publicState() {
     coins: (data.coins?.balance || 0) + (data.coins?.pending || 0),
     betaUntil: data.betaUntil || 0,
     beta: (data.betaUntil || 0) > Date.now(),
+    gameModeUntil: data.gameModeUntil || 0,
+    gameModeOwned: (data.gameModeUntil || 0) > Date.now(),
     admin: !!data.admin
   };
 }
@@ -664,11 +666,42 @@ const deleteReport = safe(async ({ id }) => {
 });
 
 // ---------------------------------------------------------------------------
-// FalCoins: 1 Coin pro Website-Besuch, solange man angemeldet ist
+// FalCoins: 1 Coin pro Website-Besuch, solange man angemeldet ist.
+// Jedes Konto hat ein Wallet unter wallets/{uid} (Kontostand, gekaufte Inhalte, Name, E-Mail) –
+// lesbar nur für den Besitzer und den Admin, der dort auch Kontostände bearbeiten kann.
 // ---------------------------------------------------------------------------
-const coinsPath = () => `users/${data.uid}/meta/coins`;
+const walletPath = (uid = data.uid) => `wallets/${uid}`;
+const legacyCoinsPath = () => `users/${data.uid}/meta/coins`; // bis 1.9.2
+const commitUrl = () => `${STORE.replace(/\/documents$/, '')}/documents:commit`;
+const docName = (p) => `projects/${config.projectId}/databases/(default)/documents/${p}`;
+const bool = (v) => ({ booleanValue: !!v });
 let coinTimer = null;
 let coinNotify = null;
+
+function applyWallet(doc) {
+  const f = doc?.fields || {};
+  data.coins = { balance: Number(f.balance?.integerValue) || 0, pending: data.coins?.pending || 0 };
+  data.betaUntil = Number(f.betaUntil?.integerValue) || 0;
+  data.gameModeUntil = Number(f.gameModeUntil?.integerValue) || 0;
+}
+
+// Wallet einmalig anlegen – mit dem Guthaben vom alten Speicherort
+async function ensureWallet() {
+  if (data.walletReady) return;
+  const doc = await getDoc(walletPath());
+  if (!doc) {
+    const old = await getDoc(legacyCoinsPath()).catch(() => null);
+    const f = old?.fields || {};
+    const fields = {
+      balance: int(Number(f.balance?.integerValue) || 0), betaUntil: int(Number(f.betaUntil?.integerValue) || 0),
+      gameModeUntil: int(0), email: str(data.email || ''), name: str(data.displayName || ''), created: int(Date.now())
+    };
+    try { await putDoc(walletPath(), fields, { exists: false }); } catch (e) { if (!/ALREADY_EXISTS|FAILED_PRECONDITION/.test(e.code)) throw e; }
+  }
+  data.walletReady = true;
+  persist();
+}
+
 function addCoin(n = 1) {
   if (!load()) return;
   data.coins = data.coins || { balance: 0, pending: 0 };
@@ -681,14 +714,16 @@ async function flushCoins() {
   if (!load() || !data.coins?.pending) return;
   const n = data.coins.pending;
   try {
-    const res = await request(`${STORE.replace(/\/documents$/, '')}/documents:commit`, {
+    await ensureWallet();
+    const res = await request(commitUrl(), {
       method: 'POST', token: await token(),
-      body: { writes: [{ transform: {
-        document: `projects/${config.projectId}/databases/(default)/documents/${coinsPath()}`,
-        fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(n) } }]
-      } }] }
+      body: { writes: [
+        // Name und E-Mail aktuell halten, damit der Admin das Wallet zuordnen kann
+        { update: { name: docName(walletPath()), fields: { email: str(data.email || ''), name: str(data.displayName || '') } }, updateMask: { fieldPaths: ['email', 'name'] }, currentDocument: { exists: true } },
+        { transform: { document: docName(walletPath()), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(n) } }] } }
+      ] }
     });
-    const balance = Number(res.writeResults?.[0]?.transformResults?.[0]?.integerValue);
+    const balance = Number(res.writeResults?.[1]?.transformResults?.[0]?.integerValue);
     data.coins.pending -= n;
     if (Number.isFinite(balance)) data.coins.balance = balance;
     persist(); changed();
@@ -697,9 +732,8 @@ async function flushCoins() {
 async function loadCoins() {
   if (!load()) return;
   try {
-    const doc = await getDoc(coinsPath());
-    data.coins = { balance: Number(doc?.fields?.balance?.integerValue) || 0, pending: data.coins?.pending || 0 };
-    data.betaUntil = Number(doc?.fields?.betaUntil?.integerValue) || 0;
+    await ensureWallet();
+    applyWallet(await getDoc(walletPath()));
     persist(); changed();
   } catch { /* offline */ }
 }
@@ -707,10 +741,19 @@ async function loadCoins() {
 // ---------------------------------------------------------------------------
 // FalCoin-Shop
 // ---------------------------------------------------------------------------
-const SHOP = { beta14: { price: 1000, days: 14 } };
-// Kontostand vom Server holen (z. B. FalCoins von anderen PCs)
+// Zeitlich begrenzte Freischaltungen – ein erneuter Kauf verlängert ab dem bisherigen Ende
+const SHOP = {
+  beta14: { price: 1000, field: 'betaUntil', days: 14 },
+  gameMode: { price: 150, field: 'gameModeUntil', months: 2 }
+};
+function extend(from, it) {
+  const d = new Date(Math.max(Date.now(), from || 0));
+  if (it.months) d.setMonth(d.getMonth() + it.months);
+  if (it.days) d.setDate(d.getDate() + it.days);
+  return d.getTime();
+}
+// Kontostand vom Server holen (z. B. FalCoins von anderen PCs oder vom Admin geändert)
 const refreshCoins = safe(async () => { await flushCoins(); await loadCoins(); return {}; });
-const docName = (p) => `projects/${config.projectId}/databases/(default)/documents/${p}`;
 const purchase = safe(async ({ item }) => {
   const it = SHOP[item];
   if (!it) throw new AccountError('INVALID');
@@ -718,27 +761,26 @@ const purchase = safe(async ({ item }) => {
   // Erst offene FalCoins gutschreiben, damit der Kontostand stimmt
   await flushCoins();
   if (data.coins?.pending) throw new AccountError('NETWORK');
+  await ensureWallet();
   for (let attempt = 0; attempt < 3; attempt++) {
-    const doc = await getDoc(coinsPath());
-    const balance = Number(doc?.fields?.balance?.integerValue) || 0;
+    const doc = await getDoc(walletPath());
+    const f = doc?.fields || {};
+    const balance = Number(f.balance?.integerValue) || 0;
     if (balance < it.price) throw new AccountError('NOT_ENOUGH');
-    const until = Math.max(Date.now(), Number(doc?.fields?.betaUntil?.integerValue) || 0) + it.days * 86400_000;
-    // Abbuchen und Freischalten in einem Schritt – nur wenn sich der Kontostand inzwischen nicht geändert hat
+    const until = extend(Number(f[it.field]?.integerValue) || 0, it);
+    const fields = { balance: int(balance - it.price), [it.field]: int(until) };
+    // Abbuchen und Freischalten in einem Schritt – nur wenn sich das Wallet inzwischen nicht geändert hat
     const writes = [
-      {
-        update: { name: docName(coinsPath()), fields: { balance: int(balance - it.price), betaUntil: int(until) } },
-        updateMask: { fieldPaths: ['balance', 'betaUntil'] },
-        currentDocument: { updateTime: doc.updateTime }
-      },
+      { update: { name: docName(walletPath()), fields }, updateMask: { fieldPaths: Object.keys(fields) }, currentDocument: { updateTime: doc.updateTime } },
       {
         update: { name: docName(`users/${data.uid}/purchases/${crypto.randomUUID()}`), fields: { item: str(item), price: int(it.price), at: int(Date.now()), until: int(until) } },
         currentDocument: { exists: false }
       }
     ];
     try {
-      await request(`${STORE.replace(/\/documents$/, '')}/documents:commit`, { method: 'POST', token: await token(), body: { writes } });
+      await request(commitUrl(), { method: 'POST', token: await token(), body: { writes } });
       data.coins.balance = balance - it.price;
-      data.betaUntil = until;
+      data[it.field] = until;
       persist(); changed();
       return { until };
     } catch (e) {
@@ -746,6 +788,40 @@ const purchase = safe(async ({ item }) => {
     }
   }
   throw new AccountError('UNKNOWN');
+});
+
+// ---------------------------------------------------------------------------
+// Admin: Wallets aller Nutzer ansehen und Kontostände ändern
+// ---------------------------------------------------------------------------
+const listWallets = safe(async () => {
+  const res = await request(`${STORE}/wallets?pageSize=300`, { token: await token() });
+  const wallets = (res.documents || []).map((d) => {
+    const f = d.fields || {};
+    return {
+      uid: d.name.split('/').pop(), email: f.email?.stringValue || '', name: f.name?.stringValue || '',
+      balance: Number(f.balance?.integerValue) || 0, betaUntil: Number(f.betaUntil?.integerValue) || 0, gameModeUntil: Number(f.gameModeUntil?.integerValue) || 0
+    };
+  }).sort((a, b) => b.balance - a.balance);
+  return { wallets };
+});
+const adminUpdateWallet = safe(async ({ uid, balance, gameModeUntil }) => {
+  if (!/^[\w-]{6,128}$/.test(String(uid))) throw new AccountError('INVALID');
+  const fields = {};
+  if (balance !== undefined) {
+    const n = Math.round(Number(balance));
+    if (!Number.isFinite(n) || n < 0 || n > 1e9) throw new AccountError('INVALID');
+    fields.balance = int(n);
+  }
+  if (gameModeUntil !== undefined) {
+    const t = Math.round(Number(gameModeUntil));
+    if (!Number.isFinite(t) || t < 0) throw new AccountError('INVALID');
+    fields.gameModeUntil = int(t);
+  }
+  if (!Object.keys(fields).length) throw new AccountError('INVALID');
+  const mask = Object.keys(fields).map((k) => `updateMask.fieldPaths=${k}`).join('&');
+  await request(`${STORE}/wallets/${uid}?${mask}&currentDocument.exists=true`, { method: 'PATCH', token: await token(), body: { fields } });
+  if (uid === data.uid) await loadCoins();
+  return {};
 });
 
 function setKinds(kinds) {
@@ -774,6 +850,6 @@ function syncIfStale() {
 module.exports = {
   KINDS, init, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
   updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale, remoteTabs,
-  submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins, purchase, refreshCoins,
+  submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins, purchase, refreshCoins, listWallets, adminUpdateWallet,
   _test: { encrypt, decrypt, MERGE }
 };

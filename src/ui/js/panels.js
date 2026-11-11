@@ -242,6 +242,16 @@ const Perf = (() => {
   }
 
   async function setGameMode(enabled) {
+    const acc = typeof Account !== 'undefined' ? Account.state : {};
+    if (enabled && !(acc.signedIn && acc.gameModeOwned)) {
+      emit('settings', state.settings); // Schalter zurücksetzen
+      if (Popover.isOpen(pop)) renderPop();
+      toast(acc.signedIn
+        ? $t('Game Mode kostet 150 FalCoins und gilt dann 2 Monate.')
+        : $t('Melde dich an und schalte Game Mode im FalCoin-Shop frei.'), 'gamepad',
+        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
+      return;
+    }
     await updateSettings({ gameMode: enabled });
     if (enabled) {
       toast($t('Game Mode an – inaktive Tabs schlafen nach {n} Min.', { n: state.settings.sleepMinutes }), 'gamepad');

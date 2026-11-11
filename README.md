@@ -26,7 +26,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 ## Features
 
 ### 🎮 Made for gaming
-- **Game Mode**: pauses background tabs after 30 seconds and later puts them to sleep, so your game gets the CPU and memory. Tabs playing audio stay active.
+- **Game Mode** (unlock in the FalCoin shop, 150 FalCoins for 2 months): pauses background tabs after 30 seconds and later puts them to sleep, so your game gets the CPU and memory. Tabs playing audio stay active.
 - **Network limiter**: caps websites and downloads so your game keeps a stable ping – always or only in Game Mode.
 - **Free games & deals** from Steam, Epic and GOG right on the start page.
 - **Volume per tab**: turn a stream down without touching Discord.
@@ -57,7 +57,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **Sync between your PCs**: bookmarks, passwords, history and settings – pick what you want to sync.
 - **End-to-end encrypted**: data is encrypted on your PC (AES-256-GCM) with a key protected by your password before it's uploaded. The server only ever sees ciphertext.
 - **Tabs from other PCs**: open what you were reading on your other computer.
-- **FalCoins**: earn one coin per website visit while signed in and spend them in the FalCoin shop, e.g. on 14 days of beta access.
+- **FalCoins**: earn one coin per website visit while signed in and spend them in the FalCoin shop on Game Mode (2 months) or beta access (14 days).
 - **Profile** with name and color, device names, password reset by email and account deletion.
 
 ### 🔐 Passwords & security
@@ -169,6 +169,11 @@ service cloud.firestore {
         && (!('uid' in request.resource.data) || (request.auth != null && request.resource.data.uid == request.auth.uid))
         && (!('screenshot' in request.resource.data) || request.resource.data.screenshot.size() <= 900000);
       allow read, update, delete: if isAdmin();
+    }
+    // FalCoin wallets: owner and developer account
+    match /wallets/{uid} {
+      allow read, create, update: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
     }
     // Public copy without personal data: readable by everyone, status changes by the developer only
     match /reportsPublic/{id} {

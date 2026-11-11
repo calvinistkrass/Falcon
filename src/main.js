@@ -594,7 +594,10 @@ const accountHandlers = {
   remoteTabs: () => account.remoteTabs(),
   submitReport: (a) => account.submitReport(a),
   purchase: (a) => account.purchase(a),
-  refreshCoins: () => account.refreshCoins()
+  refreshCoins: () => account.refreshCoins(),
+  // Nur für das Admin-Konto (zusätzlich durch die Firestore-Regeln geschützt)
+  listWallets: () => (account.state().admin ? account.listWallets() : { ok: false, error: 'FORBIDDEN' }),
+  adminUpdateWallet: (a) => (account.state().admin ? account.adminUpdateWallet(a) : { ok: false, error: 'FORBIDDEN' })
 };
 ipcMain.handle('account', async (e, action, arg) => {
   const w = BrowserWindow.fromWebContents(e.sender);

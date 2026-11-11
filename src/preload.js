@@ -36,7 +36,7 @@ contextBridge.exposeInMainWorld('falcon', {
   },
   clearData: () => ipcRenderer.invoke('clear-data'),
   account: Object.fromEntries(['state', 'signUp', 'signIn', 'signOut', 'resetPassword', 'resendVerification', 'refreshProfile', 'updateProfile',
-    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty', 'remoteTabs', 'submitReport', 'purchase', 'refreshCoins']
+    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty', 'remoteTabs', 'submitReport', 'purchase', 'refreshCoins', 'listWallets', 'adminUpdateWallet']
     .map((action) => [action, (arg) => ipcRenderer.invoke('account', action, arg)])),
   extensions: {
     list: () => ipcRenderer.invoke('ext:list'),
