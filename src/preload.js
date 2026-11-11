@@ -36,7 +36,7 @@ contextBridge.exposeInMainWorld('falcon', {
   },
   clearData: () => ipcRenderer.invoke('clear-data'),
   account: Object.fromEntries(['state', 'signUp', 'signIn', 'signOut', 'resetPassword', 'resendVerification', 'refreshProfile', 'updateProfile',
-    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty', 'remoteTabs', 'submitReport', 'purchase', 'refreshCoins', 'listWallets', 'adminUpdateWallet']
+    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty', 'remoteTabs', 'submitReport', 'purchase', 'refreshCoins', 'listWallets', 'adminUpdateWallet', 'coinLog', 'claimDaily', 'claimMission']
     .map((action) => [action, (arg) => ipcRenderer.invoke('account', action, arg)])),
   extensions: {
     list: () => ipcRenderer.invoke('ext:list'),
@@ -48,6 +48,10 @@ contextBridge.exposeInMainWorld('falcon', {
     options: (key) => ipcRenderer.invoke('ext:options', key)
   },
   reportScreenshot: (webContentsId) => ipcRenderer.invoke('report:screenshot', webContentsId),
+  screenshot: {
+    capture: (webContentsId, mode) => ipcRenderer.invoke('screenshot:capture', webContentsId, mode),
+    save: (dataUrl) => ipcRenderer.invoke('screenshot:save', dataUrl)
+  },
   defaultBrowser: {
     status: () => ipcRenderer.invoke('default-browser:status'),
     set: () => ipcRenderer.invoke('default-browser:set')

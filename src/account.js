@@ -98,6 +98,8 @@ function publicState() {
     betaUntil: data.betaUntil || 0,
     beta: (data.betaUntil || 0) > Date.now(),
     gameModeUntil: data.gameModeUntil || 0,
+    daily: { available: data.lastDaily !== today(), streak: data.lastDaily === today() ? data.streak || 0 : nextStreak() - 1, next: dailyReward(data.lastDaily === today() ? (data.streak || 0) + 1 : nextStreak()) },
+    missions: missionList(),
     gameModeOwned: (data.gameModeUntil || 0) > Date.now(),
     admin: !!data.admin
   };
@@ -683,6 +685,8 @@ function applyWallet(doc) {
   data.coins = { balance: Number(f.balance?.integerValue) || 0, pending: data.coins?.pending || 0 };
   data.betaUntil = Number(f.betaUntil?.integerValue) || 0;
   data.gameModeUntil = Number(f.gameModeUntil?.integerValue) || 0;
+  data.lastDaily = f.lastDaily?.stringValue || '';
+  data.streak = Number(f.streak?.integerValue) || 0;
 }
 
 // Wallet einmalig anlegen – mit dem Guthaben vom alten Speicherort
@@ -702,10 +706,13 @@ async function ensureWallet() {
   persist();
 }
 
-function addCoin(n = 1) {
+function addCoin(n = 1, host = '') {
   if (!load()) return;
   data.coins = data.coins || { balance: 0, pending: 0 };
   data.coins.pending += n;
+  const m = missionState();
+  m.visits += n;
+  if (host && !m.domains.includes(host) && m.domains.length < 50) m.domains.push(host);
   // Zustand höchstens einmal pro Sekunde melden
   if (!coinNotify) coinNotify = setTimeout(() => { coinNotify = null; persist(); changed(); }, 1000);
   if (!coinTimer) coinTimer = setTimeout(() => { coinTimer = null; flushCoins(); }, 30_000);
@@ -720,7 +727,9 @@ async function flushCoins() {
       body: { writes: [
         // Name und E-Mail aktuell halten, damit der Admin das Wallet zuordnen kann
         { update: { name: docName(walletPath()), fields: { email: str(data.email || ''), name: str(data.displayName || '') } }, updateMask: { fieldPaths: ['email', 'name'] }, currentDocument: { exists: true } },
-        { transform: { document: docName(walletPath()), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(n) } }] } }
+        { transform: { document: docName(walletPath()), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(n) } }] } },
+        // Verlauf: Besuche werden pro Tag zusammengefasst
+        ...logWrites({ id: `visits-${today()}`, type: 'visits', amount: n, label: today(), increment: true })
       ] }
     });
     const balance = Number(res.writeResults?.[1]?.transformResults?.[0]?.integerValue);
@@ -775,7 +784,8 @@ const purchase = safe(async ({ item }) => {
       {
         update: { name: docName(`users/${data.uid}/purchases/${crypto.randomUUID()}`), fields: { item: str(item), price: int(it.price), at: int(Date.now()), until: int(until) } },
         currentDocument: { exists: false }
-      }
+      },
+      ...logWrites({ type: 'purchase', amount: -it.price, label: item })
     ];
     try {
       await request(commitUrl(), { method: 'POST', token: await token(), body: { writes } });
@@ -788,6 +798,116 @@ const purchase = safe(async ({ item }) => {
     }
   }
   throw new AccountError('UNKNOWN');
+});
+
+// ---------------------------------------------------------------------------
+// FalCoin-Verlauf: users/{uid}/coinlog
+// ---------------------------------------------------------------------------
+function today(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function logWrites({ id = crypto.randomUUID(), type, amount, label = '', increment = false }) {
+  const name = docName(`users/${data.uid}/coinlog/${id}`);
+  if (!increment) {
+    return [{ update: { name, fields: { type: str(type), amount: int(amount), label: str(label), at: int(Date.now()) } }, currentDocument: { exists: false } }];
+  }
+  return [
+    { update: { name, fields: { type: str(type), label: str(label), at: int(Date.now()) } }, updateMask: { fieldPaths: ['type', 'label', 'at'] } },
+    { transform: { document: name, fieldTransforms: [{ fieldPath: 'amount', increment: { integerValue: String(amount) } }] } }
+  ];
+}
+const coinLog = safe(async () => {
+  await flushCoins();
+  const res = await request(`${STORE}/users/${data.uid}/coinlog?pageSize=100&orderBy=at%20desc`, { token: await token() });
+  const entries = (res.documents || []).map((d) => {
+    const f = d.fields || {};
+    return { type: f.type?.stringValue || '', amount: Number(f.amount?.integerValue) || 0, label: f.label?.stringValue || '', at: Number(f.at?.integerValue) || 0 };
+  }).sort((a, b) => b.at - a.at);
+  return { entries };
+});
+
+// ---------------------------------------------------------------------------
+// Tägliche Belohnung: 10 FalCoins pro Tag, jeder 7. Tag in Folge +50 Bonus
+// ---------------------------------------------------------------------------
+const DAILY = 10, STREAK_BONUS = 50, STREAK_DAYS = 7;
+const dailyReward = (streak) => DAILY + (streak % STREAK_DAYS === 0 ? STREAK_BONUS : 0);
+function nextStreak() {
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  return data.lastDaily === today(y) ? (data.streak || 0) + 1 : 1;
+}
+const claimDaily = safe(async () => {
+  if (!load()) throw new AccountError('SIGNED_OUT');
+  await ensureWallet();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const doc = await getDoc(walletPath());
+    applyWallet(doc);
+    if (data.lastDaily === today()) throw new AccountError('ALREADY_CLAIMED');
+    const streak = nextStreak();
+    const reward = dailyReward(streak);
+    const writes = [
+      {
+        update: { name: docName(walletPath()), fields: { balance: int(data.coins.balance + reward), lastDaily: str(today()), streak: int(streak) } },
+        updateMask: { fieldPaths: ['balance', 'lastDaily', 'streak'] },
+        currentDocument: { updateTime: doc.updateTime }
+      },
+      ...logWrites({ type: 'daily', amount: reward, label: String(streak) })
+    ];
+    try {
+      await request(commitUrl(), { method: 'POST', token: await token(), body: { writes } });
+      data.coins.balance += reward; data.lastDaily = today(); data.streak = streak;
+      persist(); changed();
+      return { reward, streak };
+    } catch (e) {
+      if (!/FAILED_PRECONDITION|ABORTED/.test(e.code) || attempt === 2) throw e;
+    }
+  }
+  throw new AccountError('UNKNOWN');
+});
+
+// ---------------------------------------------------------------------------
+// Tägliche Missionen (Fortschritt wird auf diesem PC gezählt)
+// ---------------------------------------------------------------------------
+const MISSIONS = [
+  { id: 'visits20', metric: 'visits', goal: 20, reward: 20 },
+  { id: 'sites5', metric: 'domains', goal: 5, reward: 10 },
+  { id: 'gamemode30', metric: 'gmMinutes', goal: 30, reward: 15 }
+];
+function missionState() {
+  if (!data.missions || data.missions.date !== today()) data.missions = { date: today(), visits: 0, domains: [], gmMinutes: 0, claimed: [] };
+  return data.missions;
+}
+function missionList() {
+  const m = missionState();
+  return MISSIONS.map((x) => {
+    const value = x.metric === 'domains' ? m.domains.length : m[x.metric];
+    return { id: x.id, goal: x.goal, reward: x.reward, progress: Math.min(value, x.goal), done: value >= x.goal, claimed: m.claimed.includes(x.id) };
+  });
+}
+let gmNotify = null;
+function trackGameModeMinute() {
+  if (!load()) return;
+  missionState().gmMinutes += 1;
+  if (!gmNotify) gmNotify = setTimeout(() => { gmNotify = null; persist(); changed(); }, 1000);
+}
+const claimMission = safe(async ({ id }) => {
+  if (!load()) throw new AccountError('SIGNED_OUT');
+  const mission = missionList().find((x) => x.id === id);
+  if (!mission) throw new AccountError('INVALID');
+  if (mission.claimed) throw new AccountError('ALREADY_CLAIMED');
+  if (!mission.done) throw new AccountError('NOT_DONE');
+  await ensureWallet();
+  const res = await request(commitUrl(), {
+    method: 'POST', token: await token(),
+    body: { writes: [
+      { transform: { document: docName(walletPath()), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(mission.reward) } }] } },
+      ...logWrites({ type: 'mission', amount: mission.reward, label: id })
+    ] }
+  });
+  const balance = Number(res.writeResults?.[0]?.transformResults?.[0]?.integerValue);
+  if (Number.isFinite(balance)) data.coins.balance = balance;
+  missionState().claimed.push(id);
+  persist(); changed();
+  return { reward: mission.reward };
 });
 
 // ---------------------------------------------------------------------------
@@ -850,6 +970,6 @@ function syncIfStale() {
 module.exports = {
   KINDS, init, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
   updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale, remoteTabs,
-  submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins, purchase, refreshCoins, listWallets, adminUpdateWallet,
+  submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins, purchase, refreshCoins, listWallets, adminUpdateWallet, coinLog, claimDaily, claimMission, trackGameModeMinute,
   _test: { encrypt, decrypt, MERGE }
 };

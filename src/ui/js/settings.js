@@ -15,7 +15,7 @@ const Settings = (() => {
     ['Auf Seite suchen', 'Strg+F'], ['Lesezeichen', 'Strg+D'],
     ['Lesezeichenleiste', 'Strg+Umschalt+B'], ['Downloads', 'Strg+J'],
     ['Zoom', 'Strg+±'], ['Neu laden', 'F5'],
-    ['Game Mode', 'Strg+Umschalt+G'], ['Einstellungen', 'Strg+,'],
+    ['Game Mode', 'Strg+Umschalt+G'], ['Screenshot', 'Strg+Umschalt+S'], ['Einstellungen', 'Strg+,'],
     ['Vollbild', 'F11'], ['Entwicklertools', 'F12']
   ];
   const AUTH_METHOD = F.platform === 'win32' ? 'Windows Hello' : F.platform === 'darwin' ? 'Touch ID' : null;

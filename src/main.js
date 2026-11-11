@@ -595,6 +595,9 @@ const accountHandlers = {
   submitReport: (a) => account.submitReport(a),
   purchase: (a) => account.purchase(a),
   refreshCoins: () => account.refreshCoins(),
+  coinLog: () => account.coinLog(),
+  claimDaily: () => account.claimDaily(),
+  claimMission: (a) => account.claimMission(a),
   // Nur für das Admin-Konto (zusätzlich durch die Firestore-Regeln geschützt)
   listWallets: () => (account.state().admin ? account.listWallets() : { ok: false, error: 'FORBIDDEN' }),
   adminUpdateWallet: (a) => (account.state().admin ? account.adminUpdateWallet(a) : { ok: false, error: 'FORBIDDEN' })
@@ -722,6 +725,39 @@ ipcMain.handle('ext:popup', (e, key, anchor) => {
 });
 ipcMain.handle('ext:options', (e, key) => (fromNormalUi(e) ? extensions.optionsUrl(String(key)) : null));
 
+// Screenshot-Werkzeug: sichtbarer Bereich oder ganze Seite als PNG
+ipcMain.handle('screenshot:capture', async (e, id, mode) => {
+  if (!isUi(e)) return null;
+  const wc = webContents.fromId(Number(id));
+  if (!wc || wc.isDestroyed() || wc.getType() !== 'webview') return null;
+  try {
+    if (mode !== 'full') return `data:image/png;base64,${(await wc.capturePage()).toPNG().toString('base64')}`;
+    const wasAttached = wc.debugger.isAttached();
+    if (!wasAttached) wc.debugger.attach('1.3');
+    try {
+      const m = await wc.debugger.sendCommand('Page.getLayoutMetrics');
+      const size = m.cssContentSize || m.contentSize;
+      const width = Math.ceil(size.width), height = Math.min(Math.ceil(size.height), 16000);
+      const shot = await wc.debugger.sendCommand('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale: 1 } });
+      return `data:image/png;base64,${shot.data}`;
+    } finally {
+      if (!wasAttached) cdpRelease(wc);
+    }
+  } catch { return null; }
+});
+ipcMain.handle('screenshot:save', async (e, dataUrl) => {
+  if (!isUi(e) || !/^data:image\/png;base64,/.test(String(dataUrl))) return false;
+  const d = new Date();
+  const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`;
+  const { canceled, filePath } = await dialog.showSaveDialog(parentFor(e), {
+    defaultPath: path.join(app.getPath('pictures'), `Falcon-Screenshot ${stamp}.png`),
+    filters: [{ name: 'PNG', extensions: ['png'] }]
+  });
+  if (canceled || !filePath) return false;
+  fs.writeFileSync(filePath, Buffer.from(String(dataUrl).split(',')[1], 'base64'));
+  return true;
+});
+
 // Screenshot der aktuellen Seite für eine Fehlermeldung (verkleinert, JPEG)
 ipcMain.handle('report:screenshot', async (e, id) => {
   if (!isUi(e)) return null;
@@ -772,7 +808,9 @@ app.on('web-contents-created', (_e, contents) => {
       const clean = url.replace(/#.*$/, '');
       if (clean === lastUrl || Date.now() - lastAt < 5000) { lastUrl = clean; return; }
       lastUrl = clean; lastAt = Date.now();
-      account.addCoin(1);
+      let host = '';
+      try { host = new URL(clean).hostname.replace(/^www\./, ''); } catch { /* egal */ }
+      account.addCoin(1, host);
     });
   }
   if (contents.getType() !== 'webview') return;
@@ -810,7 +848,7 @@ app.on('web-contents-created', (_e, contents) => {
       (ctrl && SHORTCUT_KEYS_CTRL.includes(key)) ||
       ['f5', 'f6', 'f9', 'f11', 'f12'].includes(key) ||
       (input.alt && ['arrowleft', 'arrowright', 'home'].includes(key)) ||
-      (ctrl && input.shift && ['g', 'b', 'n', 'delete'].includes(key));
+      (ctrl && input.shift && ['g', 'b', 'n', 's', 'delete'].includes(key));
     const payload = { key, ctrl, shift: input.shift, alt: input.alt };
     if (key === 'escape') return toHost(contents, 'shortcut', payload); // Seite bekommt Escape trotzdem
     if (!hit) return;
@@ -1213,6 +1251,8 @@ if (!gotLock) {
     defaultBrowser.refreshRegistration();
     account.init({ notify: (state) => broadcast('account-changed', state, { incognito: false }), providers: syncProviders, locale: pageLanguage });
     app.on('browser-window-focus', () => account.syncIfStale());
+    // Mission „Game Mode nutzen“: jede Minute mit aktivem Game Mode zählt
+    setInterval(() => { if (settings.gameMode) account.trackGameModeMinute(); }, 60_000);
     app.on('browser-window-focus', () => updater.checkIfStale());
   });
 
