@@ -2,10 +2,17 @@
 
 All notable changes to Falcon are documented here.
 
-## [1.9.2] – 2026-11-11
+## [1.9.5] – 2026-11-11
 
 ### Added
-- **FalCoin shop**: open it from the coin balance in the account menu, under Settings → Account & sync or with Ctrl+K. The first item is **beta access for 14 days for 1,000 FalCoins**. Buying it deducts the coins on the server and unlocks beta access; buying again extends it by another 14 days. There are no beta features yet – they're coming later.
+- **FalCoin shop**: open it from the coin balance in the account menu, under Settings → Account & sync or with Ctrl+K.
+  - **Game Mode · 2 months for 150 FalCoins**: active for exactly two calendar months from purchase; buying again extends it.
+  - **Beta access · 14 days for 1,000 FalCoins**; buying again extends it by another 14 days. There are no beta features yet – they're coming later.
+- **Wallets**: FalCoins, beta access and Game Mode are stored per account. Existing balances are carried over automatically.
+- **Admin: manage users' FalCoins** (account menu, developer account only): see every wallet, change balances and give or revoke Game Mode.
+
+### Changed
+- **Game Mode now requires an unlock** from the FalCoin shop. Without a valid unlock (or when signed out) it turns off automatically.
 
 ### Fixed
 - **Falcon didn't appear in Windows Settings → Default apps**, so it couldn't be chosen for https, http or HTML files. The installer now registers Falcon as a browser, and Falcon checks the registration on every start and repairs it if it's missing or points to an old location.
@@ -158,7 +165,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
-[1.9.2]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.2
+[1.9.5]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.5
 [1.9.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.1
 [1.9.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.0
 [1.8.3]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.8.3

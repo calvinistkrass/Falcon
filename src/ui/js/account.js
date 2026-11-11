@@ -105,6 +105,7 @@ const Account = (() => {
           h('div', { class: 'acc-sync' }, syncLine(),
             h('button', { class: 'tb-btn sm', title: $t('Jetzt synchronisieren'), disabled: acc.syncing || acc.needsKey, onclick: syncNow }, icon('sync'))),
           h('div', { class: 'menu-sep' }),
+          acc.admin ? h('button', { class: 'menu-item', onclick: () => { closePop(); walletAdminDialog(); } }, icon('coin'), h('span', { class: 'menu-label' }, $t('FalCoins der Nutzer verwalten')), h('span', { class: 'admin-tag' }, 'Admin')) : null,
           h('button', { class: 'menu-item', onclick: () => { closePop(); remoteTabsDialog(); } }, icon('devices'), h('span', { class: 'menu-label' }, $t('Tabs von anderen PCs'))),
           h('button', { class: 'menu-item', onclick: () => { closePop(); Settings.open('account'); } }, icon('user'), h('span', { class: 'menu-label' }, $t('Konto & Sync verwalten'))),
           h('button', { class: 'menu-item', onclick: () => { closePop(); signOut(); } }, icon('logout'), h('span', { class: 'menu-label' }, $t('Abmelden')))
@@ -294,7 +295,8 @@ const Account = (() => {
   // FalCoin-Shop
   // ---------------------------------------------------------------------------
   const SHOP = [
-    { id: 'beta14', price: 1000, icon: 'flask', title: 'Beta-Zugriff · 14 Tage', text: 'Teste neue Funktionen vor allen anderen. Die ersten Beta-Funktionen folgen bald – dein Zugriff gilt ab dem Kauf 14 Tage lang.' }
+    { id: 'gameMode', price: 150, icon: 'gamepad', field: 'gameModeUntil', extendLabel: 'Um 2 Monate verlängern', title: 'Game Mode · 2 Monate', text: 'Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt. Ab dem Kauf genau 2 Monate aktiv.' },
+    { id: 'beta14', price: 1000, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 14 Tage verlängern', title: 'Beta-Zugriff · 14 Tage', text: 'Teste neue Funktionen vor allen anderen. Die ersten Beta-Funktionen folgen bald – dein Zugriff gilt ab dem Kauf 14 Tage lang.' }
   ];
   const fmtUntil = (ms) => new Date(ms).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long', year: 'numeric' });
   function shopDialog() {
@@ -316,12 +318,12 @@ const Account = (() => {
       balance.textContent = (acc.coins || 0).toLocaleString(I18N.locale);
       list.replaceChildren(...SHOP.map((item) => {
         const missing = item.price - (acc.coins || 0);
-        const active = item.id === 'beta14' && acc.beta;
+        const active = (acc[item.field] || 0) > Date.now();
         const buy = h('button', {
           class: 'btn primary', disabled: missing > 0,
           onclick: async () => {
             const ok = await confirmDialog({
-              title: active ? $t('Beta-Zugriff verlängern?') : $t('Beta-Zugriff kaufen?'),
+              title: active ? $t('{name} verlängern?', { name: $t(item.title) }) : $t('{name} kaufen?', { name: $t(item.title) }),
               message: $t('{price} FalCoins werden von deinem Guthaben abgezogen.', { price: item.price.toLocaleString(I18N.locale) }),
               confirmLabel: $t('Für {price} FalCoins kaufen', { price: item.price.toLocaleString(I18N.locale) })
             });
@@ -335,20 +337,83 @@ const Account = (() => {
             }
             acc = await F.account.state();
             renderAll(); render();
-            toast($t('Beta-Zugriff aktiv bis {date}', { date: fmtUntil(r.until) }), 'check');
+            toast($t('{name} aktiv bis {date}', { name: $t(item.title), date: fmtUntil(r.until) }), 'check');
           }
-        }, missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : active ? $t('Um 14 Tage verlängern') : $t('Kaufen'));
+        }, missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : active ? $t(item.extendLabel) : $t('Kaufen'));
         return h('div', { class: `shop-item${active ? ' owned' : ''}` },
           h('span', { class: 'shop-ic' }, icon(item.icon)),
           h('div', { class: 'shop-main' },
             h('b', {}, $t(item.title), active ? h('span', { class: 'beta-badge' }, $t('Aktiv')) : null),
             h('p', {}, $t(item.text)),
-            active ? h('small', { class: 'shop-until' }, $t('Aktiv bis {date}', { date: fmtUntil(acc.betaUntil) })) : null,
+            active ? h('small', { class: 'shop-until' }, $t('Aktiv bis {date}', { date: fmtUntil(acc[item.field]) })) : null,
             h('span', { class: 'shop-price' }, h('span', { class: 'coin-ic' }, icon('coin')), item.price.toLocaleString(I18N.locale))),
           buy);
       }));
     }
     render();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Admin: FalCoins aller Nutzer bearbeiten
+  // ---------------------------------------------------------------------------
+  function walletAdminDialog() {
+    const search = h('input', { class: 'field-input', placeholder: $t('Name oder E-Mail suchen'), spellcheck: false });
+    const list = h('div', { class: 'wa-list' }, h('div', { class: 'rt-empty' }, h('span', { class: 'spinner' })));
+    const box = h('div', { class: 'dialog wa-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' },
+        h('h3', {}, $t('FalCoins der Nutzer verwalten')),
+        h('p', { class: 'shop-sub' }, $t('Nur für dein Admin-Konto sichtbar. Änderungen gelten sofort.')),
+        search, list),
+      h('div', { class: 'dialog-foot' }, h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
+    const close = dialogShell(box);
+    let wallets = [];
+    async function load() {
+      const r = await F.account.listWallets();
+      if (!r.ok) { list.replaceChildren(h('div', { class: 'rt-empty' }, errorText(r.error))); return; }
+      wallets = r.wallets;
+      render();
+    }
+    function render() {
+      const q = search.value.trim().toLowerCase();
+      const shown = wallets.filter((w) => !q || w.email.toLowerCase().includes(q) || w.name.toLowerCase().includes(q));
+      if (!shown.length) { list.replaceChildren(h('div', { class: 'rt-empty' }, $t(wallets.length ? 'Keine Treffer' : 'Noch keine Wallets'))); return; }
+      list.replaceChildren(...shown.map((w) => {
+        const input = h('input', { class: 'field-input wa-input', type: 'number', min: 0, step: 1, value: w.balance });
+        const save = h('button', { class: 'btn primary sm', disabled: true }, $t('Speichern'));
+        input.addEventListener('input', () => { save.disabled = String(Math.round(Number(input.value))) === String(w.balance) || input.value === ''; });
+        const commit = async (patch) => {
+          save.disabled = true;
+          const r = await F.account.adminUpdateWallet({ uid: w.uid, ...patch });
+          if (!r.ok) { toast(errorText(r.error), 'warning'); return; }
+          Object.assign(w, patch.balance !== undefined ? { balance: Math.round(Number(patch.balance)) } : {}, patch.gameModeUntil !== undefined ? { gameModeUntil: patch.gameModeUntil } : {});
+          toast($t('Gespeichert'), 'check');
+          render();
+          if (w.uid && acc.signedIn) refresh();
+        };
+        save.addEventListener('click', () => commit({ balance: input.value }));
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !save.disabled) commit({ balance: input.value }); });
+        const step = (d) => h('button', { class: 'tb-btn sm wa-step', title: `${d > 0 ? '+' : ''}${d}`, onclick: () => { input.value = Math.max(0, Math.round(Number(input.value || 0)) + d); input.dispatchEvent(new Event('input')); } }, `${d > 0 ? '+' : ''}${d}`);
+        const gm = (w.gameModeUntil || 0) > Date.now();
+        return h('div', { class: 'wa-row' },
+          h('div', { class: 'wa-user' },
+            h('b', { 'data-no-i18n': '' }, w.name || w.email.split('@')[0] || w.uid.slice(0, 8)),
+            h('span', { 'data-no-i18n': '' }, w.email || w.uid),
+            h('span', { class: 'wa-tags' },
+              gm ? h('span', { class: 'beta-badge' }, $t('Game Mode bis {date}', { date: fmtUntil(w.gameModeUntil) })) : null,
+              (w.betaUntil || 0) > Date.now() ? h('span', { class: 'beta-badge' }, $t('Beta bis {date}', { date: fmtUntil(w.betaUntil) })) : null)),
+          h('div', { class: 'wa-edit' },
+            step(-100), step(-10), input, step(10), step(100), save,
+            h('button', {
+              class: 'btn ghost sm', title: gm ? $t('Game Mode entziehen') : $t('Game Mode für 2 Monate schenken'),
+              onclick: () => {
+                const d = new Date(); d.setMonth(d.getMonth() + 2);
+                commit({ gameModeUntil: gm ? 0 : d.getTime() });
+              }
+            }, icon('gamepad'), gm ? $t('Entziehen') : $t('Schenken'))));
+      }));
+    }
+    search.addEventListener('input', render);
+    load();
   }
 
   // ---------------------------------------------------------------------------
@@ -515,7 +580,8 @@ const Account = (() => {
           h('div', { class: 'acc-coin-row' },
             h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale))),
             h('button', { class: 'btn ghost', onclick: () => shopDialog() }, icon('shop'), $t('Shop')))),
-        acc.beta ? row($t('Beta-Zugriff'), $t('Aktiv bis {date}', { date: fmtUntil(acc.betaUntil) }), h('span', { class: 'beta-badge big' }, 'Beta')) : null),
+        acc.beta ? row($t('Beta-Zugriff'), $t('Aktiv bis {date}', { date: fmtUntil(acc.betaUntil) }), h('span', { class: 'beta-badge big' }, 'Beta')) : null,
+        acc.gameModeOwned ? row($t('Game Mode'), $t('Aktiv bis {date}', { date: fmtUntil(acc.gameModeUntil) }), h('span', { class: 'beta-badge big' }, $t('Aktiv'))) : null),
 
       h('h3', { class: 's-sub' }, $t('Synchronisierung')),
       h('div', { class: 's-card' },
@@ -565,5 +631,19 @@ const Account = (() => {
   on('tabs-changed', tabsDirty);
   on('tab-loaded', tabsDirty);
 
-  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, shopDialog, get state() { return acc; } };
+  // Game Mode ist nur mit gültiger Freischaltung nutzbar – abgelaufen oder abgemeldet → aus
+  function enforceGameMode() {
+    if (state.settings.gameMode && !(acc.signedIn && acc.gameModeOwned)) {
+      updateSettings({ gameMode: false });
+      toast(acc.gameModeUntil
+        ? $t('Game Mode ist abgelaufen. Im FalCoin-Shop kannst du ihn für 2 Monate freischalten.')
+        : $t('Game Mode gibt es jetzt im FalCoin-Shop: 150 FalCoins für 2 Monate.'), 'gamepad', { label: $t('Shop'), onClick: () => (acc.signedIn ? shopDialog() : authDialog('signin')) });
+    }
+  }
+  let accountKnown = false;
+  F.on('account-changed', () => { if (accountKnown) enforceGameMode(); });
+  setInterval(() => { if (accountKnown) { acc = { ...acc, gameModeOwned: (acc.gameModeUntil || 0) > Date.now() }; enforceGameMode(); } }, 60_000);
+  setTimeout(async () => { if (!INCOGNITO) acc = await F.account.state(); accountKnown = true; enforceGameMode(); }, 8000);
+
+  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, shopDialog, walletAdminDialog, get state() { return acc; } };
 })();
