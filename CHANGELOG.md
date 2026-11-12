@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.0.2] – 2026-11-12
+
+### Added
+- **Install extensions right from the Chrome Web Store**: the store disables its own "Add" button outside Chrome, so Falcon shows an **Add to Falcon** button on every extension page. After a confirmation, Falcon installs the extension – or updates it if it's already installed.
+
+### Changed
+- The beta access in the FalCoin shop lists what it includes: Translate page and all further beta features.
+
 ## [2.0.1] – 2026-11-12
 
 ### Fixed
@@ -180,6 +188,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[2.0.2]: https://github.com/calvinistkrass/Falcon/releases/tag/v2.0.2
 [2.0.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v2.0.1
 [2.0.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v2.0.0
 [1.9.5]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.5
