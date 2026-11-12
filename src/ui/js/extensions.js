@@ -82,6 +82,22 @@ const Extensions = (() => {
     }));
   }
 
+  // Aus dem Chrome Web Store heraus installieren
+  async function installFromPage(info, done) {
+    if (INCOGNITO) { toast($t('Erweiterungen kannst du nur in normalen Fenstern installieren.'), 'puzzle'); return done(); }
+    const name = info?.name || $t('Erweiterung');
+    const existing = list.find((e) => e.storeId === info?.id);
+    const ok = await confirmDialog({
+      title: existing ? $t('„{name}“ aktualisieren?', { name }) : $t('„{name}“ zu Falcon hinzufügen?', { name }),
+      message: $t('Falcon lädt die Erweiterung aus dem Chrome Web Store. Nicht jede Erweiterung funktioniert in Falcon vollständig.'),
+      confirmLabel: existing ? $t('Aktualisieren') : $t('Hinzufügen')
+    });
+    if (!ok) return done();
+    const r = await F.extensions.installStore(info.id);
+    done();
+    installed(r);
+  }
+
   function installed(r) {
     if (r.ok) toast($t('{name} wurde installiert', { name: r.extension.name }), 'puzzle');
     else if (r.error !== 'CANCELLED') toast(errorText(r), 'warning');
@@ -103,5 +119,5 @@ const Extensions = (() => {
   F.on('extensions-changed', (l) => { list = l; renderButton(); if (Settings.section === 'extensions') renderSettings(); });
   if (!INCOGNITO) refresh(); else renderButton();
 
-  return { renderSettings, refresh, get list() { return list; } };
+  return { renderSettings, refresh, installFromPage, get list() { return list; } };
 })();

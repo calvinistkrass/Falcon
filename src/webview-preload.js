@@ -55,6 +55,66 @@ if (/^https?:$/.test(location.protocol)) {
   });
 }
 
+// Chrome Web Store: eigener Knopf „Zu Falcon hinzufügen“ (der Store sperrt seinen Knopf für andere Browser)
+if (location.protocol === 'https:' && (location.hostname === 'chromewebstore.google.com' || (location.hostname === 'chrome.google.com' && location.pathname.startsWith('/webstore'))) && window.top === window) {
+  const LABELS = {
+    de: ['Zu Falcon hinzufügen', 'Wird hinzugefügt …'], en: ['Add to Falcon', 'Adding…'], fr: ['Ajouter à Falcon', 'Ajout…'],
+    es: ['Añadir a Falcon', 'Añadiendo…'], tr: ['Falcon’a ekle', 'Ekleniyor…']
+  };
+  const L = LABELS[(navigator.language || 'en').slice(0, 2)] || LABELS.en;
+  const idFromPath = () => (location.pathname.match(/\/detail\/(?:[^/]+\/)?([a-p]{32})(?:[/?#]|$)/) || [])[1] || null;
+  let host = null, btn = null, busy = false;
+  function ensure() {
+    if (host || !document.body) return;
+    host = document.createElement('div');
+    host.id = 'falcon-cws';
+    const root = host.attachShadow({ mode: 'open' });
+    // Der Store erzwingt Trusted Types – daher ohne innerHTML aufbauen
+    const style = document.createElement('style');
+    style.textContent = `
+      button { position: fixed; z-index: 2147483647; right: 24px; bottom: 24px; display: inline-flex; align-items: center; gap: 10px;
+        height: 48px; padding: 0 20px 0 14px; border: 0; border-radius: 24px; background: #7c6cff; color: #fff; cursor: pointer;
+        font: 600 15px "Segoe UI", system-ui, sans-serif; box-shadow: 0 10px 30px -8px rgb(60 40 160 / .6), 0 2px 8px rgb(0 0 0 / .25); transition: transform .15s, background .15s; }
+      button:hover { transform: translateY(-1px); background: #8b7dff; }
+      button[disabled] { opacity: .75; cursor: default; transform: none; }
+      svg { width: 22px; height: 22px; }`;
+    const b = document.createElement('button');
+    b.type = 'button';
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2'); svg.setAttribute('stroke-linecap', 'round');
+    const pathEl = document.createElementNS(NS, 'path');
+    pathEl.setAttribute('d', 'M12 5v14M5 12h14');
+    svg.append(pathEl);
+    b.append(svg, document.createElement('span'));
+    root.append(style, b);
+    btn = root.querySelector('button');
+    btn.addEventListener('click', () => {
+      const id = idFromPath();
+      if (!id || busy) return;
+      busy = true;
+      btn.disabled = true;
+      btn.querySelector('span').textContent = L[1];
+      const name = (document.querySelector('h1')?.textContent || document.title.replace(/\s*[-–]\s*Chrome Web Store.*$/i, '')).trim();
+      ipcRenderer.sendToHost('ext-install', { id, name: name.slice(0, 120) });
+    });
+    document.documentElement.append(host);
+  }
+  function update() {
+    const id = idFromPath();
+    if (id) ensure();
+    if (!host) return;
+    host.style.display = id ? '' : 'none';
+    if (!busy) btn.querySelector('span').textContent = L[0];
+  }
+  ipcRenderer.on('ext-install-done', () => { busy = false; if (btn) { btn.disabled = false; update(); } });
+  // Der Store ist eine Single-Page-App: Seitenwechsel erkennen
+  let last = '';
+  setInterval(() => { if (location.href !== last) { last = location.href; update(); } }, 500);
+  document.addEventListener('DOMContentLoaded', update);
+}
+
 // falcon://reports (Übersicht der Fehlermeldungen für den Admin)
 if (location.protocol === 'falcon:' && location.hostname === 'reports') {
   const call = (action, arg) => ipcRenderer.invoke('reports', action, arg);

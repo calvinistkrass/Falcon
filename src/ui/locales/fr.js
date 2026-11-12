@@ -740,5 +740,14 @@ I18N.add('fr', {
   "Deine tägliche Belohnung wartet: +{n} FalCoins": "Votre récompense quotidienne vous attend : +{n} FalCoins",
   "Abholen": "Récupérer",
   "Serie: 1 Tag": "Série : 1 jour",
+  "Erweiterungen kannst du nur in normalen Fenstern installieren.": "Les extensions ne peuvent être installées que dans les fenêtres normales.",
+  "Erweiterung": "Extension",
+  "„{name}“ aktualisieren?": "Mettre à jour « {name} » ?",
+  "„{name}“ zu Falcon hinzufügen?": "Ajouter « {name} » à Falcon ?",
+  "Falcon lädt die Erweiterung aus dem Chrome Web Store. Nicht jede Erweiterung funktioniert in Falcon vollständig.": "Falcon télécharge l’extension depuis le Chrome Web Store. Toutes les extensions ne fonctionnent pas entièrement dans Falcon.",
+  "Teste neue Funktionen vor allen anderen. Dein Zugriff gilt ab dem Kauf 14 Tage lang.": "Testez les nouvelles fonctions avant tout le monde. Votre accès dure 14 jours à partir de l’achat.",
+  "Das bekommst du:": "Ce que vous obtenez :",
+  "Seite übersetzen – per Rechtsklick auf eine Seite oder mit Strg+K": "Traduire la page – clic droit sur une page ou Ctrl+K",
+  "Alle weiteren Beta-Funktionen, sobald sie erscheinen": "Toutes les prochaines fonctions bêta dès leur sortie",
   "Öffnen": "Ouvrir"
 });
