@@ -740,5 +740,14 @@ I18N.add('tr', {
   "Deine tägliche Belohnung wartet: +{n} FalCoins": "Günlük ödülün seni bekliyor: +{n} FalCoin",
   "Abholen": "Al",
   "Serie: 1 Tag": "Seri: 1 gün",
+  "Erweiterungen kannst du nur in normalen Fenstern installieren.": "Uzantıları yalnızca normal pencerelerde yükleyebilirsin.",
+  "Erweiterung": "Uzantı",
+  "„{name}“ aktualisieren?": "“{name}” güncellensin mi?",
+  "„{name}“ zu Falcon hinzufügen?": "“{name}” Falcon’a eklensin mi?",
+  "Falcon lädt die Erweiterung aus dem Chrome Web Store. Nicht jede Erweiterung funktioniert in Falcon vollständig.": "Falcon uzantıyı Chrome Web Mağazası’ndan indirir. Her uzantı Falcon’da tam olarak çalışmaz.",
+  "Teste neue Funktionen vor allen anderen. Dein Zugriff gilt ab dem Kauf 14 Tage lang.": "Yeni özellikleri herkesten önce dene. Erişimin satın alımdan itibaren 14 gün geçerli.",
+  "Das bekommst du:": "Neler alırsın:",
+  "Seite übersetzen – per Rechtsklick auf eine Seite oder mit Strg+K": "Sayfayı çevir – sayfaya sağ tıkla veya Ctrl+K",
+  "Alle weiteren Beta-Funktionen, sobald sie erscheinen": "Yayınlandıkça diğer tüm beta özellikleri",
   "Öffnen": "Aç"
 });

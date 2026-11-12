@@ -302,7 +302,14 @@ const Account = (() => {
   // ---------------------------------------------------------------------------
   const SHOP = [
     { id: 'gameMode', price: 150, icon: 'gamepad', field: 'gameModeUntil', extendLabel: 'Um 2 Monate verlängern', title: 'Game Mode · 2 Monate', text: 'Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt. Ab dem Kauf genau 2 Monate aktiv.' },
-    { id: 'beta14', price: 1000, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 14 Tage verlängern', title: 'Beta-Zugriff · 14 Tage', text: 'Teste neue Funktionen vor allen anderen. Die ersten Beta-Funktionen folgen bald – dein Zugriff gilt ab dem Kauf 14 Tage lang.' }
+    {
+      id: 'beta14', price: 1000, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 14 Tage verlängern', title: 'Beta-Zugriff · 14 Tage',
+      text: 'Teste neue Funktionen vor allen anderen. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
+      perks: [
+        'Seite übersetzen – per Rechtsklick auf eine Seite oder mit Strg+K',
+        'Alle weiteren Beta-Funktionen, sobald sie erscheinen'
+      ]
+    }
   ];
   const fmtUntil = (ms) => new Date(ms).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long', year: 'numeric' });
   function shopDialog() {
@@ -351,6 +358,8 @@ const Account = (() => {
           h('div', { class: 'shop-main' },
             h('b', {}, $t(item.title), active ? h('span', { class: 'beta-badge' }, $t('Aktiv')) : null),
             h('p', {}, $t(item.text)),
+            item.perks ? h('div', { class: 'shop-perks' }, h('small', {}, $t('Das bekommst du:')),
+              h('ul', {}, item.perks.map((p) => h('li', {}, icon('check'), h('span', {}, $t(p)))))) : null,
             active ? h('small', { class: 'shop-until' }, $t('Aktiv bis {date}', { date: fmtUntil(acc[item.field]) })) : null,
             h('span', { class: 'shop-price' }, h('span', { class: 'coin-ic' }, icon('coin')), item.price.toLocaleString(I18N.locale))),
           buy);

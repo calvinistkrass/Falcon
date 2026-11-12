@@ -116,6 +116,10 @@ const Tabs = (() => {
   }
 
   function bind(tab, wv) {
+    // Knopf „Zu Falcon hinzufügen“ im Chrome Web Store
+    wv.addEventListener('ipc-message', (e) => {
+      if (e.channel === 'ext-install') Extensions.installFromPage(e.args[0], () => { try { wv.send('ext-install-done'); } catch { /* Tab zu */ } });
+    });
     const navChanged = () => { if (isActive(tab)) emit('nav-state'); };
 
     wv.addEventListener('dom-ready', () => {
