@@ -254,9 +254,12 @@ if (/^https?:$/.test(location.protocol)) {
   }
 
   let genTarget = null;
+  let offeredEl = null; // Feld, für das die Liste gerade angeboten wurde
   function offerGenerate(el) {
     const fields = newPasswordFields(el);
     if (!fields) return false;
+    if (offeredEl === el) return true;
+    offeredEl = el;
     genTarget = fields;
     const r = el.getBoundingClientRect();
     ipcRenderer.sendToHost('pw-generate-offer', { rect: { x: r.left, y: r.top, width: r.width, height: r.height } });
@@ -278,20 +281,23 @@ if (/^https?:$/.test(location.protocol)) {
     if (!document.hasFocus() || Date.now() < quietUntil) return;
     if (offerGenerate(el)) return;
     const fields = loginFieldsFor(el);
-    if (!fields) return;
+    if (!fields || offeredEl === el) return;
     const list = await loadAccounts();
-    if (!list.length || document.activeElement !== el) return;
+    if (!list.length || document.activeElement !== el || offeredEl === el) return;
+    offeredEl = el;
     target = fields;
     const r = el.getBoundingClientRect();
     ipcRenderer.sendToHost('pw-fill-offer', { accounts: list, rect: { x: r.left, y: r.top, width: r.width, height: r.height } });
   }
 
   document.addEventListener('focusin', (e) => offer(e.target), true);
-  document.addEventListener('mousedown', (e) => { if (e.target === document.activeElement) offer(e.target); }, true);
+  document.addEventListener('mousedown', (e) => { if (e.isTrusted && e.target === document.activeElement) { offeredEl = null; offer(e.target); } }, true);
   document.addEventListener('input', (e) => {
     if (e.isTrusted && ((target && (e.target === target.pw || e.target === target.user)) || (genTarget && e.target === genTarget.pw))) ipcRenderer.sendToHost('pw-fill-hide');
   }, true);
-  document.addEventListener('focusout', () => setTimeout(() => {
+  document.addEventListener('focusout', (e) => setTimeout(() => {
+    // Nur echte Feldwechsel zählen – nicht, wenn das Fenster kurz den Fokus verliert (z. B. für die Liste selbst)
+    if (document.hasFocus() && document.activeElement !== e.target) offeredEl = null;
     if (!loginFieldsFor(document.activeElement) && !newPasswordFields(document.activeElement)) ipcRenderer.sendToHost('pw-fill-hide');
   }, 150), true);
 
