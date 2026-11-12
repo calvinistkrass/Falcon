@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.0.1] – 2026-11-12
+
+### Fixed
+- **The saved-password list below login fields flickered** and made the password field flash while typing a username. Opening the list briefly took focus away from the page; when the focus came back, the page asked for the list again, hundreds of times per second. The list now opens once per click into a field and closes while you type.
+
 ## [2.0.0] – 2026-11-11
 
 ### Added
@@ -175,6 +180,7 @@ All notable changes to Falcon are documented here.
 
 - First release.
 
+[2.0.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v2.0.1
 [2.0.0]: https://github.com/calvinistkrass/Falcon/releases/tag/v2.0.0
 [1.9.5]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.5
 [1.9.1]: https://github.com/calvinistkrass/Falcon/releases/tag/v1.9.1

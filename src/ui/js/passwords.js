@@ -358,6 +358,8 @@ const Passwords = (() => {
         return;
       }
       if (e.channel !== 'pw-fill-offer' || Date.now() < quietUntil) return;
+      // Liste für diesen Tab ist schon offen → nicht schließen und neu öffnen (sonst flackert sie)
+      if (fillMenu && Popover.current?.el === fillMenu && fillMenu.dataset.wv === String(wv.getWebContentsId())) return;
       const { accounts, rect } = e.args[0] || {};
       if (!accounts?.length || !wv.classList.contains('active') && wv.closest('#views')) return;
       const box = wv.getBoundingClientRect();
@@ -374,7 +376,8 @@ const Passwords = (() => {
         { label: $t('Passwörter verwalten'), icon: 'settings', onClick: () => Settings.open('passwords') }
       ], { point });
       fillMenu.classList.add('pw-fill');
-      fillMenu.dataset.sticky = ''; // bleibt offen, wenn der Fokus gleich zur Seite zurückgeht
+      fillMenu.dataset.sticky = '';
+      fillMenu.dataset.wv = String(id); // bleibt offen, wenn der Fokus gleich zur Seite zurückgeht
       fillMenu.style.minWidth = `${Math.max(236, Math.round(rect.width * zoom))}px`;
       // Die Seite behält den Fokus, damit man normal weitertippen kann
       wv.focus();
