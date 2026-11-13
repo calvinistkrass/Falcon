@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Falcon",
+    "slug": "falcon-mobile",
+    "version": "1.0.0",
+    "scheme": "falcon",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0b0e",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "de.falconbrowser.mobile"
+    },
+    "android": {
+      "package": "de.falconbrowser.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#0b0b0e",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-image",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0b0b0e"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
