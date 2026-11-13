@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const web = Platform.OS === 'web';
 export async function save(key: string, value: string | null) {
-  if (web) { try { value == null ? localStorage.removeItem(key) : localStorage.setItem(key, value); } catch { /* egal */ } return; }
+  if (web) { try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* egal */ } return; }
   if (value == null) await SecureStore.deleteItemAsync(key);
   else await SecureStore.setItemAsync(key, value);
 }

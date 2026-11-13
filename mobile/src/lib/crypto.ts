@@ -57,6 +57,15 @@ export async function unwrapKey(fields: { salt: string; iter: number; wrapped: s
   return openBox(kek, fromBase64(fields.wrapped), `falcon-key:${uid}`);
 }
 
+export const PBKDF2_ITER = 310000;
+/** Neuen Sync-Schlüssel mit dem Kontopasswort verpacken (gleiches Format wie Falcon auf dem PC). */
+export async function wrapKey(dataKey: Uint8Array, password: string, uid: string) {
+  const salt = ExpoCrypto.getRandomBytes(16);
+  const kek = await pbkdf2Async(sha256, enc.encode(password), salt, { c: PBKDF2_ITER, dkLen: 32, asyncTick: 25 });
+  return { salt: toBase64(salt), iter: PBKDF2_ITER, wrapped: toBase64(sealBox(kek, dataKey, `falcon-key:${uid}`)) };
+}
+export const newDataKey = () => ExpoCrypto.getRandomBytes(32);
+
 /** Verschlüsselte Sync-Daten lesen. */
 export function decryptJson<T = unknown>(key: Uint8Array, b64: string, aad: string): T {
   const plain = openBox(key, fromBase64(b64), aad);

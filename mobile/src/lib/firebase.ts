@@ -53,6 +53,21 @@ export async function signIn(email: string, password: string) {
     displayName: (r.displayName as string) || ''
   };
 }
+export async function signUp(email: string, password: string) {
+  const r = await request<any>(`${AUTH}/accounts:signUp?key=${CONFIG.apiKey}`, {
+    method: 'POST', body: { email, password, returnSecureToken: true }
+  });
+  return { idToken: r.idToken, refreshToken: r.refreshToken, expiresAt: Date.now() + Number(r.expiresIn || 3600) * 1000, uid: r.localId } as Tokens;
+}
+export async function setDisplayName(idToken: string, displayName: string): Promise<Tokens> {
+  const r = await request<any>(`${AUTH}/accounts:update?key=${CONFIG.apiKey}`, {
+    method: 'POST', body: { idToken, displayName, returnSecureToken: true }
+  });
+  return { idToken: r.idToken, refreshToken: r.refreshToken, expiresAt: Date.now() + Number(r.expiresIn || 3600) * 1000, uid: r.localId } as Tokens;
+}
+export async function sendVerification(idToken: string) {
+  await request(`${AUTH}/accounts:sendOobCode?key=${CONFIG.apiKey}`, { method: 'POST', body: { requestType: 'VERIFY_EMAIL', idToken } });
+}
 export async function refresh(refreshToken: string): Promise<Tokens> {
   const r = await request<any>(`${TOKEN}/token?key=${CONFIG.apiKey}`, {
     method: 'POST', form: { grant_type: 'refresh_token', refresh_token: refreshToken }

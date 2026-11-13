@@ -4,8 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { C } from '@/lib/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-const icon = (on: IconName, off: IconName) => ({ color, focused }: { color: ColorValue; focused: boolean }) =>
-  <Ionicons name={focused ? on : off} size={23} color={typeof color === 'string' ? color : C.text3} />;
+const icon = (on: IconName, off: IconName) =>
+  function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
+    return <Ionicons name={focused ? on : off} size={23} color={typeof color === 'string' ? color : C.text3} />;
+  };
 
 export default function TabLayout() {
   return (

@@ -18,16 +18,32 @@ export default function Account() {
 }
 
 function Login() {
-  const { signIn, status } = useSession();
+  const { signIn, signUp, status } = useSession();
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const up = mode === 'signup';
 
   const submit = async () => {
-    if (!email.trim() || !password) { setError('Bitte gib E-Mail-Adresse und Passwort ein.'); return; }
-    setBusy(true); setError('');
-    try { await signIn(email, password); setPassword(''); } catch (e) { setError(errorText(e)); }
+    setError('');
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) { setError('Bitte gib eine gültige E-Mail-Adresse ein.'); return; }
+    if (!password) { setError('Bitte gib dein Passwort ein.'); return; }
+    if (up && password.length < 8) { setError('Das Passwort muss mindestens 8 Zeichen lang sein.'); return; }
+    if (up && password !== repeat) { setError('Die Passwörter stimmen nicht überein.'); return; }
+    setBusy(true);
+    try {
+      if (up) {
+        await signUp(name, email, password);
+        Alert.alert(`Willkommen bei Falcon${name.trim() ? `, ${name.trim()}` : ''}!`, 'Wir haben dir eine E-Mail geschickt. Bitte bestätige darin deine Adresse. Dein Konto funktioniert auch in Falcon auf dem PC.');
+      } else {
+        await signIn(email, password);
+      }
+      setPassword(''); setRepeat('');
+    } catch (e) { setError(errorText(e)); }
     setBusy(false);
   };
   const forgot = async () => {
@@ -35,29 +51,51 @@ function Login() {
     try { await resetPassword(email.trim()); } catch { /* aus Datenschutzgründen immer dieselbe Meldung */ }
     Alert.alert('Passwort zurücksetzen', `Falls es ein Konto für ${email.trim()} gibt, ist der Link unterwegs.`);
   };
+  const switchMode = () => { setMode(up ? 'signin' : 'signup'); setError(''); };
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[s.pad, { flexGrow: 1, justifyContent: 'center' }]} keyboardShouldPersistTaps="handled">
-          <View style={{ alignItems: 'center', marginBottom: 28 }}>
-            <Image source={require('../../../assets/logo.png')} style={{ width: 76, height: 76, marginBottom: 16 }} />
-            <Text style={s.h1}>Bei Falcon anmelden</Text>
-            <Text style={s.lead}>Mit deinem Falcon-Konto siehst du Lesezeichen und die Tabs deiner PCs und sammelst FalCoins.</Text>
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <Image source={require('../../../assets/logo.png')} style={{ width: 72, height: 72, marginBottom: 16 }} />
+            <Text style={s.h1}>{up ? 'Falcon-Konto erstellen' : 'Bei Falcon anmelden'}</Text>
+            <Text style={s.lead}>{up
+              ? 'Kostenlos – für Lesezeichen und Tabs auf all deinen Geräten und FalCoins.'
+              : 'Mit deinem Falcon-Konto siehst du Lesezeichen und die Tabs deiner PCs und sammelst FalCoins.'}</Text>
           </View>
+
+          <View style={s.segment}>
+            {(['signin', 'signup'] as const).map((m) => (
+              <Pressable key={m} onPress={() => { setMode(m); setError(''); }} style={[s.segBtn, mode === m && s.segOn]}>
+                <Text style={[s.segText, mode === m && { color: C.text }]}>{m === 'signin' ? 'Anmelden' : 'Registrieren'}</Text>
+              </Pressable>
+            ))}
+          </View>
+
           <View style={{ gap: 12 }}>
+            {up ? <Field icon="person-outline" placeholder="Name (optional)" value={name} onChangeText={setName} autoComplete="name" textContentType="name" /> : null}
             <Field icon="mail-outline" placeholder="E-Mail-Adresse" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false}
-              keyboardType="email-address" textContentType="username" autoComplete="email" />
-            <Field icon="lock-closed-outline" placeholder="Passwort" value={password} onChangeText={setPassword} secureTextEntry
-              textContentType="password" autoComplete="password" onSubmitEditing={submit} returnKeyType="go" />
+              keyboardType="email-address" textContentType={up ? 'emailAddress' : 'username'} autoComplete="email" />
+            <Field icon="lock-closed-outline" placeholder={up ? 'Passwort (mindestens 8 Zeichen)' : 'Passwort'} value={password} onChangeText={setPassword} secureTextEntry
+              textContentType={up ? 'newPassword' : 'password'} autoComplete={up ? 'new-password' : 'password'} onSubmitEditing={up ? undefined : submit} returnKeyType={up ? 'next' : 'go'} />
+            {up ? <Field icon="lock-closed-outline" placeholder="Passwort wiederholen" value={repeat} onChangeText={setRepeat} secureTextEntry
+              textContentType="newPassword" autoComplete="new-password" onSubmitEditing={submit} returnKeyType="go" /> : null}
             {error ? <Text style={s.error}>{error}</Text> : null}
-            <Button title={status === 'unlocking' ? 'Sync-Daten werden entschlüsselt …' : 'Anmelden'} onPress={submit} loading={busy && status !== 'unlocking'} disabled={busy} />
+            <Button
+              title={status === 'unlocking' ? (up ? 'Sync-Schlüssel wird erstellt …' : 'Sync-Daten werden entschlüsselt …') : up ? 'Konto erstellen' : 'Anmelden'}
+              onPress={submit} loading={busy && status !== 'unlocking'} disabled={busy} />
             {status === 'unlocking' ? <Text style={s.note}>Das dauert auf dem Handy ein paar Sekunden.</Text> : null}
-            <Pressable onPress={forgot} style={{ alignSelf: 'center', padding: 8 }}><Text style={s.link}>Passwort vergessen?</Text></Pressable>
+            {up ? null : <Pressable onPress={forgot} style={{ alignSelf: 'center', padding: 8 }}><Text style={s.link}>Passwort vergessen?</Text></Pressable>}
+            <Pressable onPress={switchMode} style={{ alignSelf: 'center', padding: 8 }}>
+              <Text style={s.switchText}>{up ? 'Schon ein Konto? ' : 'Noch kein Konto? '}<Text style={s.link}>{up ? 'Anmelden' : 'Registrieren'}</Text></Text>
+            </Pressable>
           </View>
           <View style={s.hint}>
             <Ionicons name="lock-closed" size={15} color={C.green} />
-            <Text style={s.hintText}>Deine Daten werden erst hier auf dem Handy mit deinem Passwort entschlüsselt. Noch kein Konto? Erstelle es in Falcon auf dem PC.</Text>
+            <Text style={s.hintText}>{up
+              ? 'Mit diesem Passwort werden auch deine Sync-Daten verschlüsselt. Merk es dir gut – ohne es lassen sich die Daten nicht wiederherstellen.'
+              : 'Deine Daten werden erst hier auf dem Handy mit deinem Passwort entschlüsselt.'}</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -68,11 +106,12 @@ function Login() {
 function Profile() {
   const { user, wallet, daily, claimDaily, signOut, reload, loadingData, dataError, bookmarks, devices } = useSession();
   const [claiming, setClaiming] = useState(false);
+  const [now] = useState(Date.now);
   if (!user) return null;
   const name = user.name || user.email.split('@')[0];
   const coins = wallet.balance + wallet.pending;
-  const gm = wallet.gameModeUntil > Date.now();
-  const beta = wallet.betaUntil > Date.now();
+  const gm = wallet.gameModeUntil > now;
+  const beta = wallet.betaUntil > now;
 
   const claim = async () => {
     setClaiming(true);
@@ -150,6 +189,11 @@ const s = StyleSheet.create({
   error: { color: C.danger, fontSize: 14 },
   note: { color: C.text3, fontSize: 13, textAlign: 'center' },
   link: { color: C.accent, fontSize: 15, fontWeight: '600' },
+  switchText: { color: C.text3, fontSize: 15 },
+  segment: { flexDirection: 'row', padding: 4, marginBottom: 16, borderRadius: R.md, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line },
+  segBtn: { flex: 1, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  segOn: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.line2 },
+  segText: { color: C.text2, fontSize: 14.5, fontWeight: '700' },
   hint: { flexDirection: 'row', gap: 10, marginTop: 28, padding: 14, borderRadius: R.md, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line },
   hintText: { flex: 1, color: C.text2, fontSize: 13, lineHeight: 19 },
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },

@@ -2,11 +2,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as FB from './firebase';
-import { decryptJson, fromBase64, randomId, toBase64, unwrapKey } from './crypto';
+import { decryptJson, fromBase64, newDataKey, randomId, toBase64, unwrapKey, wrapKey } from './crypto';
 import { load, save } from './storage';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Device = { id: string; name: string; at: number; tabs: { url: string; title?: string }[] };
+export type Tab = { id: string; src: string; nonce: number; url: string; title: string };
 export type Wallet = { balance: number; pending: number; betaUntil: number; gameModeUntil: number; lastDaily: string; streak: number };
 type User = { uid: string; email: string; name: string };
 type Status = 'loading' | 'signedOut' | 'unlocking' | 'signedIn';
@@ -20,12 +21,22 @@ type Ctx = {
   daily: { available: boolean; streak: number; next: number };
   loadingData: boolean;
   dataError: string | null;
-  browser: { url: string; nonce: number };
+  tabs: Tab[];
+  activeId: string;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   reload: () => Promise<void>;
   claimDaily: () => Promise<{ reward: number; streak: number }>;
+  /** Von Start, Lesezeichen oder PC-Tabs: im leeren Tab öffnen, sonst in einem neuen Tab */
   openUrl: (url: string) => void;
+  /** Im aktuellen Tab laden (Adressleiste) */
+  navigate: (url: string) => void;
+  newTab: () => void;
+  closeTab: (id: string) => void;
+  closeAllTabs: () => void;
+  switchTab: (id: string) => void;
+  updateTab: (id: string, patch: Partial<Pick<Tab, 'url' | 'title'>>) => void;
   visited: (url: string) => void;
 };
 
@@ -68,7 +79,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [wallet, setWallet] = useState<Wallet>(EMPTY_WALLET);
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
-  const [browser, setBrowser] = useState({ url: '', nonce: 0 });
+  const [tabs, setTabs] = useState<Tab[]>(() => [{ id: randomId(), src: '', nonce: 0, url: '', title: '' }]);
+  const [activeId, setActiveId] = useState(() => tabs[0].id);
 
   const tokens = useRef<FB.Tokens | null>(null);
   const key = useRef<Uint8Array | null>(null);
@@ -150,18 +162,33 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [reloadFor]);
 
-  // ---------- Anmelden / Abmelden ----------
+  // ---------- Anmelden / Registrieren / Abmelden ----------
+  // Sync-Schlüssel holen – oder beim ersten Mal anlegen (wie Falcon auf dem PC)
+  const setupKey = useCallback(async function setup(uid: string, password: string, idToken: string): Promise<Uint8Array> {
+    const keyDoc = await FB.getDoc(`users/${uid}/meta/key`, idToken);
+    if (keyDoc?.fields) {
+      const f = keyDoc.fields;
+      try { return await unwrapKey({ salt: FB.text(f.salt), iter: FB.num(f.iter), wrapped: FB.text(f.wrapped) }, password, uid); }
+      catch { throw new FB.ApiError('NO_KEY'); }
+    }
+    const dataKey = newDataKey();
+    const w = await wrapKey(dataKey, password, uid);
+    try {
+      await FB.createDoc(`users/${uid}/meta/key`, { salt: FB.str(w.salt), iter: FB.int(w.iter), wrapped: FB.str(w.wrapped), v: FB.int(1) }, idToken);
+      return dataKey;
+    } catch (e) {
+      // Ein anderes Gerät war schneller → dessen Schlüssel verwenden
+      if (e instanceof FB.ApiError && /ALREADY_EXISTS|FAILED_PRECONDITION/.test(e.code)) return setup(uid, password, idToken);
+      throw e;
+    }
+  }, []);
+
   const signIn = useCallback(async (email: string, password: string) => {
     const r = await FB.signIn(email.trim(), password);
     tokens.current = r.tokens;
     setStatus('unlocking');
     try {
-      const keyDoc = await FB.getDoc(`users/${r.tokens.uid}/meta/key`, r.tokens.idToken);
-      if (!keyDoc?.fields) throw new FB.ApiError('NO_KEY');
-      const f = keyDoc.fields;
-      try {
-        key.current = await unwrapKey({ salt: FB.text(f.salt), iter: FB.num(f.iter), wrapped: FB.text(f.wrapped) }, password, r.tokens.uid);
-      } catch { throw new FB.ApiError('NO_KEY'); }
+      key.current = await setupKey(r.tokens.uid, password, r.tokens.idToken);
       const u = { uid: r.tokens.uid, email: r.email, name: r.displayName };
       setUser(u);
       await persist(u);
@@ -172,7 +199,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setStatus('signedOut');
       throw e;
     }
-  }, [persist, reloadFor]);
+  }, [persist, reloadFor, setupKey]);
+
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
+    let t = await FB.signUp(email.trim(), password);
+    tokens.current = t;
+    setStatus('unlocking');
+    try {
+      if (name.trim()) { t = await FB.setDisplayName(t.idToken, name.trim().slice(0, 60)); tokens.current = t; }
+      FB.sendVerification(t.idToken).catch(() => {});
+      key.current = await setupKey(t.uid, password, t.idToken);
+      const u = { uid: t.uid, email: email.trim(), name: name.trim().slice(0, 60) };
+      setUser(u);
+      await persist(u);
+      setStatus('signedIn');
+      reloadFor(u);
+    } catch (e) {
+      tokens.current = null; key.current = null;
+      setStatus('signedOut');
+      throw e;
+    }
+  }, [persist, reloadFor, setupKey]);
 
   const flushCoins = useCallback(async () => {
     const u = user;
@@ -235,8 +282,35 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     throw new FB.ApiError('UNKNOWN');
   }, [user, token, ensureWallet]);
 
-  // ---------- Browser ----------
-  const openUrl = useCallback((url: string) => setBrowser((b) => ({ url, nonce: b.nonce + 1 })), []);
+  // ---------- Browser-Tabs ----------
+  const blank = (): Tab => ({ id: randomId(), src: '', nonce: 0, url: '', title: '' });
+  const navigate = useCallback((url: string) => {
+    setTabs((list) => list.map((t) => (t.id === activeId ? { ...t, src: url, nonce: t.nonce + 1, url, title: '' } : t)));
+  }, [activeId]);
+  const openUrl = useCallback((url: string) => {
+    const current = tabs.find((t) => t.id === activeId);
+    if (current && !current.src && !current.url) { navigate(url); return; }
+    const t = { ...blank(), src: url, nonce: 1, url };
+    setTabs((list) => [...list, t]);
+    setActiveId(t.id);
+  }, [tabs, activeId, navigate]);
+  const newTab = useCallback(() => {
+    const t = blank();
+    setTabs((list) => [...list, t]);
+    setActiveId(t.id);
+  }, []);
+  const closeTab = useCallback((id: string) => {
+    const i = tabs.findIndex((t) => t.id === id);
+    const rest = tabs.filter((t) => t.id !== id);
+    if (!rest.length) { const t = blank(); setTabs([t]); setActiveId(t.id); return; }
+    setTabs(rest);
+    if (id === activeId) setActiveId(rest[Math.min(i, rest.length - 1)].id);
+  }, [tabs, activeId]);
+  const closeAllTabs = useCallback(() => { const t = blank(); setTabs([t]); setActiveId(t.id); }, []);
+  const switchTab = useCallback((id: string) => setActiveId(id), []);
+  const updateTab = useCallback((id: string, patch: Partial<Pick<Tab, 'url' | 'title'>>) => {
+    setTabs((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }, []);
   // 1 FalCoin pro neuer Seite (kein Neuladen, höchstens alle 5 Sekunden)
   const visited = useCallback((url: string) => {
     if (!user || !/^https?:/i.test(url)) return;
@@ -255,9 +329,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [wallet]);
 
   const value: Ctx = {
-    status, user, bookmarks, devices, wallet, daily, loadingData, dataError, browser,
-    signIn, signOut, reload: async () => { if (user) { await flushCoins(); await reloadFor(user); } },
-    claimDaily, openUrl, visited
+    status, user, bookmarks, devices, wallet, daily, loadingData, dataError, tabs, activeId,
+    signIn, signUp, signOut, reload: async () => { if (user) { await flushCoins(); await reloadFor(user); } },
+    claimDaily, openUrl, navigate, newTab, closeTab, closeAllTabs, switchTab, updateTab, visited
   };
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
@@ -278,6 +352,9 @@ export const ERRORS: Record<string, string> = {
   TOO_MANY_ATTEMPTS_TRY_LATER: 'Zu viele Versuche. Bitte warte kurz.',
   NETWORK: 'Keine Verbindung. Bist du online?',
   NO_KEY: 'Deine Sync-Daten konnten nicht entschlüsselt werden. Melde dich einmal in Falcon auf dem PC an.',
+  EMAIL_EXISTS: 'Für diese E-Mail-Adresse gibt es schon ein Konto. Melde dich stattdessen an.',
+  WEAK_PASSWORD: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
+  OPERATION_NOT_ALLOWED: 'Registrieren ist gerade nicht möglich.',
   ALREADY_CLAIMED: 'Heute schon abgeholt – komm morgen wieder!',
   PERMISSION_DENIED: 'Der Server hat den Zugriff verweigert.'
 };
