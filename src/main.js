@@ -1043,6 +1043,9 @@ ipcMain.handle('pw:export', async (e) => {
   return { count: pw.count(), filePath };
 });
 ipcMain.handle('copy', (_e, text) => { clipboard.writeText(String(text)); return true; });
+// Bearbeiten-Befehle für Textfelder der Oberfläche (Rechtsklick-Menü der Adressleiste usw.)
+ipcMain.handle('edit', (e, cmd) => { if (['undo', 'redo', 'cut', 'copy', 'paste', 'delete', 'selectAll'].includes(cmd)) e.sender[cmd](); return true; });
+ipcMain.handle('clipboard:read', () => clipboard.readText());
 
 // „Bild kopieren“: copyImageAt funktioniert in Webviews nicht zuverlässig. Deshalb lädt Falcon das
 // Bild selbst (mit den Cookies der Sitzung), die Oberfläche wandelt es in PNG um und schreibt es hier.

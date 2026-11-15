@@ -68,6 +68,7 @@ I18N.add('fr', {
   "Drucken …": "Imprimer…",
   "Duplizieren": "Dupliquer",
   "Einfügen": "Coller",
+  "Einfügen und aufrufen": "Coller et ouvrir",
   "Einstellungen": "Paramètres",
   "Einstellungen (Strg+,)": "Paramètres (Ctrl+,)",
   "Entfernen": "Retirer",

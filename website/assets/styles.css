@@ -225,6 +225,8 @@ h3 { font-size: 19px; font-weight: 650; letter-spacing: -.01em; line-height: 1.3
 .dl-box { max-width: 560px; margin: 36px auto 0; padding: 28px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); text-align: left; }
 .dl-row { display: flex; align-items: center; gap: 16px; }
 .dl-row .os { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: rgb(59 158 255 / .14); color: #7cbcff; flex: none; }
+.dl-row .os.android { background: rgb(61 214 140 / .14); color: #6ee7a8; }
+.dl-box + .dl-box { margin-top: 16px; }
 .dl-row .os svg { width: 26px; height: 26px; }
 .dl-row div { flex: 1; min-width: 0; }
 .dl-row b { display: block; font-size: 17px; }

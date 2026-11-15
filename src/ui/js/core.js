@@ -319,6 +319,8 @@ function showMenu(items, position) {
   document.body.append(menu);
   Popover.open(menu, { ...position, onClose: () => menu.remove() });
 
+  // keepFocus: das Textfeld behält Fokus und Auswahl (Rechtsklick in Eingabefelder)
+  if (position?.keepFocus) { menu.addEventListener('mousedown', (e) => e.preventDefault()); return; }
   menu.tabIndex = -1;
   menu.focus();
   menu.addEventListener('keydown', (e) => {
@@ -398,3 +400,32 @@ function confirmDialog({ title, message, confirmLabel = 'OK', danger = false }) 
     box.querySelector('.dialog-foot .btn:last-child').focus();
   });
 }
+
+// ---------------------------------------------------------------------------
+// Rechtsklick in Textfelder der Oberfläche (Adressleiste, Suche, Formulare)
+// ---------------------------------------------------------------------------
+document.addEventListener('contextmenu', (e) => {
+  const el = e.target;
+  if (e.defaultPrevented || !(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
+  if (el instanceof HTMLInputElement && !/^(text|search|url|email|password|number|tel|)$/.test(el.type)) return;
+  e.preventDefault();
+  if (document.activeElement !== el) el.focus();
+  const selected = el.selectionStart !== el.selectionEnd;
+  const editable = !el.readOnly && !el.disabled;
+  const secret = el.type === 'password';
+  const run = (cmd) => () => { el.focus(); F.edit(cmd); };
+  const isOmnibox = !!el.closest('#omnibox');
+  showMenu([
+    editable ? { label: $t('Rückgängig'), shortcut: kb('Strg+Z'), onClick: run('undo') } : null,
+    editable ? '-' : null,
+    editable ? { label: $t('Ausschneiden'), icon: 'scissors', shortcut: kb('Strg+X'), disabled: !selected || secret, onClick: run('cut') } : null,
+    { label: $t('Kopieren'), icon: 'copy', shortcut: kb('Strg+C'), disabled: !selected || secret, onClick: run('copy') },
+    editable ? { label: $t('Einfügen'), icon: 'clipboard', shortcut: kb('Strg+V'), onClick: run('paste') } : null,
+    isOmnibox ? {
+      label: $t('Einfügen und aufrufen'), icon: 'arrowRight',
+      onClick: async () => { const text = String(await F.readClipboard() || '').trim(); if (!text) return; el.blur(); Tabs.navigate(toUrl(text)); }
+    } : null,
+    '-',
+    { label: $t('Alles auswählen'), icon: 'selectAll', shortcut: kb('Strg+A'), disabled: !el.value, onClick: () => { el.focus(); el.select(); } }
+  ], { point: { x: e.clientX, y: e.clientY }, keepFocus: true });
+});

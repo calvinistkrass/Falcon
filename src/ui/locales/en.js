@@ -68,6 +68,7 @@ I18N.add('en', {
   "Drucken …": "Print…",
   "Duplizieren": "Duplicate",
   "Einfügen": "Paste",
+  "Einfügen und aufrufen": "Paste and go",
   "Einstellungen": "Settings",
   "Einstellungen (Strg+,)": "Settings (Ctrl+,)",
   "Entfernen": "Remove",

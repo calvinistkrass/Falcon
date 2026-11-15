@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('falcon', {
   logoUrl: fileUrl('..', 'assets', 'falcon.png'),
 
   win: (action) => ipcRenderer.send('win', action),
+  edit: (cmd) => ipcRenderer.invoke('edit', cmd),
+  readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   overlayDim: (dim) => ipcRenderer.send('overlay-dim', !!dim),
   newIncognitoWindow: (url) => ipcRenderer.send('win:new-incognito', url),
   openOverlay: (url) => ipcRenderer.send('overlay:open', url),

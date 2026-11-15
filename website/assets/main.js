@@ -78,21 +78,30 @@ const REPO = 'calvinistkrass/Falcon';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
 async function latestRelease() {
   try {
-    const cached = JSON.parse(sessionStorage.getItem('falcon.release') || 'null');
+    const cached = JSON.parse(sessionStorage.getItem('falcon.release2') || 'null');
     if (cached && Date.now() - cached.at < 30 * 60_000) return cached.data;
   } catch { /* egal */ }
   const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { accept: 'application/vnd.github+json' } });
   if (!res.ok) throw new Error(String(res.status));
   const r = await res.json();
   const exe = (r.assets || []).find((a) => /\.exe$/i.test(a.name) && !/blockmap/i.test(a.name));
+  // Android-App: aus dem neuesten Release, sonst aus dem letzten Release mit APK
+  let apk = (r.assets || []).find((a) => /\.apk$/i.test(a.name));
+  if (!apk) {
+    try {
+      const list = await (await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=10`, { headers: { accept: 'application/vnd.github+json' } })).json();
+      for (const x of Array.isArray(list) ? list : []) { apk = (x.assets || []).find((a) => /\.apk$/i.test(a.name)); if (apk) break; }
+    } catch { /* kein APK */ }
+  }
   const data = {
     version: String(r.tag_name || '').replace(/^v/, ''),
     url: exe ? exe.browser_download_url : FALLBACK,
     size: exe ? exe.size : 0,
     date: r.published_at,
+    apk: apk ? { url: apk.browser_download_url, size: apk.size, version: (apk.name.match(/(\d+\.\d+\.\d+)/) || [])[1] || '' } : null,
     notes: r.body || ''
   };
-  try { sessionStorage.setItem('falcon.release', JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
+  try { sessionStorage.setItem('falcon.release2', JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
   return data;
 }
 const mb = (n) => `${(n / 1024 / 1024).toLocaleString('de-DE', { maximumFractionDigits: 0 })} MB`;
@@ -103,6 +112,13 @@ latestRelease().then((r) => {
   document.querySelectorAll('[data-version]').forEach((el) => { el.textContent = r.version; });
   document.querySelectorAll('[data-size]').forEach((el) => { if (r.size) el.textContent = mb(r.size); });
   document.querySelectorAll('[data-date]').forEach((el) => { if (r.date) el.textContent = dateDe(r.date); });
+  if (r.apk) {
+    document.querySelectorAll('[data-apk]').forEach((a) => { a.href = r.apk.url; });
+    document.querySelectorAll('[data-apk-version]').forEach((el) => { if (r.apk.version) el.textContent = r.apk.version; });
+    document.querySelectorAll('[data-apk-size]').forEach((el) => { if (r.apk.size) el.textContent = mb(r.apk.size); });
+  } else {
+    document.querySelectorAll('[data-apk-label]').forEach((el) => { el.textContent = 'Bald verfügbar'; });
+  }
 }).catch(() => { /* Link führt weiter zur Release-Seite auf GitHub */ });
 
 // Neuerungen der aktuellen Version aus CHANGELOG.md (Download-Seite)

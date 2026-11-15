@@ -68,6 +68,7 @@ I18N.add('tr', {
   "Drucken …": "Yazdır…",
   "Duplizieren": "Çoğalt",
   "Einfügen": "Yapıştır",
+  "Einfügen und aufrufen": "Yapıştır ve git",
   "Einstellungen": "Ayarlar",
   "Einstellungen (Strg+,)": "Ayarlar (Ctrl+,)",
   "Entfernen": "Kaldır",

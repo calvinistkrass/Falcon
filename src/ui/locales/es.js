@@ -68,6 +68,7 @@ I18N.add('es', {
   "Drucken …": "Imprimir…",
   "Duplizieren": "Duplicar",
   "Einfügen": "Pegar",
+  "Einfügen und aufrufen": "Pegar e ir",
   "Einstellungen": "Configuración",
   "Einstellungen (Strg+,)": "Configuración (Ctrl+,)",
   "Entfernen": "Quitar",
