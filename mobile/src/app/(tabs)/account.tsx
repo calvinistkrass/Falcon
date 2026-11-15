@@ -1,15 +1,15 @@
 // Konto: Anmeldung, FalCoins, tägliche Belohnung, Abmelden
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, CoinIcon, Divider, Field, Row, Title } from '@/components/ui';
-import { ERRORS, errorText, useSession } from '@/lib/session';
+import { APP_VERSION, ERRORS, errorText, fmtDate, useSession } from '@/lib/session';
 import { resetPassword } from '@/lib/firebase';
 import { C, R } from '@/lib/theme';
 
-const fmtDate = (ms: number) => new Date(ms).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export default function Account() {
   const session = useSession();
@@ -104,7 +104,7 @@ function Login() {
 }
 
 function Profile() {
-  const { user, wallet, daily, claimDaily, signOut, reload, loadingData, dataError, bookmarks, devices } = useSession();
+  const { user, wallet, daily, claimDaily, signOut, reload, loadingData, dataError, bookmarks, devices, passwords, history, missions, admin } = useSession();
   const [claiming, setClaiming] = useState(false);
   const [now] = useState(Date.now);
   if (!user) return null;
@@ -112,6 +112,7 @@ function Profile() {
   const coins = wallet.balance + wallet.pending;
   const gm = wallet.gameModeUntil > now;
   const beta = wallet.betaUntil > now;
+  const ready = missions.filter((m) => m.done && !m.claimed).length;
 
   const claim = async () => {
     setClaiming(true);
@@ -140,7 +141,11 @@ function Profile() {
             <Text style={s.coins}>{coins.toLocaleString('de-DE')}</Text>
             <Text style={s.coinsLabel}>FalCoins</Text>
           </View>
-          <Text style={s.walletNote}>1 FalCoin pro Website, die du hier im Browser besuchst. Im Shop in Falcon auf dem PC tauschst du sie gegen Game Mode und Beta-Zugriff.</Text>
+          <Text style={s.walletNote}>1 FalCoin pro Website, die du besuchst – hier und in Falcon auf dem PC. Im Shop tauschst du sie gegen Game Mode und Beta-Zugriff.</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}><Button title="Shop" icon="storefront-outline" small onPress={() => router.push('/shop')} /></View>
+            <View style={{ flex: 1 }}><Button title="Verlauf" icon="time-outline" small variant="ghost" onPress={() => router.push('/coinlog')} /></View>
+          </View>
           {daily.available ? (
             <Button title={`Tägliche Belohnung: +${daily.next} abholen`} icon="gift-outline" variant="gold" onPress={claim} loading={claiming} />
           ) : (
@@ -154,11 +159,20 @@ function Profile() {
           ) : null}
         </Card>
 
+        <Card style={{ marginTop: 14 }}>
+          <Row icon="flag-outline" title="Belohnungen & Missionen" sub={ready ? `${ready} ${ready === 1 ? 'Mission' : 'Missionen'} bereit zum Abholen` : daily.available ? 'Tägliche Belohnung wartet' : 'Missionen von heute'}
+            onPress={() => router.push('/rewards')} right={ready ? <View style={s.dot}><Text style={s.dotText}>{ready}</Text></View> : undefined} />
+        </Card>
+
         <Text style={s.section}>Synchronisierung</Text>
         <Card>
-          <Row icon="bookmark-outline" title="Lesezeichen" sub={`${countBookmarks(bookmarks)} synchronisiert`} />
+          <Row icon="bookmark-outline" title="Lesezeichen" sub={`${countBookmarks(bookmarks)} synchronisiert`} onPress={() => router.navigate("/bookmarks")} />
           <Divider />
-          <Row icon="desktop-outline" title="PCs" sub={`${devices.length} ${devices.length === 1 ? 'PC' : 'PCs'} mit offenen Tabs`} />
+          <Row icon="key-outline" title="Passwörter" sub={`${passwords.length} gespeichert`} onPress={() => router.push('/passwords')} />
+          <Divider />
+          <Row icon="time-outline" title="Verlauf" sub={`${history.length} Einträge`} onPress={() => router.push('/history')} />
+          <Divider />
+          <Row icon="desktop-outline" title="Andere Geräte" sub={`${devices.length} mit offenen Tabs`} onPress={() => router.navigate('/devices')} />
           <Divider />
           <Row icon="refresh" title={loadingData ? 'Wird aktualisiert …' : 'Jetzt aktualisieren'} sub={dataError ? ERRORS[dataError] || `Fehler: ${dataError}` : 'Ende-zu-Ende-verschlüsselt'} onPress={reload}
             right={loadingData ? <ActivityIndicator color={C.text2} /> : undefined} />
@@ -166,11 +180,16 @@ function Profile() {
 
         <Text style={s.section}>Mehr</Text>
         <Card>
+          <Row icon="settings-outline" title="Konto-Einstellungen" sub="Name, Passwort, Konto löschen" onPress={() => router.push('/settings')} />
+          <Divider />
+          <Row icon="bug-outline" title="Fehler melden" sub="Und alle Meldungen ansehen" onPress={() => router.push('/report')} />
+          <Divider />
+          {admin ? <><Row icon="shield-checkmark-outline" title="Admin: FalCoins verwalten" onPress={() => router.push('/admin')} /><Divider /></> : null}
           <Row icon="download-outline" title="Falcon für Windows" sub="falconbrowser.de" onPress={() => Linking.openURL('https://falconbrowser.de/download')} />
           <Divider />
           <Row icon="log-out-outline" title="Abmelden" onPress={logout} />
         </Card>
-        <Text style={s.version}>Falcon Mobile 1.0.0</Text>
+        <Text style={s.version}>Falcon Mobile {APP_VERSION}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -210,5 +229,7 @@ const s = StyleSheet.create({
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: C.accentSoft },
   tagText: { color: '#c2baff', fontSize: 12.5, fontWeight: '700' },
   section: { color: C.text3, fontSize: 12.5, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 26, marginBottom: 10, marginLeft: 4 },
+  dot: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: C.gold, alignItems: 'center', justifyContent: 'center' },
+  dotText: { color: '#3d2700', fontSize: 12, fontWeight: '800' },
   version: { color: C.text3, fontSize: 12, textAlign: 'center', marginTop: 28 }
 });

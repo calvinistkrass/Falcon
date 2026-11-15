@@ -687,6 +687,8 @@ I18N.add('en', {
   "Beta bis {date}": "Beta until {date}",
   "Game Mode entziehen": "Revoke Game Mode",
   "Game Mode für 2 Monate schenken": "Give Game Mode for 2 months",
+  "Beta-Zugriff für 14 Tage schenken": "Give beta access for 14 days",
+  "Beta-Zugriff entziehen": "Revoke beta access",
   "Entziehen": "Revoke",
   "Schenken": "Give",
   "Game Mode ist abgelaufen. Im FalCoin-Shop kannst du ihn für 2 Monate freischalten.": "Game Mode has expired. You can unlock it for 2 months in the FalCoin shop.",

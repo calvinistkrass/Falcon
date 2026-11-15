@@ -1,5 +1,6 @@
 # Baut Falcon für Windows und veröffentlicht ein GitHub-Release, sobald ein Versions-Tag
 # (z. B. v1.2.0) gepusht wird. Falcon erkennt das neue Release dann als Update.
+# Danach wird Falcon Mobile für Android (APK) gebaut und an dasselbe Release angehängt.
 name: Release
 
 on:
@@ -35,5 +36,44 @@ jobs:
 
       - name: Bauen und veröffentlichen
         run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  android:
+    needs: windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Abhängigkeiten
+        working-directory: mobile
+        run: npm ci
+
+      # android/ wird aus app.json erzeugt (Continuous Native Generation) und nicht eingecheckt
+      - name: Android-Projekt erzeugen
+        working-directory: mobile
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: APK bauen
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: An das Release anhängen
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./mobile/app.json').expo.version")"
+          cp mobile/android/app/build/outputs/apk/release/app-release.apk "Falcon-Mobile-$VERSION.apk"
+          gh release upload "$GITHUB_REF_NAME" "Falcon-Mobile-$VERSION.apk" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

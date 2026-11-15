@@ -687,6 +687,8 @@ I18N.add('tr', {
   "Beta bis {date}": "{date} tarihine kadar Beta",
   "Game Mode entziehen": "Game Mode’u geri al",
   "Game Mode für 2 Monate schenken": "2 aylık Game Mode hediye et",
+  "Beta-Zugriff für 14 Tage schenken": "14 günlük beta erişimi hediye et",
+  "Beta-Zugriff entziehen": "Beta erişimini geri al",
   "Entziehen": "Geri al",
   "Schenken": "Hediye et",
   "Game Mode ist abgelaufen. Im FalCoin-Shop kannst du ihn für 2 Monate freischalten.": "Game Mode’un süresi doldu. FalCoin mağazasında 2 ay için açabilirsin.",

@@ -74,6 +74,18 @@ export async function refresh(refreshToken: string): Promise<Tokens> {
   });
   return { idToken: r.id_token, refreshToken: r.refresh_token, expiresAt: Date.now() + Number(r.expires_in || 3600) * 1000, uid: r.user_id };
 }
+export async function lookup(idToken: string) {
+  const r = await request<any>(`${AUTH}/accounts:lookup?key=${CONFIG.apiKey}`, { method: 'POST', body: { idToken } });
+  const u = r.users?.[0] || {};
+  return { displayName: (u.displayName as string) || '', emailVerified: !!u.emailVerified };
+}
+export async function changePassword(idToken: string, password: string): Promise<Tokens> {
+  const r = await request<any>(`${AUTH}/accounts:update?key=${CONFIG.apiKey}`, { method: 'POST', body: { idToken, password, returnSecureToken: true } });
+  return { idToken: r.idToken, refreshToken: r.refreshToken, expiresAt: Date.now() + Number(r.expiresIn || 3600) * 1000, uid: r.localId } as Tokens;
+}
+export async function deleteUser(idToken: string) {
+  await request(`${AUTH}/accounts:delete?key=${CONFIG.apiKey}`, { method: 'POST', body: { idToken } });
+}
 export async function resetPassword(email: string) {
   await request(`${AUTH}/accounts:sendOobCode?key=${CONFIG.apiKey}`, { method: 'POST', body: { requestType: 'PASSWORD_RESET', email } });
 }
@@ -96,6 +108,28 @@ export async function createDoc(path: string, fields: Record<string, any>, token
 export async function commit(writes: unknown[], token: string) {
   return request<{ writeResults?: { transformResults?: { integerValue?: string }[] }[] }>(
     `${ROOT.replace(/\/documents$/, '')}/documents:commit`, { method: 'POST', token, body: { writes } });
+}
+/** Dokument schreiben – optional nur, wenn es (nicht) existiert bzw. sich seit updateTime nicht geändert hat. */
+export async function putDoc(path: string, fields: Record<string, any>, token: string | undefined, pre?: { exists?: boolean; updateTime?: string }, mask?: string[]) {
+  const q: string[] = [];
+  if (pre?.exists !== undefined) q.push(`currentDocument.exists=${pre.exists}`);
+  if (pre?.updateTime) q.push(`currentDocument.updateTime=${encodeURIComponent(pre.updateTime)}`);
+  for (const m of mask || []) q.push(`updateMask.fieldPaths=${m}`);
+  if (!token) q.push(`key=${CONFIG.apiKey}`);
+  return request<Doc>(`${ROOT}/${path}${q.length ? `?${q.join('&')}` : ''}`, { method: 'PATCH', token, body: { fields } });
+}
+export async function addDoc(collection: string, fields: Record<string, any>, token?: string) {
+  return request<Doc>(`${ROOT}/${collection}${token ? '' : `?key=${CONFIG.apiKey}`}`, { method: 'POST', token, body: { fields } });
+}
+export async function deleteDoc(path: string, token: string) {
+  try { await request(`${ROOT}/${path}`, { method: 'DELETE', token }); } catch (e) {
+    if (!(e instanceof ApiError && (e.code === 'NOT_FOUND' || e.status === 404))) throw e;
+  }
+}
+/** Liste mit Sortierung/Seitengröße; ohne Token öffentlich (mit API-Schlüssel). */
+export async function query(path: string, params: string, token?: string): Promise<Doc[]> {
+  const r = await request<{ documents?: Doc[] }>(`${ROOT}/${path}?${params}${token ? '' : `&key=${CONFIG.apiKey}`}`, { token });
+  return r.documents || [];
 }
 export async function fetchJson<T = any>(url: string): Promise<T> { return request<T>(url); }
 

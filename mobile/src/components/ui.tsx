@@ -1,8 +1,10 @@
 // Gemeinsame Bausteine im Falcon-Look
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle, StyleProp } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { C, R, favicon } from '@/lib/theme';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -16,7 +18,7 @@ export function Title({ children, sub }: { children: React.ReactNode; sub?: stri
   );
 }
 
-export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
+export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[s.card, style]}>{children}</View>;
 }
 
@@ -93,9 +95,33 @@ export function Empty({ icon, title, text, children }: { icon: IconName; title: 
   );
 }
 
+/** Unterseite mit Zurück-Knopf (Shop, Passwörter, …) */
+export function Screen({ title, right, children, scroll = true }: { title: string; right?: React.ReactNode; children: React.ReactNode; scroll?: boolean }) {
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+      <View style={s.head}>
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate('/account'))} hitSlop={10} style={s.back} accessibilityLabel="Zurück">
+          <Ionicons name="chevron-back" size={24} color={C.text} />
+        </Pressable>
+        <Text style={s.headTitle} numberOfLines={1}>{title}</Text>
+        <View style={{ minWidth: 36, alignItems: 'flex-end' }}>{right}</View>
+      </View>
+      {scroll ? <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">{children}</ScrollView> : <View style={{ flex: 1 }}>{children}</View>}
+    </SafeAreaView>
+  );
+}
+
+export function Section({ children }: { children: React.ReactNode }) {
+  return <Text style={s.section}>{children}</Text>;
+}
+
 export const Divider = () => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: C.line, marginLeft: 58 }} />;
 
 const s = StyleSheet.create({
+  head: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, height: 52 },
+  back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  headTitle: { flex: 1, color: C.text, fontSize: 19, fontWeight: '800' },
+  section: { color: C.text3, fontSize: 12.5, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 24, marginBottom: 10, marginLeft: 4 },
   title: { color: C.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6 },
   sub: { color: C.text2, fontSize: 15, marginTop: 6, lineHeight: 21 },
   card: { backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.line, overflow: 'hidden' },

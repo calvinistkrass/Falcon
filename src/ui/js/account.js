@@ -458,6 +458,10 @@ const Account = (() => {
   // ---------------------------------------------------------------------------
   // Admin: FalCoins aller Nutzer bearbeiten
   // ---------------------------------------------------------------------------
+  const GRANTS = [
+    { field: 'gameModeUntil', name: 'Game Mode', icon: 'gamepad', months: 2, give: 'Game Mode für 2 Monate schenken', revoke: 'Game Mode entziehen' },
+    { field: 'betaUntil', name: 'Beta', icon: 'flask', days: 14, give: 'Beta-Zugriff für 14 Tage schenken', revoke: 'Beta-Zugriff entziehen' }
+  ];
   function walletAdminDialog() {
     const search = h('input', { class: 'field-input', placeholder: $t('Name oder E-Mail suchen'), spellcheck: false });
     const list = h('div', { class: 'wa-list' }, h('div', { class: 'rt-empty' }, h('span', { class: 'spinner' })));
@@ -487,7 +491,7 @@ const Account = (() => {
           save.disabled = true;
           const r = await F.account.adminUpdateWallet({ uid: w.uid, ...patch });
           if (!r.ok) { toast(errorText(r.error), 'warning'); return; }
-          Object.assign(w, patch.balance !== undefined ? { balance: Math.round(Number(patch.balance)) } : {}, patch.gameModeUntil !== undefined ? { gameModeUntil: patch.gameModeUntil } : {});
+          Object.assign(w, patch, patch.balance !== undefined ? { balance: Math.round(Number(patch.balance)) } : {});
           toast($t('Gespeichert'), 'check');
           render();
           if (w.uid && acc.signedIn) refresh();
@@ -496,6 +500,19 @@ const Account = (() => {
         input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !save.disabled) commit({ balance: input.value }); });
         const step = (d) => h('button', { class: 'tb-btn sm wa-step', title: `${d > 0 ? '+' : ''}${d}`, onclick: () => { input.value = Math.max(0, Math.round(Number(input.value || 0)) + d); input.dispatchEvent(new Event('input')); } }, `${d > 0 ? '+' : ''}${d}`);
         const gm = (w.gameModeUntil || 0) > Date.now();
+        // Alle Freischaltungen aus dem Shop verleihen oder entziehen
+        const grant = (g) => {
+          const on = (w[g.field] || 0) > Date.now();
+          return h('button', {
+            class: 'btn ghost sm', title: on ? $t(g.revoke) : $t(g.give),
+            onclick: () => {
+              const d = new Date();
+              if (g.months) d.setMonth(d.getMonth() + g.months);
+              if (g.days) d.setDate(d.getDate() + g.days);
+              commit({ [g.field]: on ? 0 : d.getTime() });
+            }
+          }, icon(g.icon), h('span', { 'data-no-i18n': '' }, g.name), on ? $t('Entziehen') : $t('Schenken'));
+        };
         return h('div', { class: 'wa-row' },
           h('div', { class: 'wa-user' },
             h('b', { 'data-no-i18n': '' }, w.name || w.email.split('@')[0] || w.uid.slice(0, 8)),
@@ -505,13 +522,7 @@ const Account = (() => {
               (w.betaUntil || 0) > Date.now() ? h('span', { class: 'beta-badge' }, $t('Beta bis {date}', { date: fmtUntil(w.betaUntil) })) : null)),
           h('div', { class: 'wa-edit' },
             step(-100), step(-10), input, step(10), step(100), save,
-            h('button', {
-              class: 'btn ghost sm', title: gm ? $t('Game Mode entziehen') : $t('Game Mode für 2 Monate schenken'),
-              onclick: () => {
-                const d = new Date(); d.setMonth(d.getMonth() + 2);
-                commit({ gameModeUntil: gm ? 0 : d.getTime() });
-              }
-            }, icon('gamepad'), gm ? $t('Entziehen') : $t('Schenken'))));
+            ...GRANTS.map(grant)));
       }));
     }
     search.addEventListener('input', render);
@@ -557,7 +568,7 @@ const Account = (() => {
         return;
       }
       list.replaceChildren(...devices.map((d) => h('section', { class: 'rt-device' },
-        h('header', {}, icon('devices'), h('b', { 'data-no-i18n': '' }, d.name), h('span', {}, ago(d.at)),
+        h('header', {}, icon(d.kind === 'phone' ? 'phone' : 'devices'), h('b', { 'data-no-i18n': '' }, d.name), h('span', {}, ago(d.at)),
           d.tabs.length > 1 ? h('button', { class: 'link-btn', onclick: () => { close(); d.tabs.forEach((t, i) => openUrl(t.url, i > 0)); } }, $t('Alle öffnen')) : null),
         d.tabs.length
           ? h('div', { class: 'rt-tabs' }, d.tabs.map((t) => h('button', { class: 'rt-tab', title: t.url, onclick: (e) => { close(); openUrl(t.url, e.ctrlKey || e.button === 1); } },

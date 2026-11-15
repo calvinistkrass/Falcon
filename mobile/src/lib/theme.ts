@@ -22,7 +22,9 @@ export const R = { sm: 8, md: 12, lg: 18, xl: 24 };
 export const ENGINES: Record<string, string> = {
   google: 'https://www.google.com/search?q=',
   duckduckgo: 'https://duckduckgo.com/?q=',
-  bing: 'https://www.bing.com/search?q='
+  bing: 'https://www.bing.com/search?q=',
+  brave: 'https://search.brave.com/search?q=',
+  ecosia: 'https://www.ecosia.org/search?q='
 };
 
 export function toUrl(input: string, engine = 'google') {

@@ -38,7 +38,7 @@ export default function Devices() {
         {devices.length ? devices.map((d) => (
           <View key={d.id} style={{ marginBottom: 22 }}>
             <View style={s.devHead}>
-              <Ionicons name="desktop-outline" size={17} color={C.text2} />
+              <Ionicons name={d.kind === 'phone' ? 'phone-portrait-outline' : 'desktop-outline'} size={17} color={C.text2} />
               <Text style={s.devName} numberOfLines={1}>{d.name}</Text>
               <Text style={s.devAt}>{ago(d.at)}</Text>
             </View>

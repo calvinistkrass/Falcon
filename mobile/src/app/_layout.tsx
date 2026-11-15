@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import '@/lib/web-alert';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider } from '@/lib/session';

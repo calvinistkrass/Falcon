@@ -12,6 +12,7 @@ export default function TabSwitcher({ visible, onClose }: { visible: boolean; on
 
   const pick = (id: string) => { switchTab(id); onClose(); };
   const add = () => { newTab(); onClose(); };
+  const addIncognito = () => { newTab(true); onClose(); };
   const closeAll = () => Alert.alert('Alle Tabs schließen?', `${tabs.length} ${tabs.length === 1 ? 'Tab wird' : 'Tabs werden'} geschlossen.`, [
     { text: 'Abbrechen', style: 'cancel' },
     { text: 'Alle schließen', style: 'destructive', onPress: () => { closeAllTabs(); onClose(); } }
@@ -30,10 +31,10 @@ export default function TabSwitcher({ visible, onClose }: { visible: boolean; on
             const on = t.id === activeId;
             const host = hostOf(t.url);
             return (
-              <Pressable key={t.id} onPress={() => pick(t.id)} style={({ pressed }) => [s.card, on && s.cardOn, pressed && { opacity: 0.85 }]}
+              <Pressable key={t.id} onPress={() => pick(t.id)} style={({ pressed }) => [s.card, t.incognito && s.cardIncognito, on && s.cardOn, pressed && { opacity: 0.85 }]}
                 accessibilityLabel={`Tab ${t.title || host || 'Neuer Tab'} öffnen`}>
                 <View style={s.cardHead}>
-                  {t.url ? <Favicon url={t.url} size={16} /> : <Ionicons name="add-circle-outline" size={16} color={C.text3} />}
+                  {t.incognito ? <Ionicons name="eye-off" size={15} color="#c2baff" /> : t.url ? <Favicon url={t.url} size={16} /> : <Ionicons name="add-circle-outline" size={16} color={C.text3} />}
                   <Text numberOfLines={1} style={s.cardTitle}>{t.title || host || 'Neuer Tab'}</Text>
                   <Pressable onPress={() => closeTab(t.id)} hitSlop={10} style={s.x} accessibilityLabel="Tab schließen">
                     <Ionicons name="close" size={16} color={C.text2} />
@@ -48,7 +49,7 @@ export default function TabSwitcher({ visible, onClose }: { visible: boolean; on
                   ) : (
                     <>
                       <Ionicons name="globe-outline" size={34} color={C.text3} />
-                      <Text style={s.previewHost}>Neuer Tab</Text>
+                      <Text style={s.previewHost}>{t.incognito ? 'Inkognito-Tab' : 'Neuer Tab'}</Text>
                     </>
                   )}
                 </View>
@@ -61,6 +62,10 @@ export default function TabSwitcher({ visible, onClose }: { visible: boolean; on
           <Pressable onPress={add} style={({ pressed }) => [s.footBtn, pressed && { opacity: 0.7 }]} accessibilityLabel="Neuer Tab">
             <Ionicons name="add" size={26} color={C.text} />
           </Pressable>
+          <Pressable onPress={addIncognito} style={({ pressed }) => [s.footBtn, pressed && { opacity: 0.7 }]} accessibilityLabel="Neuer Inkognito-Tab">
+            <Ionicons name="eye-off-outline" size={22} color={C.text} />
+          </Pressable>
+          <View style={{ flex: 1 }} />
           <Pressable onPress={onClose} style={({ pressed }) => [s.done, pressed && { opacity: 0.8 }]}>
             <Text style={s.doneText}>Fertig</Text>
           </Pressable>
@@ -78,12 +83,13 @@ const s = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, padding: 16, paddingBottom: 32 },
   card: { width: '47.5%', borderRadius: R.lg, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.line, overflow: 'hidden' },
   cardOn: { borderColor: C.accent },
+  cardIncognito: { backgroundColor: '#1d1728' },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 10, paddingRight: 6, height: 36, backgroundColor: C.raised },
   cardTitle: { flex: 1, color: C.text, fontSize: 12.5, fontWeight: '600' },
   x: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   preview: { height: 150, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 10 },
   previewHost: { color: C.text2, fontSize: 13, textAlign: 'center' },
-  foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line },
   footBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.raised, alignItems: 'center', justifyContent: 'center' },
   done: { height: 42, paddingHorizontal: 22, borderRadius: 21, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
   doneText: { color: '#fff', fontSize: 15, fontWeight: '700' }

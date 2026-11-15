@@ -54,7 +54,7 @@ export default function Start() {
             <Text style={s.brandText}>Falcon</Text>
           </View>
           {user ? (
-            <Pressable style={s.coins} onPress={() => router.navigate('/account')}>
+            <Pressable style={s.coins} onPress={() => router.push('/shop')} accessibilityLabel="FalCoin-Shop">
               <CoinIcon size={18} />
               <Text style={s.coinsText}>{(wallet.balance + wallet.pending).toLocaleString('de-DE')}</Text>
             </Pressable>

@@ -582,7 +582,7 @@ const remoteTabs = safe(async () => {
     if (Date.now() - at > 30 * 86400_000) continue; // seit 30 Tagen nicht gesehen
     try {
       const d = decrypt(secret.dataKey, doc.fields.data.stringValue, `${data.uid}:device:${id}`);
-      devices.push({ id, name: d.name || '?', at, tabs: Array.isArray(d.tabs) ? d.tabs : [] });
+      devices.push({ id, name: d.name || '?', kind: d.kind === 'phone' ? 'phone' : 'pc', at, tabs: Array.isArray(d.tabs) ? d.tabs : [] });
     } catch { /* anderer Schlüssel (alter PC) – überspringen */ }
   }
   devices.sort((a, b) => b.at - a.at);
@@ -924,7 +924,7 @@ const listWallets = safe(async () => {
   }).sort((a, b) => b.balance - a.balance);
   return { wallets };
 });
-const adminUpdateWallet = safe(async ({ uid, balance, gameModeUntil }) => {
+const adminUpdateWallet = safe(async ({ uid, balance, gameModeUntil, betaUntil }) => {
   if (!/^[\w-]{6,128}$/.test(String(uid))) throw new AccountError('INVALID');
   const fields = {};
   if (balance !== undefined) {
@@ -932,10 +932,12 @@ const adminUpdateWallet = safe(async ({ uid, balance, gameModeUntil }) => {
     if (!Number.isFinite(n) || n < 0 || n > 1e9) throw new AccountError('INVALID');
     fields.balance = int(n);
   }
-  if (gameModeUntil !== undefined) {
-    const t = Math.round(Number(gameModeUntil));
+  // Freischaltungen (Game Mode, Beta-Zugriff) verleihen oder mit 0 entziehen
+  for (const [k, v] of Object.entries({ gameModeUntil, betaUntil })) {
+    if (v === undefined) continue;
+    const t = Math.round(Number(v));
     if (!Number.isFinite(t) || t < 0) throw new AccountError('INVALID');
-    fields.gameModeUntil = int(t);
+    fields[k] = int(t);
   }
   if (!Object.keys(fields).length) throw new AccountError('INVALID');
   const mask = Object.keys(fields).map((k) => `updateMask.fieldPaths=${k}`).join('&');

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Falcon",
     "slug": "falcon-mobile",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "scheme": "falcon",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -32,6 +32,12 @@
       "expo-status-bar",
       "expo-image",
       "expo-font",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Falcon fragt Face ID ab, bevor deine gespeicherten Passwörter angezeigt werden."
+        }
+      ],
       [
         "expo-splash-screen",
         {

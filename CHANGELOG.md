@@ -2,6 +2,19 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.1.0] – 2026-11-15
+
+### Added
+- **Admin panel: grant and revoke beta access**, not only Game Mode. Each user row has a button per unlock (Game Mode for 2 months, beta access for 14 days) that gives it or takes it away again.
+- **Phones in "Tabs from other PCs"**: Falcon Mobile shares its open tabs like a PC; phones are shown with a phone icon.
+- **Falcon Mobile 1.1.0 for Android** is attached to this release as an APK (Falcon-Mobile-1.1.0.apk). The app now covers almost everything the desktop account does:
+  - Create an account on the phone (compatible with Falcon for Windows) and switch between tabs with a tab overview, including incognito tabs.
+  - **FalCoin shop** with the same items and prices as on the PC, daily reward with the 7-day streak, daily missions and the FalCoin history.
+  - **Passwords**: view, copy, add, edit and delete (locked with fingerprint/Face ID); fill them into login forms and get asked to save new logins. "Never for this site" is shared with the PC.
+  - **History** from all devices, bookmarks can be added and removed from the browser menu.
+  - **Translate page** (beta), share, copy link, report a problem, account settings (name, password, delete account) and the admin tools.
+  - The address bar uses the search engine from your Falcon settings.
+
 ## [2.0.2] – 2026-11-12
 
 ### Added
