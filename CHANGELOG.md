@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.1.1] – 2026-11-15
+
+### Fixed
+- **Right-clicking the address bar did nothing**, so a selected link could not be copied. The address bar and all other text fields of the Falcon interface now have a context menu with Undo, Cut, Copy, Paste and Select all; the address bar also offers **Paste and go**.
+
 ## [2.1.0] – 2026-11-15
 
 ### Added
