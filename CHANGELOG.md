@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.1.3] – 2026-11-18
+
+### Changed
+- Test release for the update mechanisms of Falcon for Windows and Falcon Mobile (Falcon-Mobile-1.1.2.apk, update notice in the app). No functional changes.
+
 ## [2.1.2] – 2026-11-18
 
 ### Fixed
