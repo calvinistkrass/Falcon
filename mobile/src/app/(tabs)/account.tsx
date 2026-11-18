@@ -141,7 +141,7 @@ function Profile() {
             <Text style={s.coins}>{coins.toLocaleString('de-DE')}</Text>
             <Text style={s.coinsLabel}>FalCoins</Text>
           </View>
-          <Text style={s.walletNote}>1 FalCoin pro Website, die du besuchst – hier und in Falcon auf dem PC. Im Shop tauschst du sie gegen Game Mode und Beta-Zugriff.</Text>
+          <Text style={s.walletNote}>1 FalCoin pro Website, die du besuchst – hier und in Falcon auf dem PC. Im Shop tauschst du sie gegen Game Mode.</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}><Button title="Shop" icon="storefront-outline" small onPress={() => router.push('/shop')} /></View>
             <View style={{ flex: 1 }}><Button title="Verlauf" icon="time-outline" small variant="ghost" onPress={() => router.push('/coinlog')} /></View>

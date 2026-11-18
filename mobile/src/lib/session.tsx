@@ -8,7 +8,7 @@ import { load, save } from './storage';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '1.1.2';
+export const APP_VERSION = '2.1.4';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -35,7 +35,9 @@ export const SHOP = [
   {
     id: 'beta14', price: 1000, icon: 'flask-outline', field: 'betaUntil', days: 14, title: 'Beta-Zugriff · 14 Tage', extendLabel: 'Um 14 Tage verlängern',
     text: 'Teste neue Funktionen vor allen anderen. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
-    perks: ['Seite übersetzen – am PC per Rechtsklick oder Strg+K, hier im Browser-Menü', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
+    // Solange es keine Beta-Funktionen gibt, lässt sich der Beta-Zugriff nicht kaufen
+    available: false,
+    unavailableText: 'Zurzeit gibt es keine Beta-Funktionen. Sobald neue erscheinen, kannst du den Beta-Zugriff hier freischalten.'
   }
 ] as const;
 export type ShopItem = (typeof SHOP)[number];
@@ -530,6 +532,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const u = user;
     const it = SHOP.find((x) => x.id === itemId);
     if (!it) throw new FB.ApiError('INVALID');
+    if ('available' in it && it.available === false) throw new FB.ApiError('UNAVAILABLE');
     if (!u) throw new FB.ApiError('SIGNED_OUT');
     // Erst offene FalCoins gutschreiben, damit der Kontostand stimmt
     await flushCoins();
@@ -769,6 +772,7 @@ export const ERRORS: Record<string, string> = {
   ALREADY_CLAIMED: 'Heute schon abgeholt – komm morgen wieder!',
   NOT_ENOUGH: 'Nicht genug FalCoins.',
   NOT_DONE: 'Die Mission ist noch nicht geschafft.',
+  UNAVAILABLE: 'Das gibt es zurzeit nicht zu kaufen.',
   EMPTY: 'Bitte beschreib kurz, was passiert ist.',
   CREDENTIAL_TOO_OLD_LOGIN_AGAIN: 'Bitte melde dich ab und wieder an.',
   PERMISSION_DENIED: 'Der Server hat den Zugriff verweigert.',

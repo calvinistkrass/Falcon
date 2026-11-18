@@ -433,7 +433,7 @@ async function copyImage(src) {
 }
 
 // ---------------------------------------------------------------------------
-// Beta-Feature: Seite übersetzen (über Google Übersetzer)
+// Seite übersetzen (über Google Übersetzer) – für alle, seit 2.1.4 kein Beta-Feature mehr
 // ---------------------------------------------------------------------------
 const Translate = (() => {
   const isTranslated = (url) => { try { return new URL(url).hostname.endsWith('.translate.goog'); } catch { return false; } };
@@ -446,12 +446,6 @@ const Translate = (() => {
   }
   function translate(tab = Tabs.active()) {
     if (!tab || !/^https?:/.test(tab.url)) return;
-    const acc = typeof Account !== 'undefined' ? Account.state : {};
-    if (!acc.beta) {
-      toast($t('„Seite übersetzen“ ist ein Beta-Feature. Schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'flask',
-        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
-      return;
-    }
     if (isTranslated(tab.url)) return Tabs.navigate(original(tab.url), tab);
     const lang = I18N.lang || 'de';
     Tabs.navigate(`https://translate.google.com/translate?sl=auto&tl=${encodeURIComponent(lang)}&u=${encodeURIComponent(tab.url)}`, tab);
@@ -515,7 +509,7 @@ function openPageMenu(p) {
       '-',
       {
         label: Translate.isTranslated(p.pageURL) ? $t('Original anzeigen') : $t('Seite übersetzen'), icon: 'globe',
-        shortcut: 'Beta', disabled: !/^https?:/.test(p.pageURL), onClick: () => Translate.translate()
+        disabled: !/^https?:/.test(p.pageURL), onClick: () => Translate.translate()
       },
       { label: $t('Screenshot …'), icon: 'scissors', shortcut: kb('Strg+Umschalt+S'), onClick: () => Screenshot.menu({ point }) },
       '-',

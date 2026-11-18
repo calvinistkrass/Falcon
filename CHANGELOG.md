@@ -2,7 +2,13 @@
 
 All notable changes to Falcon are documented here.
 
-## [Unreleased]
+## [2.1.4] – 2026-11-18
+
+Falcon Mobile now uses the same version number as Falcon for Windows: **Falcon-Mobile-2.1.4.apk**.
+
+### Changed
+- **Translate page is no longer a beta feature** – it works for everyone on the PC (right-click, Ctrl+K) and in Falcon Mobile (browser menu), without beta access or an account.
+- **Beta access can't be bought right now**: there are no beta features at the moment, so the buy button in the FalCoin shop is disabled ("Not available right now") on the PC and in the app. Existing beta access stays valid; the admin can still grant it.
 
 ### Added
 - **New tabs load first**: while a tab you just opened is loading, Falcon throttles all other tabs and sidebar apps and briefly pauses running downloads, so the new page gets the full bandwidth. Tabs playing audio keep enough bandwidth for music and streams. Everything goes back to normal as soon as the tab has loaded (at most after 8 seconds). Tabs opened in the background don't trigger this.

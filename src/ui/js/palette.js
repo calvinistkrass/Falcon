@@ -44,7 +44,7 @@ const Palette = (() => {
       typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'FalCoin-Shop', icon: 'shop', words: 'shop falcoins beta', run: () => Account.shopDialog() } : null,
       { label: 'Screenshot: Bereich auswählen', icon: 'scissors', key: 'Strg+Umschalt+S', words: 'screenshot capture', run: () => Screenshot.capture('area'), when: web },
       { label: 'Screenshot: Ganze Seite', icon: 'file', words: 'screenshot full page', run: () => Screenshot.capture('full'), when: web },
-      { label: 'Seite übersetzen (Beta)', icon: 'globe', words: 'translate übersetzen beta', run: () => Translate.translate(), when: web },
+      { label: 'Seite übersetzen', icon: 'globe', words: 'translate übersetzen google', run: () => Translate.translate(), when: web },
       typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'Tägliche Belohnung & Missionen', icon: 'coin', words: 'daily reward missions falcoins', run: () => Account.rewardsDialog() } : null,
       typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'FalCoin-Verlauf', icon: 'clock', words: 'falcoins history verlauf', run: () => Account.historyDialog() } : null,
       { label: 'Fehler melden …', icon: 'bug', words: 'bug report feedback', run: () => Report.open() },

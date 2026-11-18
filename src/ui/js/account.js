@@ -305,10 +305,9 @@ const Account = (() => {
     {
       id: 'beta14', price: 1000, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 14 Tage verlängern', title: 'Beta-Zugriff · 14 Tage',
       text: 'Teste neue Funktionen vor allen anderen. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
-      perks: [
-        'Seite übersetzen – per Rechtsklick auf eine Seite oder mit Strg+K',
-        'Alle weiteren Beta-Funktionen, sobald sie erscheinen'
-      ]
+      // Solange es keine Beta-Funktionen gibt, lässt sich der Beta-Zugriff nicht kaufen
+      available: false,
+      unavailableText: 'Zurzeit gibt es keine Beta-Funktionen. Sobald neue erscheinen, kannst du den Beta-Zugriff hier freischalten.'
     }
   ];
   const fmtUntil = (ms) => new Date(ms).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long', year: 'numeric' });
@@ -332,8 +331,9 @@ const Account = (() => {
       list.replaceChildren(...SHOP.map((item) => {
         const missing = item.price - (acc.coins || 0);
         const active = (acc[item.field] || 0) > Date.now();
+        const off = item.available === false;
         const buy = h('button', {
-          class: 'btn primary', disabled: missing > 0,
+          class: 'btn primary', disabled: off || missing > 0,
           onclick: async () => {
             const ok = await confirmDialog({
               title: active ? $t('{name} verlängern?', { name: $t(item.title) }) : $t('{name} kaufen?', { name: $t(item.title) }),
@@ -352,12 +352,13 @@ const Account = (() => {
             renderAll(); render();
             toast($t('{name} aktiv bis {date}', { name: $t(item.title), date: fmtUntil(r.until) }), 'check');
           }
-        }, missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : active ? $t(item.extendLabel) : $t('Kaufen'));
+        }, off ? $t('Zurzeit nicht verfügbar') : missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : active ? $t(item.extendLabel) : $t('Kaufen'));
         return h('div', { class: `shop-item${active ? ' owned' : ''}` },
           h('span', { class: 'shop-ic' }, icon(item.icon)),
           h('div', { class: 'shop-main' },
             h('b', {}, $t(item.title), active ? h('span', { class: 'beta-badge' }, $t('Aktiv')) : null),
             h('p', {}, $t(item.text)),
+            off ? h('small', { class: 'shop-unavailable' }, icon('clock'), h('span', {}, $t(item.unavailableText))) : null,
             item.perks ? h('div', { class: 'shop-perks' }, h('small', {}, $t('Das bekommst du:')),
               h('ul', {}, item.perks.map((p) => h('li', {}, icon('check'), h('span', {}, $t(p)))))) : null,
             active ? h('small', { class: 'shop-until' }, $t('Aktiv bis {date}', { date: fmtUntil(acc[item.field]) })) : null,
@@ -689,7 +690,7 @@ const Account = (() => {
         row($t('Name'), acc.displayName || $t('Nicht festgelegt'), h('button', { class: 'btn ghost', onclick: editName }, $t('Ändern'))),
         row($t('Profilfarbe'), $t('Farbe deines Profilbilds.'), swatches),
         row($t('Dieser PC'), acc.deviceName, h('button', { class: 'btn ghost', onclick: editDevice }, $t('Umbenennen'))),
-        row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Bald kannst du sie gegen Belohnungen wie Beta-Features eintauschen.'),
+        row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Im Shop tauschst du sie gegen Game Mode ein.'),
           h('div', { class: 'acc-coin-row' },
             h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale))),
             h('button', { class: 'btn ghost', onclick: () => shopDialog() }, icon('shop'), $t('Shop')))),

@@ -169,7 +169,7 @@ export default function Browser() {
 }
 
 function BrowserMenu({ tab, onClose, inject }: { tab: Tab; onClose: () => void; inject: (js: string) => void }) {
-  const { user, bookmarks, addBookmark, removeBookmark, newTab, navigate, passwords, betaActive } = useSession();
+  const { user, bookmarks, addBookmark, removeBookmark, newTab, navigate, passwords } = useSession();
   const page = /^https?:/.test(tab.url) ? tab.url : '';
   const marked = !!page && hasBookmark(bookmarks, page);
   const origin = page ? originOf(page) : '';
@@ -195,10 +195,6 @@ function BrowserMenu({ tab, onClose, inject }: { tab: Tab; onClose: () => void; 
   };
   const translate = () => {
     if (original) { navigate(original); return; }
-    if (!betaActive) {
-      Alert.alert('Beta-Funktion', 'Seite übersetzen gehört zum Beta-Zugriff aus dem FalCoin-Shop.', [{ text: 'Abbrechen', style: 'cancel' }, { text: 'Zum Shop', onPress: () => router.push('/shop') }]);
-      return;
-    }
     navigate(translateUrl(page));
   };
 
@@ -206,7 +202,7 @@ function BrowserMenu({ tab, onClose, inject }: { tab: Tab; onClose: () => void; 
     { icon: marked ? 'star' : 'star-outline', label: marked ? 'Lesezeichen entfernen' : 'Lesezeichen hinzufügen', hidden: !page,
       onPress: needsAccount(() => { (marked ? removeBookmark(page) : addBookmark(page, tab.title)).catch((e) => Alert.alert('Lesezeichen', errorText(e))); }) },
     { icon: 'key-outline', label: logins.length === 1 ? `Passwort ausfüllen (${logins[0].username || host})` : 'Passwort ausfüllen', hidden: !logins.length, onPress: run(fill) },
-    { icon: 'language-outline', label: original ? 'Original anzeigen' : 'Seite übersetzen', tag: original ? undefined : 'Beta', hidden: !page, onPress: run(translate) },
+    { icon: 'language-outline', label: original ? 'Original anzeigen' : 'Seite übersetzen', hidden: !page, onPress: run(translate) },
     { icon: 'share-outline', label: 'Teilen', hidden: !page, onPress: run(() => { Share.share(Platform.OS === 'ios' ? { url: page } : { message: page }).catch(() => {}); }) },
     { icon: 'link-outline', label: 'Link kopieren', hidden: !page, onPress: run(() => { Clipboard.setStringAsync(page).catch(() => {}); }) },
     { icon: 'eye-off-outline', label: 'Neuer Inkognito-Tab', onPress: run(() => newTab(true)) },

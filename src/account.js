@@ -752,7 +752,8 @@ async function loadCoins() {
 // ---------------------------------------------------------------------------
 // Zeitlich begrenzte Freischaltungen – ein erneuter Kauf verlängert ab dem bisherigen Ende
 const SHOP = {
-  beta14: { price: 1000, field: 'betaUntil', days: 14 },
+  // available: false → kann nicht gekauft werden (zurzeit gibt es keine Beta-Funktionen)
+  beta14: { price: 1000, field: 'betaUntil', days: 14, available: false },
   gameMode: { price: 150, field: 'gameModeUntil', months: 2 }
 };
 function extend(from, it) {
@@ -766,6 +767,7 @@ const refreshCoins = safe(async () => { await flushCoins(); await loadCoins(); r
 const purchase = safe(async ({ item }) => {
   const it = SHOP[item];
   if (!it) throw new AccountError('INVALID');
+  if (it.available === false) throw new AccountError('UNAVAILABLE');
   if (!load()) throw new AccountError('SIGNED_OUT');
   // Erst offene FalCoins gutschreiben, damit der Kontostand stimmt
   await flushCoins();

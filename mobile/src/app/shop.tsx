@@ -7,6 +7,9 @@ import { Button, Card, CoinIcon, Empty, Screen } from '@/components/ui';
 import { SHOP, ShopItem, errorText, fmtDate, useSession } from '@/lib/session';
 import { C, R } from '@/lib/theme';
 
+// Vorteile-Liste (optional je Artikel)
+const perksOf = (item: ShopItem): readonly string[] => ('perks' in item ? (item as { perks: readonly string[] }).perks : []);
+
 export default function Shop() {
   const { user, wallet, refreshCoins, purchase } = useSession();
   const [busy, setBusy] = useState('');
@@ -50,6 +53,7 @@ export default function Shop() {
           const until = wallet[item.field];
           const active = until > now;
           const missing = item.price - coins;
+          const off = 'available' in item && item.available === false;
           return (
             <Card key={item.id} style={[s.item, active ? s.owned : null]}>
               <View style={s.top}>
@@ -63,10 +67,10 @@ export default function Shop() {
                 </View>
               </View>
               <Text style={s.text}>{item.text}</Text>
-              {'perks' in item ? (
+              {perksOf(item).length ? (
                 <View style={{ gap: 6 }}>
                   <Text style={s.perksHead}>Das bekommst du:</Text>
-                  {item.perks.map((p) => (
+                  {perksOf(item).map((p) => (
                     <View key={p} style={{ flexDirection: 'row', gap: 8 }}>
                       <Ionicons name="checkmark" size={16} color={C.green} style={{ marginTop: 1 }} />
                       <Text style={[s.text, { flex: 1 }]}>{p}</Text>
@@ -75,10 +79,13 @@ export default function Shop() {
                 </View>
               ) : null}
               {'note' in item ? <Text style={s.note}>{item.note}</Text> : null}
+              {off && 'unavailableText' in item ? (
+                <View style={s.off}><Ionicons name="time-outline" size={16} color={C.text2} /><Text style={[s.text, { flex: 1 }]}>{item.unavailableText}</Text></View>
+              ) : null}
               {active ? <Text style={s.until}>Aktiv bis {fmtDate(until)}</Text> : null}
               <Button
-                title={missing > 0 ? `Noch ${missing.toLocaleString('de-DE')} FalCoins` : active ? item.extendLabel : 'Kaufen'}
-                disabled={missing > 0} loading={busy === item.id} onPress={() => buy(item, active)} />
+                title={off ? 'Zurzeit nicht verfügbar' : missing > 0 ? `Noch ${missing.toLocaleString('de-DE')} FalCoins` : active ? item.extendLabel : 'Kaufen'}
+                disabled={off || missing > 0} loading={busy === item.id} onPress={() => buy(item, active)} />
             </Card>
           );
         })}
@@ -107,5 +114,6 @@ const s = StyleSheet.create({
   text: { color: C.text2, fontSize: 14, lineHeight: 20 },
   perksHead: { color: C.text3, fontSize: 12.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
   note: { color: C.text3, fontSize: 13, fontStyle: 'italic' },
-  until: { color: C.green, fontSize: 13.5, fontWeight: '600' }
+  until: { color: C.green, fontSize: 13.5, fontWeight: '600' },
+  off: { flexDirection: 'row', gap: 8, padding: 12, borderRadius: R.md, backgroundColor: C.raised }
 });
