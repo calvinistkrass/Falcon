@@ -73,104 +73,210 @@ if (shots.length) {
   });
 }
 
-// ---------- Aktuelle Version von GitHub ----------
+// ---------- Aktuelle Versionen von GitHub ----------
+// Eine Abfrage für alles: die letzten Releases (Windows-Installer, Android-APK) und – falls gerade ein
+// Release gebaut wird – dessen Stand. „Fertig“ heißt: die Datei liegt im Release.
+// Bis die Daten da sind, zeigt die Seite „Neueste Version wird geladen …“ mit gelbem Punkt –
+// nie eine veraltete Versionsnummer.
 const REPO = 'calvinistkrass/Falcon';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
-async function latestRelease() {
-  try {
-    const cached = JSON.parse(sessionStorage.getItem('falcon.release2') || 'null');
-    if (cached && Date.now() - cached.at < 5 * 60_000) return cached.data;
-  } catch { /* egal */ }
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { accept: 'application/vnd.github+json' } });
-  if (!res.ok) throw new Error(String(res.status));
-  const r = await res.json();
-  const exe = (r.assets || []).find((a) => /\.exe$/i.test(a.name) && !/blockmap/i.test(a.name));
-  // Android-App: aus dem neuesten Release, sonst aus dem letzten Release mit APK
-  let apk = (r.assets || []).find((a) => /\.apk$/i.test(a.name));
-  if (!apk) {
-    try {
-      const list = await (await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=10`, { headers: { accept: 'application/vnd.github+json' } })).json();
-      for (const x of Array.isArray(list) ? list : []) { apk = (x.assets || []).find((a) => /\.apk$/i.test(a.name)); if (apk) break; }
-    } catch { /* kein APK */ }
-  }
-  const data = {
-    version: String(r.tag_name || '').replace(/^v/, ''),
-    url: exe ? exe.browser_download_url : FALLBACK,
-    size: exe ? exe.size : 0,
-    date: r.published_at,
-    apk: apk ? { url: apk.browser_download_url, size: apk.size, version: (apk.name.match(/(\d+\.\d+\.\d+)/) || [])[1] || '' } : null,
-    notes: r.body || ''
-  };
-  try { sessionStorage.setItem('falcon.release2', JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
-  return data;
-}
+const CACHE_KEY = 'falcon.dl3';
+const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } })
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
+const verOf = (name) => (String(name).match(/(\d+\.\d+\.\d+)/) || [])[1] || '';
 const mb = (n) => `${(n / 1024 / 1024).toLocaleString('de-DE', { maximumFractionDigits: 0 })} MB`;
 const dateDe = (d) => new Date(d).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
+const SPIN = '<span class="spin" aria-hidden="true"></span>';
 
-latestRelease().then((r) => {
-  document.querySelectorAll('[data-download]').forEach((a) => { a.href = r.url; });
-  document.querySelectorAll('[data-version]').forEach((el) => { el.textContent = r.version; });
-  document.querySelectorAll('[data-size]').forEach((el) => { if (r.size) el.textContent = mb(r.size); });
-  document.querySelectorAll('[data-date]').forEach((el) => { if (r.date) el.textContent = dateDe(r.date); });
-  if (r.apk) {
-    document.querySelectorAll('[data-apk]').forEach((a) => { a.href = r.apk.url; });
-    document.querySelectorAll('[data-apk-version]').forEach((el) => { if (r.apk.version) el.textContent = r.apk.version; });
-    document.querySelectorAll('[data-apk-size]').forEach((el) => { if (r.apk.size) el.textContent = mb(r.apk.size); });
-  } else {
-    document.querySelectorAll('[data-apk-label]').forEach((el) => { el.textContent = 'Bald verfügbar'; });
-  }
-}).catch(() => { /* Link führt weiter zur Release-Seite auf GitHub */ });
-
-// ---------- Neue Version wird gerade gebaut ----------
-// Läuft der Release-Workflow auf GitHub (Windows-Installer und Android-APK werden gebaut),
-// zeigt jede Seite einen Hinweis; auf der Download-Seite zusätzlich pro Plattform.
-async function buildStatus() {
+function cachedDownloads() {
   try {
-    const cached = JSON.parse(sessionStorage.getItem('falcon.build') || 'null');
-    if (cached && Date.now() - cached.at < 2 * 60_000) return cached.data;
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    // Während ein Build läuft öfter nachsehen
+    if (c && Date.now() - c.at < (c.data.build ? 90_000 : 5 * 60_000)) return c.data;
   } catch { /* egal */ }
-  const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
-  const runs = await gh(`https://api.github.com/repos/${REPO}/actions/workflows/release.yml/runs?per_page=1`);
-  const run = runs.workflow_runs?.[0];
-  let data = null;
-  // Nur laufende Builds; ein fertiger (auch fehlgeschlagener) Build zeigt nichts an
+  return null;
+}
+async function fetchDownloads() {
+  const [releases, runs] = await Promise.all([
+    gh(`https://api.github.com/repos/${REPO}/releases?per_page=10`),
+    gh(`https://api.github.com/repos/${REPO}/actions/workflows/release.yml/runs?per_page=1`).catch(() => null)
+  ]);
+  const list = (Array.isArray(releases) ? releases : []).filter((r) => !r.draft && !r.prerelease);
+  const findAsset = (test) => {
+    for (const r of list) { const a = (r.assets || []).find((x) => test(x.name)); if (a) return { r, a }; }
+    return null;
+  };
+  const exe = findAsset((n) => /\.exe$/i.test(n) && !/blockmap/i.test(n));
+  const apk = findAsset((n) => /^Falcon-Mobile-.*\.apk$/i.test(n));
+  const data = {
+    version: exe ? exe.r.tag_name.replace(/^v/, '') : '',
+    url: exe ? exe.a.browser_download_url : FALLBACK,
+    size: exe ? exe.a.size : 0,
+    date: exe ? exe.r.published_at : '',
+    apk: apk ? { url: apk.a.browser_download_url, size: apk.a.size, version: verOf(apk.a.name), date: apk.r.published_at } : null,
+    build: null
+  };
+  const run = runs?.workflow_runs?.[0];
   if (run && run.status !== 'completed' && /^v\d+\.\d+\.\d+$/.test(run.head_branch || '') && Date.now() - Date.parse(run.created_at) < 6 * 3600_000) {
-    const jobs = (await gh(`${run.jobs_url}?per_page=10`)).jobs || [];
-    const done = (name) => jobs.some((j) => j.name === name && j.status === 'completed' && j.conclusion === 'success');
-    data = { version: run.head_branch.slice(1), windows: done('windows'), android: done('android') };
+    const target = list.find((r) => r.tag_name === run.head_branch);
+    const has = (test) => !!target && (target.assets || []).some((x) => test(x.name));
+    const windows = has((n) => /\.exe$/i.test(n) && !/blockmap/i.test(n));
+    const android = has((n) => /\.apk$/i.test(n));
+    if (!windows || !android) data.build = { version: run.head_branch.slice(1), windows, android };
   }
-  try { sessionStorage.setItem('falcon.build', JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
   return data;
 }
-const SPIN = '<span class="spin" aria-hidden="true"></span>';
-buildStatus().then((b) => {
+
+function renderDownloads(d) {
+  document.querySelectorAll('[data-version-badge]').forEach((el) => {
+    el.classList.remove('is-loading');
+    el.querySelector('[data-badge-text]').textContent = d.version ? `Version ${d.version}${el.dataset.badgeSuffix || ''}` : 'Neueste Version';
+  });
+  if (d.version) document.querySelectorAll('[data-version]').forEach((el) => { el.textContent = d.version; });
+  document.querySelectorAll('[data-download]').forEach((a) => { a.href = d.url; });
+  document.querySelectorAll('[data-win-meta]').forEach((el) => {
+    el.textContent = d.version ? [`Version ${d.version}`, d.size && mb(d.size), d.date && dateDe(d.date)].filter(Boolean).join(' · ') : 'Neueste Version auf GitHub';
+  });
+  if (d.apk) {
+    document.querySelectorAll('[data-apk]').forEach((a) => { a.href = d.apk.url; });
+    document.querySelectorAll('[data-apk-version]').forEach((el) => { if (d.apk.version) el.textContent = d.apk.version; });
+    document.querySelectorAll('[data-apk-meta]').forEach((el) => {
+      el.textContent = [d.apk.version && `Version ${d.apk.version}`, d.apk.size && mb(d.apk.size), d.apk.date && dateDe(d.apk.date)].filter(Boolean).join(' · ');
+    });
+  } else {
+    document.querySelectorAll('[data-apk-meta]').forEach((el) => { el.textContent = 'Noch keine Version veröffentlicht'; });
+    document.querySelectorAll('[data-apk-label]').forEach((el) => { el.textContent = 'Bald verfügbar'; });
+  }
+
+  // Neue Version wird gerade gebaut → Hinweis oben auf jeder Seite und pro Plattform auf der Download-Seite
+  document.querySelectorAll('.build-banner').forEach((el) => el.remove());
+  document.querySelectorAll('[data-build-win], [data-build-apk]').forEach((el) => { el.hidden = true; });
+  const b = d.build;
   if (!b) return;
-  // Hinweis oben auf jeder Seite
   const main = document.querySelector('main');
-  if (main && !(b.windows && b.android)) {
-    const bar = document.createElement('div');
-    bar.className = 'build-banner';
-    bar.setAttribute('role', 'status');
+  if (main) {
     const text = b.windows
       ? `<b>Die neue Android-Version wird für den Download vorbereitet.</b> Sie ist in den nächsten Minuten bis Stunden verfügbar – Falcon ${b.version} für Windows ist schon da.`
       : `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} ist in den nächsten Minuten bis Stunden verfügbar.`;
+    const bar = document.createElement('div');
+    bar.className = 'build-banner';
+    bar.setAttribute('role', 'status');
     bar.innerHTML = `<div class="container">${SPIN}<span>${text}</span>${location.pathname.startsWith('/download') ? '' : '<a href="/download">Zum Download</a>'}</div>`;
     main.prepend(bar);
   }
-  // Download-Seite: pro Plattform
   if (!b.windows) {
     document.querySelectorAll('[data-build-win]').forEach((el) => {
-      el.innerHTML = `${SPIN}<span>Version ${b.version} wird gerade für den Download vorbereitet. Bis dahin bekommst du die bisherige Version – sie aktualisiert sich danach automatisch.</span>`;
+      el.innerHTML = `${SPIN}<span>Version ${b.version} wird gerade für den Download vorbereitet. Bis dahin bekommst du ${d.version ? `Version ${d.version}` : 'die bisherige Version'} – sie aktualisiert sich danach automatisch.</span>`;
       el.hidden = false;
     });
   }
   if (!b.android) {
     document.querySelectorAll('[data-build-apk]').forEach((el) => {
-      el.innerHTML = `${SPIN}<span>Die neue Android-Version wird gerade für den Download vorbereitet. Bis dahin bekommst du die bisherige.</span>`;
+      el.innerHTML = `${SPIN}<span>Die neue Android-Version wird gerade für den Download vorbereitet. Bis dahin bekommst du ${d.apk?.version ? `Version ${d.apk.version}` : 'die bisherige'}.</span>`;
       el.hidden = false;
     });
   }
-}).catch(() => { /* GitHub nicht erreichbar oder Limit erreicht – dann ohne Hinweis */ });
+}
+
+const cached = cachedDownloads();
+if (cached) renderDownloads(cached);
+else {
+  fetchDownloads().then(renderDownloads).catch(() => {
+    // GitHub nicht erreichbar (oder Limit erreicht): Links führen zur Release-Seite
+    document.querySelectorAll('[data-version-badge]').forEach((el) => { el.classList.remove('is-loading'); el.querySelector('[data-badge-text]').textContent = 'Neueste Version'; });
+    document.querySelectorAll('[data-win-meta], [data-apk-meta]').forEach((el) => { el.textContent = 'Neueste Version auf GitHub'; });
+  });
+}
+
+// ---------- Gerät erkennen und passende Version anbieten ----------
+async function detectDevice() {
+  const ua = navigator.userAgent || '';
+  const uad = navigator.userAgentData;
+  let platform = 'windows', name = '', model = '', version = '';
+  if (/Android/i.test(ua)) {
+    platform = 'android';
+    version = (ua.match(/Android ([\d.]+)/) || [])[1] || '';
+    model = (ua.match(/Android [\d.]+;\s*([^;)]+?)(?:\s+Build\/|\))/) || [])[1] || '';
+    name = /Mobile/i.test(ua) ? 'Android-Handy' : 'Android-Tablet';
+  } else if (/iPhone|iPod/i.test(ua)) {
+    platform = 'ios'; name = 'iPhone'; version = (ua.match(/OS (\d+)_(\d+)/) || []).slice(1, 3).join('.');
+  } else if (/iPad/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) {
+    platform = 'ios'; name = 'iPad'; version = (ua.match(/OS (\d+)_(\d+)/) || []).slice(1, 3).join('.');
+  } else if (/CrOS/i.test(ua)) {
+    platform = 'android'; name = 'Chromebook';
+  } else if (/Windows NT/i.test(ua)) {
+    platform = 'windows'; name = 'Windows-PC';
+  } else if (/Macintosh|Mac OS X/i.test(ua)) {
+    platform = 'mac'; name = 'Mac';
+  } else if (/Linux/i.test(ua)) {
+    platform = 'linux'; name = 'Linux-PC';
+  }
+  // Chromium nennt das echte Modell und die Windows-Version nur auf Nachfrage
+  if (uad?.getHighEntropyValues) {
+    try {
+      const h = await uad.getHighEntropyValues(['model', 'platformVersion']);
+      if (h.model) model = h.model;
+      if (platform === 'windows' && h.platformVersion) version = Number(h.platformVersion.split('.')[0]) >= 13 ? '11' : '10';
+      if (platform === 'android' && h.platformVersion) version = h.platformVersion.replace(/\.0(\.0)?$/, '');
+    } catch { /* egal */ }
+  }
+  if (model === 'K' || /^Linux/i.test(model)) model = ''; // gekürzte Kennung neuer Chrome-Versionen
+  const os = { windows: 'Windows', android: 'Android', ios: name === 'iPad' ? 'iPadOS' : 'iOS', mac: 'macOS', linux: 'Linux' }[platform];
+  const device = model || name;
+  return { platform, label: [device, version ? `${os} ${version}` : (model ? os : '')].filter(Boolean).join(' · ') };
+}
+
+const PLATFORM_KEY = 'falcon.platform';
+const picker = document.querySelector('[data-platform]');
+const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Falcon auf iPhone & iPad', mac: 'Kostenlos herunterladen', linux: 'Kostenlos herunterladen' };
+const SOON = {
+  ios: { title: 'Falcon für iPhone & iPad', text: 'Eine eigene App für iPhone und iPad gibt es noch nicht. Bis dahin zeigt dir die Falcon-Web-App deine Lesezeichen und die Tabs deiner PCs.', btn: 'Zur Falcon-Web-App', href: '/app' },
+  mac: { title: 'Falcon für macOS', text: 'Falcon für macOS ist in Vorbereitung. Bis dahin gibt es Falcon für Windows 10 und 11 und die Android-App.', btn: 'Windows-Version ansehen', href: '#windows' },
+  linux: { title: 'Falcon für Linux', text: 'Falcon für Linux ist in Vorbereitung. Bis dahin gibt es Falcon für Windows 10 und 11 und die Android-App.', btn: 'Windows-Version ansehen', href: '#windows' }
+};
+
+function showPlatform(p) {
+  document.querySelectorAll('[data-platform-box]').forEach((el) => { el.hidden = !el.dataset.platformBox.split(' ').includes(p); });
+  document.querySelectorAll('[data-platform-steps]').forEach((el) => { el.hidden = !el.dataset.platformSteps.split(' ').includes(p); });
+  const soon = SOON[p];
+  if (soon) {
+    document.querySelector('[data-soon-title]').textContent = soon.title;
+    document.querySelector('[data-soon-text]').textContent = soon.text;
+    const btn = document.querySelector('[data-soon-btn]');
+    btn.textContent = soon.btn;
+    btn.href = soon.href;
+  }
+  if (picker && picker.value !== p) picker.value = p;
+}
+
+if (picker) {
+  // Sofort die naheliegende Plattform zeigen, dann genauer erkennen
+  showPlatform('windows');
+  document.querySelector('[data-soon-btn]')?.addEventListener('click', (e) => {
+    if (e.currentTarget.getAttribute('href') === '#windows') { e.preventDefault(); showPlatform('windows'); }
+  });
+  picker.addEventListener('change', () => {
+    showPlatform(picker.value);
+    try { localStorage.setItem(PLATFORM_KEY, picker.value); } catch { /* egal */ }
+  });
+}
+detectDevice().then((dev) => {
+  // Startseite: Knopf passend zum Gerät beschriften
+  document.querySelectorAll('[data-cta]').forEach((a) => {
+    const label = a.querySelector('[data-cta-label]');
+    if (label) label.textContent = HOME_CTA[dev.platform];
+    if (dev.platform === 'android' || dev.platform === 'ios') a.href = `/download#${dev.platform}`;
+  });
+  if (!picker) return;
+  let chosen = '';
+  try { chosen = localStorage.getItem(PLATFORM_KEY) || ''; } catch { /* egal */ }
+  const fromHash = { '#android': 'android', '#windows': 'windows', '#ios': 'ios' }[location.hash] || '';
+  const info = document.querySelector('[data-detected]');
+  if (info) info.textContent = dev.label ? `Erkannt: ${dev.label}` : 'Wähle deine Plattform';
+  document.querySelector('.dl-picker')?.removeAttribute('hidden');
+  showPlatform(fromHash || chosen || dev.platform);
+});
 
 // Neuerungen der aktuellen Version aus CHANGELOG.md (Download-Seite)
 const notesEl = document.querySelector('[data-notes]');

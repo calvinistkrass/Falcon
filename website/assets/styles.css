@@ -225,7 +225,6 @@ h3 { font-size: 19px; font-weight: 650; letter-spacing: -.01em; line-height: 1.3
 .dl-box { max-width: 560px; margin: 36px auto 0; padding: 28px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); text-align: left; }
 .dl-row { display: flex; align-items: center; gap: 16px; }
 .dl-row .os { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: rgb(59 158 255 / .14); color: #7cbcff; flex: none; }
-.dl-row .os.android { background: rgb(61 214 140 / .14); color: #6ee7a8; }
 .dl-box + .dl-box { margin-top: 16px; }
 .dl-row .os svg { width: 26px; height: 26px; }
 .dl-row div { flex: 1; min-width: 0; }
@@ -317,3 +316,24 @@ h3 { font-size: 19px; font-weight: 650; letter-spacing: -.01em; line-height: 1.3
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.5s; } }
 @media (max-width: 600px) { .build-banner .container { flex-wrap: wrap; row-gap: 6px; } .build-banner span:not(.spin) { flex-basis: calc(100% - 28px); } .build-banner a { margin-left: 28px; } }
+
+/* Versionsabzeichen: gelb, solange die neueste Version geladen wird */
+.eyebrow.is-loading { background: rgb(245 181 68 / .12); color: #f5d08a; }
+.eyebrow.is-loading i { background: var(--gold); box-shadow: 0 0 0 3px rgb(245 181 68 / .22); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .eyebrow.is-loading i { animation: none; } }
+
+/* Plattform-Auswahl auf der Download-Seite */
+.dl-picker { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; max-width: 560px; margin: 30px auto 0; }
+.dl-picker[hidden] { display: none; }
+.dl-detected { color: var(--text-2); font-size: 14px; }
+.dl-select { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px 0 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line-2); cursor: pointer; }
+.dl-select:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dl-select-label { color: var(--text-3); font-size: 13px; }
+.dl-select select { appearance: none; -webkit-appearance: none; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 600; padding-right: 22px; cursor: pointer; }
+.dl-select select option { background: #16161c; color: #ededf1; }
+.dl-select svg { position: absolute; right: 10px; width: 16px; height: 16px; color: var(--text-2); pointer-events: none; }
+.dl-picker + .dl-box { margin-top: 18px; }
+.dl-box[hidden], [data-platform-steps][hidden] { display: none; }
+.dl-soon-text { margin: 18px 0 0; color: var(--text-2); font-size: 14.5px; line-height: 1.55; }
+[data-platform-steps] + [data-platform-steps]:not([hidden]) .steps-h { margin-top: 44px; }

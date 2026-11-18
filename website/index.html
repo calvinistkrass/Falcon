@@ -18,8 +18,8 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/assets/logo.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/styles.css">
-<script src="/assets/main.js" defer></script>
+<link rel="stylesheet" href="/assets/styles.css?v=20261118">
+<script src="/assets/main.js?v=20261118" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Zum Inhalt springen</a>
@@ -39,11 +39,11 @@
 <section class="hero">
   <div class="container">
     <div class="hero-inner">
-      <span class="eyebrow"><i></i>Version <span data-version>2.0.2</span> ist da</span>
+      <span class="eyebrow is-loading" data-version-badge data-badge-suffix=" ist da"><i></i><span data-badge-text>Neueste Version wird geladen …</span></span>
       <h1>Der Browser, der <span class="grad">für Gamer</span> gebaut ist.</h1>
       <p class="lead">Falcon gibt deinen Spielen CPU, Arbeitsspeicher und Bandbreite zurück – mit Game Mode, Netzwerk-Limiter, eingebautem Werbeblocker und Ende-zu-Ende-verschlüsseltem Sync.</p>
       <div class="hero-cta">
-        <a class="btn btn-primary btn-lg" href="/download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>Kostenlos herunterladen</a>
+        <a class="btn btn-primary btn-lg" href="/download" data-cta><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg><span data-cta-label>Kostenlos herunterladen</span></a>
         <a class="btn btn-ghost btn-lg" href="/funktionen">Alle Funktionen<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       </div>
       <div class="hero-meta">
@@ -153,7 +153,7 @@
     </div>
     <div class="footer-bottom">
       <span>© <span data-year>2026</span> Falcon · MIT-Lizenz</span>
-      <span>Aktuelle Version <span data-version>2.0.2</span></span>
+      <span>Aktuelle Version <span data-version>…</span></span>
     </div>
   </div>
 </footer>
