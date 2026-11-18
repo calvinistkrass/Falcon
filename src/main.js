@@ -411,7 +411,7 @@ function setupDownloads(ses) {
       if (got > allowed) {
         throttled = true;
         item.pause();
-        setTimeout(() => { throttled = false; if (item.getState() === 'progressing' && item.isPaused() && !item.userPaused) item.resume(); }, Math.min(2000, ((got - allowed) / netLimitBytes) * 1000));
+        setTimeout(() => { throttled = false; if (item.getState() === 'progressing' && item.isPaused() && !item.userPaused && !item.falconBoostPaused) item.resume(); }, Math.min(2000, ((got - allowed) / netLimitBytes) * 1000));
       }
       if (elapsed > 3) { windowStart = Date.now(); windowBytes = item.getReceivedBytes(); }
     });
@@ -492,6 +492,48 @@ function applyNetLimit() {
   netLimitBytes = active ? Math.round(mbps * 125000 * 1.5) : 0;
   for (const wc of webContents.getAllWebContents()) throttleWebview(wc, netLimitBytes);
 }
+
+// Neuer Tab lädt zuerst: Solange ein frisch geöffneter Tab lädt, werden alle anderen Tabs und
+// Seitenleisten-Apps stark gedrosselt und laufende Downloads kurz pausiert. Sobald der Tab fertig
+// geladen hat (spätestens nach 8 Sekunden), läuft alles wieder normal bzw. mit dem Netzwerk-Limiter.
+const BOOST_MAX_MS = 8000;
+const BOOST_BG_BYTES = 48 * 1024;        // ~0,4 Mbit/s für Hintergrund-Tabs
+const BOOST_AUDIO_BYTES = 256 * 1024;    // ~2 Mbit/s für Tabs, die gerade Ton abspielen (Musik/Stream läuft weiter)
+let boost = null; // { id, timer, paused: DownloadItem[] }
+function endTabBoost() {
+  if (!boost) return;
+  const b = boost; boost = null;
+  clearTimeout(b.timer);
+  for (const item of b.paused) {
+    item.falconBoostPaused = false;
+    if (item.getState() === 'progressing' && item.isPaused() && !item.userPaused) item.resume();
+  }
+  // Zurück auf „keine Drosselung“ bzw. den eingestellten Netzwerk-Limiter
+  for (const wc of webContents.getAllWebContents()) {
+    if (wc.falconBoosted) { wc.falconBoosted = false; throttleWebview(wc, netLimitBytes).catch(() => {}); }
+  }
+}
+function startTabBoost(id) {
+  endTabBoost();
+  const target = webContents.fromId(id);
+  if (!target || target.isDestroyed() || target.getType() !== 'webview') return false;
+  const cap = (n) => (netLimitBytes ? Math.min(n, netLimitBytes) : n);
+  for (const wc of webContents.getAllWebContents()) {
+    if (wc.id === id || wc.isDestroyed() || wc.getType() !== 'webview' || wc.falconFrozen) continue;
+    wc.falconBoosted = true;
+    throttleWebview(wc, cap(wc.isCurrentlyAudible() ? BOOST_AUDIO_BYTES : BOOST_BG_BYTES)).catch(() => {});
+  }
+  const paused = [];
+  for (const item of downloadItems.values()) {
+    if (item.getState() === 'progressing' && !item.isPaused()) { item.falconBoostPaused = true; item.pause(); paused.push(item); }
+  }
+  boost = { id, paused, timer: setTimeout(endTabBoost, BOOST_MAX_MS) };
+  const done = () => { if (boost?.id === id) endTabBoost(); };
+  target.once('did-stop-loading', done);
+  target.once('destroyed', done);
+  return true;
+}
+ipcMain.handle('tab:prioritize', (e, id) => (isUi(e) ? startTabBoost(Number(id)) : false));
 
 // falcon://<seite>/ liefert Dateien aus src/ui (Seite selbst aus src/ui/pages)
 const UI_DIR = path.join(__dirname, 'ui');

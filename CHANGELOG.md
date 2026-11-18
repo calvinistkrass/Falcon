@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [Unreleased]
+
+### Added
+- **New tabs load first**: while a tab you just opened is loading, Falcon throttles all other tabs and sidebar apps and briefly pauses running downloads, so the new page gets the full bandwidth. Tabs playing audio keep enough bandwidth for music and streams. Everything goes back to normal as soon as the tab has loaded (at most after 8 seconds). Tabs opened in the background don't trigger this.
+
 ## [2.1.3] – 2026-11-18
 
 ### Changed

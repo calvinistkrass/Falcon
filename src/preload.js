@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('falcon', {
   newIncognitoWindow: (url) => ipcRenderer.send('win:new-incognito', url),
   openOverlay: (url) => ipcRenderer.send('overlay:open', url),
   setTabFrozen: (webContentsId, frozen) => ipcRenderer.invoke('tab:set-frozen', webContentsId, frozen),
+  prioritizeTab: (webContentsId) => ipcRenderer.invoke('tab:prioritize', webContentsId),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
   metrics: () => ipcRenderer.invoke('metrics'),

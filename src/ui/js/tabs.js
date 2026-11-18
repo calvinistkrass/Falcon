@@ -36,6 +36,7 @@ const Tabs = (() => {
       sleeping: false,
       error: null,
       lastActive: Date.now(),
+      created: Date.now(),
       webview: null,
       el: null
     };
@@ -136,6 +137,10 @@ const Tabs = (() => {
 
     wv.addEventListener('did-start-navigation', (e) => {
       if (!e.isMainFrame || e.isSameDocument) return;
+      // Frisch geöffneter Tab im Vordergrund: Hintergrund-Verbindungen drosseln, bis er geladen hat
+      if (isActive(tab) && Date.now() - tab.created < 60_000 && /^https?:/i.test(e.url)) {
+        try { F.prioritizeTab(wv.getWebContentsId()); } catch { /* Webview noch nicht bereit */ }
+      }
       if (hostOf(e.url) !== hostOf(tab.url)) tab.favicon = null;
       if (tab.error) { tab.error = null; if (isActive(tab)) emit('page-error', tab); }
     });
