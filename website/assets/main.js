@@ -79,7 +79,7 @@ const FALLBACK = `https://github.com/${REPO}/releases/latest`;
 async function latestRelease() {
   try {
     const cached = JSON.parse(sessionStorage.getItem('falcon.release2') || 'null');
-    if (cached && Date.now() - cached.at < 30 * 60_000) return cached.data;
+    if (cached && Date.now() - cached.at < 5 * 60_000) return cached.data;
   } catch { /* egal */ }
   const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { accept: 'application/vnd.github+json' } });
   if (!res.ok) throw new Error(String(res.status));
@@ -120,6 +120,57 @@ latestRelease().then((r) => {
     document.querySelectorAll('[data-apk-label]').forEach((el) => { el.textContent = 'Bald verfügbar'; });
   }
 }).catch(() => { /* Link führt weiter zur Release-Seite auf GitHub */ });
+
+// ---------- Neue Version wird gerade gebaut ----------
+// Läuft der Release-Workflow auf GitHub (Windows-Installer und Android-APK werden gebaut),
+// zeigt jede Seite einen Hinweis; auf der Download-Seite zusätzlich pro Plattform.
+async function buildStatus() {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem('falcon.build') || 'null');
+    if (cached && Date.now() - cached.at < 2 * 60_000) return cached.data;
+  } catch { /* egal */ }
+  const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
+  const runs = await gh(`https://api.github.com/repos/${REPO}/actions/workflows/release.yml/runs?per_page=1`);
+  const run = runs.workflow_runs?.[0];
+  let data = null;
+  // Nur laufende Builds; ein fertiger (auch fehlgeschlagener) Build zeigt nichts an
+  if (run && run.status !== 'completed' && /^v\d+\.\d+\.\d+$/.test(run.head_branch || '') && Date.now() - Date.parse(run.created_at) < 6 * 3600_000) {
+    const jobs = (await gh(`${run.jobs_url}?per_page=10`)).jobs || [];
+    const done = (name) => jobs.some((j) => j.name === name && j.status === 'completed' && j.conclusion === 'success');
+    data = { version: run.head_branch.slice(1), windows: done('windows'), android: done('android') };
+  }
+  try { sessionStorage.setItem('falcon.build', JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
+  return data;
+}
+const SPIN = '<span class="spin" aria-hidden="true"></span>';
+buildStatus().then((b) => {
+  if (!b) return;
+  // Hinweis oben auf jeder Seite
+  const main = document.querySelector('main');
+  if (main && !(b.windows && b.android)) {
+    const bar = document.createElement('div');
+    bar.className = 'build-banner';
+    bar.setAttribute('role', 'status');
+    const text = b.windows
+      ? `<b>Die neue Android-Version wird für den Download vorbereitet.</b> Sie ist in den nächsten Minuten bis Stunden verfügbar – Falcon ${b.version} für Windows ist schon da.`
+      : `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} ist in den nächsten Minuten bis Stunden verfügbar.`;
+    bar.innerHTML = `<div class="container">${SPIN}<span>${text}</span>${location.pathname.startsWith('/download') ? '' : '<a href="/download">Zum Download</a>'}</div>`;
+    main.prepend(bar);
+  }
+  // Download-Seite: pro Plattform
+  if (!b.windows) {
+    document.querySelectorAll('[data-build-win]').forEach((el) => {
+      el.innerHTML = `${SPIN}<span>Version ${b.version} wird gerade für den Download vorbereitet. Bis dahin bekommst du die bisherige Version – sie aktualisiert sich danach automatisch.</span>`;
+      el.hidden = false;
+    });
+  }
+  if (!b.android) {
+    document.querySelectorAll('[data-build-apk]').forEach((el) => {
+      el.innerHTML = `${SPIN}<span>Die neue Android-Version wird gerade für den Download vorbereitet. Bis dahin bekommst du die bisherige.</span>`;
+      el.hidden = false;
+    });
+  }
+}).catch(() => { /* GitHub nicht erreichbar oder Limit erreicht – dann ohne Hinweis */ });
 
 // Neuerungen der aktuellen Version aus CHANGELOG.md (Download-Seite)
 const notesEl = document.querySelector('[data-notes]');
