@@ -18,8 +18,8 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/assets/logo.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/styles.css?v=20261118">
-<script src="/assets/main.js?v=20261118" defer></script>
+<link rel="stylesheet" href="/assets/styles.css?v=20261118b">
+<script src="/assets/main.js?v=20261118b" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Zum Inhalt springen</a>
@@ -44,17 +44,22 @@
     <p class="lead" style="max-width:560px;margin:0 auto">Kostenlos, ohne Werbung und Open Source. Nach der Installation hält sich Falcon selbst auf dem neuesten Stand.</p>
     <div class="dl-picker" hidden>
       <span class="dl-detected" data-detected>Dein Gerät wird erkannt …</span>
-      <label class="dl-select">
-        <span class="dl-select-label">Version für</span>
-        <select data-platform aria-label="Plattform wählen">
-          <option value="windows">Windows-PC</option>
-          <option value="android">Android</option>
-          <option value="ios">iPhone &amp; iPad</option>
-          <option value="mac">macOS</option>
-          <option value="linux">Linux</option>
-        </select>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
-      </label>
+      <div class="dl-select" data-platform-menu>
+        <button type="button" class="dl-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Plattform wählen">
+          <span class="dl-select-ic" data-platform-icon><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5 10.5 4.5v7h-7zM12 4.3l8.5-1.3v8.5H12zM3.5 12.5h7v7l-7-1zM12 12.5h8.5V21L12 19.7z"/></svg></span>
+          <span class="dl-select-label">Version für</span>
+          <b data-platform-current>Windows-PC</b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+        </button>
+        <ul class="dl-select-list" role="listbox" tabindex="-1" aria-label="Plattform" hidden>
+          <li role="option" id="pf-windows" data-value="windows" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5 10.5 4.5v7h-7zM12 4.3l8.5-1.3v8.5H12zM3.5 12.5h7v7l-7-1zM12 12.5h8.5V21L12 19.7z"/></svg></span><span class="dl-opt-text"><b>Windows-PC</b><small>Windows 10 und 11</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
+          <li role="option" id="pf-android" data-value="android" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span><span class="dl-opt-text"><b>Android</b><small>Handy und Tablet, APK</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
+          <li role="option" id="pf-ios" data-value="ios" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span><span class="dl-opt-text"><b>iPhone &amp; iPad</b><small>Web-App</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
+          <li role="option" id="pf-mac" data-value="mac" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4.5" width="16" height="11" rx="1.5"/><path d="M2.5 19h19"/></svg></span><span class="dl-opt-text"><b>macOS</b><small>In Vorbereitung</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
+          <li role="option" id="pf-linux" data-value="linux" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m7.5 10 2.5 2-2.5 2M12 14.5h4.5"/></svg></span><span class="dl-opt-text"><b>Linux</b><small>In Vorbereitung</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
+        </ul>
+        <select data-platform hidden aria-hidden="true" tabindex="-1"><option value="windows">Windows-PC</option><option value="android">Android</option><option value="ios">iPhone &amp; iPad</option><option value="mac">macOS</option><option value="linux">Linux</option></select>
+      </div>
     </div>
     <div class="dl-box" id="windows" data-platform-box="windows">
       <div class="dl-row">

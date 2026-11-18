@@ -236,6 +236,65 @@ const SOON = {
   linux: { title: 'Falcon für Linux', text: 'Falcon für Linux ist in Vorbereitung. Bis dahin gibt es Falcon für Windows 10 und 11 und die Android-App.', btn: 'Windows-Version ansehen', href: '#windows' }
 };
 
+// Eigenes Auswahlmenü: der ganze Knopf öffnet die Liste; Maus, Touch und Tastatur
+const menuRoot = document.querySelector('[data-platform-menu]');
+function syncMenu(p) {
+  if (!menuRoot) return;
+  const opt = menuRoot.querySelector(`[data-value="${p}"]`);
+  if (!opt) return;
+  menuRoot.querySelector('[data-platform-current]').innerHTML = opt.querySelector('b').innerHTML;
+  menuRoot.querySelector('[data-platform-icon]').innerHTML = opt.querySelector('.dl-opt-ic').innerHTML;
+  menuRoot.querySelectorAll('[role="option"]').forEach((o) => o.setAttribute('aria-selected', String(o === opt)));
+}
+if (menuRoot) {
+  const btn = menuRoot.querySelector('.dl-select-btn');
+  const list = menuRoot.querySelector('.dl-select-list');
+  const options = [...list.querySelectorAll('[role="option"]')];
+  let active = -1;
+  const highlight = (i) => {
+    active = (i + options.length) % options.length;
+    options.forEach((o, k) => o.classList.toggle('hl', k === active));
+    list.setAttribute('aria-activedescendant', options[active].id);
+    options[active].scrollIntoView({ block: 'nearest' });
+  };
+  const open = () => {
+    list.hidden = false;
+    menuRoot.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+    highlight(Math.max(0, options.findIndex((o) => o.getAttribute('aria-selected') === 'true')));
+    list.focus();
+  };
+  const close = (focusBtn = true) => {
+    if (list.hidden) return;
+    list.hidden = true;
+    menuRoot.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+    if (focusBtn) btn.focus();
+  };
+  const choose = (o) => {
+    close();
+    if (picker && picker.value !== o.dataset.value) {
+      picker.value = o.dataset.value;
+      picker.dispatchEvent(new Event('change'));
+    }
+  };
+  btn.addEventListener('click', () => (list.hidden ? open() : close()));
+  options.forEach((o, i) => {
+    o.addEventListener('click', () => choose(o));
+    o.addEventListener('mousemove', () => { if (active !== i) highlight(i); });
+  });
+  btn.addEventListener('keydown', (e) => { if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); open(); } });
+  list.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); highlight(active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); highlight(0); }
+    else if (e.key === 'End') { e.preventDefault(); highlight(options.length - 1); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(options[active]); }
+    else if (e.key === 'Escape' || e.key === 'Tab') { close(e.key === 'Escape'); }
+  });
+  document.addEventListener('click', (e) => { if (!menuRoot.contains(e.target)) close(false); });
+}
+
 function showPlatform(p) {
   document.querySelectorAll('[data-platform-box]').forEach((el) => { el.hidden = !el.dataset.platformBox.split(' ').includes(p); });
   document.querySelectorAll('[data-platform-steps]').forEach((el) => { el.hidden = !el.dataset.platformSteps.split(' ').includes(p); });
@@ -248,6 +307,7 @@ function showPlatform(p) {
     btn.href = soon.href;
   }
   if (picker && picker.value !== p) picker.value = p;
+  syncMenu(p);
 }
 
 if (picker) {
