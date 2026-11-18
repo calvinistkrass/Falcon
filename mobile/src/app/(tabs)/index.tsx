@@ -9,6 +9,7 @@ import { Button, Card, CoinIcon, Field, Favicon } from '@/components/ui';
 import { errorText, useSession } from '@/lib/session';
 import { fetchJson } from '@/lib/firebase';
 import { C, R, toUrl } from '@/lib/theme';
+import { useAppUpdate } from '@/lib/update';
 
 const SHORTCUTS = [
   ['YouTube', 'https://m.youtube.com'], ['Twitch', 'https://m.twitch.tv'], ['Steam', 'https://store.steampowered.com'],
@@ -22,6 +23,7 @@ export default function Start() {
   const [q, setQ] = useState('');
   const [games, setGames] = useState<Game[]>([]);
   const [claiming, setClaiming] = useState(false);
+  const { update, download, dismiss } = useAppUpdate();
 
   useEffect(() => {
     fetchJson<any[]>('https://www.gamerpower.com/api/giveaways?platform=pc&type=game&sort-by=popularity')
@@ -60,6 +62,22 @@ export default function Start() {
             </Pressable>
           ) : null}
         </View>
+
+        {update ? (
+          <Card style={s.update}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={s.updateIc}><Ionicons name="arrow-down-circle" size={24} color={C.accent} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.cardTitle}>Neue Version verfügbar</Text>
+                <Text style={s.cardText}>Falcon Mobile {update.version}{update.size ? ` · ${Math.round(update.size / 1048576)} MB` : ''} – herunterladen und über die bisherige App installieren.</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}><Button title="Später" variant="ghost" small onPress={dismiss} /></View>
+              <View style={{ flex: 1 }}><Button title="Herunterladen" icon="download-outline" small onPress={download} /></View>
+            </View>
+          </Card>
+        ) : null}
 
         <Field icon="search" placeholder="Suchen oder Adresse eingeben" value={q} onChangeText={setQ} onSubmitEditing={submit}
           returnKeyType="go" autoCapitalize="none" autoCorrect={false} keyboardType="web-search" />
@@ -127,6 +145,8 @@ const s = StyleSheet.create({
   tileIc: { width: 54, height: 54, borderRadius: 27, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, alignItems: 'center', justifyContent: 'center' },
   tileText: { color: C.text2, fontSize: 12.5, maxWidth: 76 },
   daily: { marginTop: 18, padding: 16, gap: 14 },
+  update: { marginBottom: 18, padding: 16, gap: 14, borderColor: 'rgba(124,108,255,0.45)' },
+  updateIc: { width: 42, height: 42, borderRadius: 12, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
   dailyIc: { width: 42, height: 42, borderRadius: 12, backgroundColor: C.goldSoft, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { color: C.text, fontSize: 16, fontWeight: '700' },
   cardText: { color: C.text2, fontSize: 14, marginTop: 3, lineHeight: 19 },

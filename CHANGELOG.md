@@ -2,6 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.1.2] – 2026-11-18
+
+### Fixed
+- **Falcon Mobile hung on the logo in BlueStacks and other PC emulators.** They run on x86 processors, but the APK only contained ARM code; the translated React Native library failed to load (`dl_unwind_find_exidx` missing) and the app restarted in a loop. The APK (Falcon-Mobile-1.1.1.apk) now also includes x86 and x86_64 code.
+
+### Added
+- **Update notice in Falcon Mobile 1.1.1**: when a newer APK is attached to a GitHub release, the start screen shows "New version available" with a download button. "Later" hides it until the next version. Checked at startup and every 6 hours.
+
+No changes to the Windows app.
+
 ## [2.1.1] – 2026-11-15
 
 ### Fixed

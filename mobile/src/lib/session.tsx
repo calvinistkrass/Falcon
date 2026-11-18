@@ -7,7 +7,8 @@ import { decryptJson, encryptJson, fromBase64, newDataKey, randomId, toBase64, u
 import { load, save } from './storage';
 import { hostOf } from './theme';
 
-export const APP_VERSION = '1.1.0';
+// Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
+export const APP_VERSION = '1.1.1';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
