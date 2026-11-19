@@ -197,4 +197,14 @@ F.on('win-state', (s) => {
   emit('settings', state.settings);
   if (INCOGNITO) { document.body.classList.add('incognito'); document.title = 'Falcon Inkognito'; }
   if (!(state.settings.restoreSession && Tabs.restoreSession())) Tabs.create();
+  // Ladebildschirm: mindestens kurz zeigen (sonst flackert er), dann sanft ausblenden
+  const boot = document.getElementById('bootLoader');
+  if (boot) {
+    const shown = performance.now();
+    setTimeout(() => {
+      boot.classList.add('done');
+      boot.addEventListener('transitionend', () => boot.remove(), { once: true });
+      setTimeout(() => boot.remove(), 800);
+    }, Math.max(0, 900 - shown));
+  }
 })();

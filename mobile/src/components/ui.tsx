@@ -1,7 +1,8 @@
 // Gemeinsame Bausteine im Falcon-Look
-import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle, StyleProp } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle, StyleProp } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,36 +23,69 @@ export function Card({ children, style }: { children: React.ReactNode; style?: S
   return <View style={[s.card, style]}>{children}</View>;
 }
 
+// Knopf im Uiverse-Stil: Farbverlauf mit Glanzkante, leuchtender Schatten, federndes Eindrücken
 export function Button({ title, onPress, icon, variant = 'primary', loading, disabled, small }: {
   title: string; onPress?: () => void; icon?: IconName; variant?: 'primary' | 'ghost' | 'gold'; loading?: boolean; disabled?: boolean; small?: boolean;
 }) {
-  const bg = variant === 'primary' ? C.accent : variant === 'gold' ? C.gold : 'rgba(255,255,255,0.06)';
+  const [scale] = useState(() => new Animated.Value(1));
+  const spring = (to: number) => Animated.spring(scale, { toValue: to, useNativeDriver: Platform.OS !== 'web', speed: 40, bounciness: 8 }).start();
   const fg = variant === 'gold' ? '#3d2700' : C.text;
+  const colors = variant === 'gold' ? ['#ffd27a', C.gold, '#e59a1f'] as const : ['#8f80ff', C.accent, '#4f8dff'] as const;
+  const glow = variant === 'gold' ? C.gold : C.accent;
+  const content = loading ? <ActivityIndicator color={fg} /> : (
+    <>
+      {icon ? <Ionicons name={icon} size={small ? 16 : 18} color={fg} /> : null}
+      <Text style={[s.btnText, small && { fontSize: 14 }, { color: fg }]}>{title}</Text>
+    </>
+  );
+  const off = disabled || loading;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
-      style={({ pressed }) => [s.btn, small && s.btnSmall, { backgroundColor: bg, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
-        variant === 'ghost' && { borderWidth: 1, borderColor: C.line2 }]}
-      accessibilityRole="button"
-    >
-      {loading ? <ActivityIndicator color={fg} /> : (
-        <>
-          {icon ? <Ionicons name={icon} size={small ? 16 : 18} color={fg} /> : null}
-          <Text style={[s.btnText, small && { fontSize: 14 }, { color: fg }]}>{title}</Text>
-        </>
-      )}
-    </Pressable>
+    <Animated.View style={[{ transform: [{ scale }], opacity: disabled ? 0.5 : 1 },
+      variant !== 'ghost' && !disabled && { shadowColor: glow, shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 }]}>
+      <Pressable onPress={onPress} disabled={off} onPressIn={() => spring(0.96)} onPressOut={() => spring(1)} accessibilityRole="button" accessibilityState={{ disabled: !!off }}>
+        {variant === 'ghost' ? (
+          <View style={[s.btn, small && s.btnSmall, s.btnGhost]}>{content}</View>
+        ) : (
+          <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.btn, small && s.btnSmall]}>
+            <View pointerEvents="none" style={s.btnShine} />
+            {content}
+          </LinearGradient>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
+// Eingabefeld: beim Tippen leuchtender Akzentrand und farbiges Symbol
 export function Field(props: TextInputProps & { icon?: IconName }) {
-  const { icon, style, ...rest } = props;
+  const { icon, style, onFocus, onBlur, ...rest } = props;
+  const [focused, setFocused] = useState(false);
   return (
-    <View style={s.field}>
-      {icon ? <Ionicons name={icon} size={18} color={C.text3} /> : null}
-      <TextInput placeholderTextColor={C.text3} selectionColor={C.accent} style={[s.input, style]} {...rest} />
+    <View style={[s.field, focused && s.fieldFocus]}>
+      {icon ? <Ionicons name={icon} size={18} color={focused ? C.accent : C.text3} /> : null}
+      <TextInput placeholderTextColor={C.text3} selectionColor={C.accent} style={[s.input, style]}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }} onBlur={(e) => { setFocused(false); onBlur?.(e); }} {...rest} />
     </View>
+  );
+}
+
+// Schalter im Uiverse-Stil: Knopf gleitet federnd, Spur mit Farbverlauf wenn an
+export function Toggle({ value, onValueChange, label }: { value: boolean; onValueChange: (v: boolean) => void; label?: string }) {
+  const [pos] = useState(() => new Animated.Value(value ? 1 : 0));
+  useEffect(() => {
+    Animated.spring(pos, { toValue: value ? 1 : 0, useNativeDriver: false, speed: 20, bounciness: 9 }).start();
+  }, [value, pos]);
+  const x = pos.interpolate({ inputRange: [0, 1], outputRange: [3, 23] });
+  const on = pos.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  return (
+    <Pressable onPress={() => onValueChange(!value)} accessibilityRole="switch" accessibilityState={{ checked: value }} accessibilityLabel={label} hitSlop={8}>
+      <View style={s.toggle}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: on }]}>
+          <LinearGradient colors={['#8f80ff', C.accent, '#4f8dff']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, { borderRadius: 14 }]} />
+        </Animated.View>
+        <Animated.View style={[s.knob, { transform: [{ translateX: x }] }]} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -125,9 +159,14 @@ const s = StyleSheet.create({
   title: { color: C.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6 },
   sub: { color: C.text2, fontSize: 15, marginTop: 6, lineHeight: 21 },
   card: { backgroundColor: C.surface, borderRadius: R.lg, borderWidth: 1, borderColor: C.line, overflow: 'hidden' },
-  btn: { height: 50, borderRadius: R.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 18 },
+  btn: { height: 50, borderRadius: R.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 18, overflow: 'hidden' },
   btnSmall: { height: 38, borderRadius: 10, paddingHorizontal: 14 },
   btnText: { fontSize: 15.5, fontWeight: '700' },
+  btnGhost: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: C.line2 },
+  btnShine: { position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: R.md, borderTopRightRadius: R.md, backgroundColor: 'rgba(255,255,255,0.12)' },
+  fieldFocus: { borderColor: C.accent, backgroundColor: '#22202f', shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 3 },
+  toggle: { width: 48, height: 28, borderRadius: 14, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line2, justifyContent: 'center', overflow: 'hidden' },
+  knob: { position: 'absolute', width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   field: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingHorizontal: 14, borderRadius: R.md, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line },
   input: { flex: 1, color: C.text, fontSize: 16, height: '100%' },
   coin: { backgroundColor: C.gold, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#ffd66b' },

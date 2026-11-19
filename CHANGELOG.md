@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [Unreleased]
+
+### Changed
+- **New look for buttons, text fields, switches and checkboxes** on the PC, in Falcon Mobile and on the website (inspired by uiverse.io): gradient buttons with a light sweep and a glow, springy press animation, glowing focus ring on fields, animated switches and checkboxes.
+
+### Added
+- **Loading screen when Falcon starts**: an animated server illustration (Uiverse.io by Juanes200122) until the browser is ready.
+
 ## [2.1.4] – 2026-11-18
 
 Falcon Mobile now uses the same version number as Falcon for Windows: **Falcon-Mobile-2.1.4.apk**.

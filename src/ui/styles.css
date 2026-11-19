@@ -1017,3 +1017,78 @@ button.acc-coins:hover { background: color-mix(in oklab, #f5b544 16%, transparen
 .shop-perks ul { list-style: none; margin: 4px 0 2px; padding: 0; display: grid; gap: 3px; }
 .shop-perks li { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--text-2); line-height: 1.4; }
 .shop-perks li svg { width: 13px; height: 13px; flex: none; margin-top: 2px; color: var(--accent); stroke-width: 2.4; }
+
+/* ==========================================================================
+   Ladebildschirm beim Start (Animation: Uiverse.io von Juanes200122)
+   ========================================================================== */
+#bootLoader { position: fixed; inset: 0; z-index: 10000; display: grid; place-content: center; justify-items: center; gap: 26px; background: radial-gradient(60% 50% at 50% 45%, rgb(87 40 204 / .18), transparent 70%), var(--chrome, #0e0f11); transition: opacity .35s ease, visibility .35s; }
+body.incognito #bootLoader { background: radial-gradient(60% 50% at 50% 45%, rgb(87 40 204 / .22), transparent 70%), #14101c; }
+#bootLoader.done { opacity: 0; visibility: hidden; pointer-events: none; }
+#bootLoader .boot-name { font: 700 20px/1 var(--font-display, 'Segoe UI', sans-serif); letter-spacing: .02em; background: linear-gradient(90deg, #91ddfb, #8f7dff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#svg-global { zoom: 1.2; overflow: visible; }
+@keyframes fade-particles { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes floatUp { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+#particles { animation: fade-particles 5s infinite alternate; }
+.particle { animation: floatUp linear infinite; }
+.p1 { animation-duration: 2.2s; animation-delay: 0s; }
+.p2 { animation-duration: 2.5s; animation-delay: .3s; }
+.p3 { animation-duration: 2s; animation-delay: .6s; }
+.p4 { animation-duration: 2.8s; animation-delay: .2s; }
+.p5 { animation-duration: 2.3s; animation-delay: .4s; }
+.p6 { animation-duration: 3s; animation-delay: .1s; }
+.p7 { animation-duration: 2.1s; animation-delay: .5s; }
+.p8 { animation-duration: 2.6s; animation-delay: .2s; }
+.p9 { animation-duration: 2.4s; animation-delay: .3s; }
+@keyframes bounce-lines { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+#line-v1, #line-v2, #node-server, #panel-rigth, #reflectores, #particles { animation: bounce-lines 3s ease-in-out infinite alternate; }
+#line-v2 { animation-delay: .2s; }
+#node-server, #panel-rigth, #reflectores, #particles { animation-delay: .4s; }
+
+/* ==========================================================================
+   Steuerelemente im Uiverse-Stil: Knöpfe, Felder, Schalter, Häkchen
+   ========================================================================== */
+/* Knöpfe: leichtes Anheben beim Darüberfahren, Eindrücken beim Klicken */
+.btn { position: relative; overflow: hidden; isolation: isolate; transition: background-color .15s, box-shadow .2s, transform .12s var(--ease), color .15s; }
+.btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: inset 0 0 0 1px var(--line-2), 0 4px 14px rgb(0 0 0 / .25); }
+.btn:not(:disabled):active { transform: translateY(0) scale(.97); }
+.btn.ghost:not(:disabled):hover { box-shadow: none; }
+/* Hauptknopf: Verlauf in der Akzentfarbe + Lichtstreifen, der beim Darüberfahren durchläuft */
+.btn.primary { background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #3b9eff)); box-shadow: 0 1px 0 rgb(255 255 255 / .18) inset, 0 4px 14px color-mix(in oklab, var(--accent) 35%, transparent); }
+.btn.primary::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, transparent 25%, rgb(255 255 255 / .35) 45%, transparent 65%); transform: translateX(-120%); transition: transform .6s ease; }
+.btn.primary:not(:disabled):hover { background: linear-gradient(135deg, var(--accent-hover), color-mix(in oklab, var(--accent-hover) 55%, #3b9eff)); box-shadow: 0 1px 0 rgb(255 255 255 / .2) inset, 0 6px 22px color-mix(in oklab, var(--accent) 50%, transparent); }
+.btn.primary:not(:disabled):hover::before { transform: translateX(120%); }
+.btn.danger-solid { box-shadow: 0 4px 14px rgb(242 85 90 / .3); }
+
+/* Eingabefelder: dezenter Hintergrund, beim Fokus leuchtender Akzentrand */
+.field-input { transition: box-shadow .18s, background-color .18s; background: color-mix(in oklab, var(--chrome) 85%, #000); }
+.field-input:hover:not(:focus) { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, var(--line-2)); }
+.field-input:focus { background: var(--chrome); box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 4px var(--accent-soft), 0 0 18px color-mix(in oklab, var(--accent) 25%, transparent); }
+.field-input::placeholder { color: var(--text-3); transition: opacity .18s, transform .18s; }
+.field-input:focus::placeholder { opacity: .5; transform: translateX(3px); }
+
+/* Schalter: breiterer Schieber mit Schatten, Verlauf + Leuchten wenn an, „Dehnen“ beim Drücken */
+.switch { cursor: pointer; }
+.switch span { width: 38px; height: 22px; border-radius: 11px; transition: background .25s, box-shadow .25s; }
+.switch span::after { top: 3px; left: 3px; width: 16px; height: 16px; background: #d6d6dc; box-shadow: 0 2px 5px rgb(0 0 0 / .4); transition: transform .28s cubic-bezier(.3, 1.5, .5, 1), width .15s, background-color .2s; }
+.switch:active span::after { width: 20px; }
+.switch input:checked + span { background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #3b9eff)); box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 45%, transparent); }
+.switch input:checked + span::after { transform: translateX(16px); background: #fff; }
+.switch:active input:checked + span::after { transform: translateX(12px); }
+.switch input:disabled + span { opacity: .45; }
+
+/* Häkchen (normale Checkboxen): eigene Box mit gezeichnetem Haken und kleinem „Plopp“ */
+input[type="checkbox"]:not(.switch input) { appearance: none; -webkit-appearance: none; flex: none; width: 18px; height: 18px; margin: 0; border-radius: 6px; display: inline-grid; place-content: center; cursor: pointer; background: var(--chrome); box-shadow: inset 0 0 0 1.5px var(--line-2); transition: background .18s, box-shadow .18s, transform .12s; }
+input[type="checkbox"]:not(.switch input):hover { box-shadow: inset 0 0 0 1.5px var(--accent); }
+input[type="checkbox"]:not(.switch input)::after { content: ""; width: 5px; height: 9px; margin-top: -2px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); transition: transform .2s cubic-bezier(.3, 1.6, .5, 1); }
+input[type="checkbox"]:not(.switch input):checked { background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #3b9eff)); box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 40%, transparent); }
+input[type="checkbox"]:not(.switch input):checked::after { transform: rotate(45deg) scale(1); }
+input[type="checkbox"]:not(.switch input):active { transform: scale(.9); }
+input[type="checkbox"]:not(.switch input):focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+
+/* Auswahllisten (select) passend zu den Feldern */
+select.field-input { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn.primary::before, .switch span::after, input[type="checkbox"]::after { transition: none !important; }
+  #bootLoader *, #bootLoader { animation: none !important; }
+}

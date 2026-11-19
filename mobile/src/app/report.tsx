@@ -1,8 +1,8 @@
 // Fehler melden & öffentliche Liste aller Meldungen (Admin: Status ändern, löschen)
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Button, Card, Empty, Field, Screen } from '@/components/ui';
+import { Button, Card, Empty, Field, Screen, Toggle } from '@/components/ui';
 import { Report, errorText, useSession } from '@/lib/session';
 import { C, R } from '@/lib/theme';
 
@@ -56,7 +56,7 @@ function Form({ url, onDone }: { url?: string; onDone: () => void }) {
       {url ? (
         <View style={s.switchRow}>
           <Text style={[s.small, { flex: 1 }]} numberOfLines={2}>Adresse der Seite mitsenden ({url})</Text>
-          <Switch value={withUrl} onValueChange={setWithUrl} trackColor={{ true: C.accent }} />
+          <Toggle value={withUrl} onValueChange={setWithUrl} label="Adresse mitsenden" />
         </View>
       ) : null}
       {user ? null : <Field icon="mail-outline" placeholder="E-Mail für Rückfragen (optional)" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />}
