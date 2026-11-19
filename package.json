@@ -133,7 +133,10 @@
       "packageName": "falcon-browser"
     },
     "rpm": {
-      "packageName": "falcon-browser"
+      "packageName": "falcon-browser",
+      "fpm": [
+        "--rpm-rpmbuild-define=_build_id_links none"
+      ]
     }
   },
   "devDependencies": {
