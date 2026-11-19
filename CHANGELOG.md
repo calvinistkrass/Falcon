@@ -2,7 +2,9 @@
 
 All notable changes to Falcon are documented here.
 
-## [Unreleased]
+## [2.1.6] – 2026-11-19
+
+Falcon Mobile: **Falcon-Mobile-2.1.6.apk** (no changes to the app).
 
 ### Added
 - **Falcon for macOS and Linux**: every release now also contains

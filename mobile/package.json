@@ -1,6 +1,6 @@
 {
   "name": "falcon-mobile",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
