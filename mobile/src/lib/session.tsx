@@ -8,7 +8,7 @@ import { load, save } from './storage';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.1.8';
+export const APP_VERSION = '2.1.9';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -29,8 +29,8 @@ type MissionState = { date: string; visits: number; domains: string[]; claimed: 
 export const SHOP = [
   // Game Mode gibt es seit 2.1.8 nur noch als Beta-Funktion (wirkt in Falcon auf dem PC)
   {
-    id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 14, title: 'Beta-Zugriff · 14 Tage', extendLabel: 'Um 14 Tage verlängern',
-    text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
+    id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 30, title: 'Beta-Zugriff · 30 Tage', extendLabel: 'Um 30 Tage verlängern',
+    text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang.',
     perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
   }
 ] as const;
@@ -535,6 +535,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const t = await token();
       const doc = await ensureWallet(u);
       const w = walletFrom(doc, 0);
+      if (w[it.field] > Date.now()) { setWallet(w); throw new FB.ApiError('ALREADY_OWNED'); }
       if (w.balance < it.price) { setWallet(w); throw new FB.ApiError('NOT_ENOUGH'); }
       const until = extend(w[it.field], it as { months?: number; days?: number });
       const fields = { balance: FB.int(w.balance - it.price), [it.field]: FB.int(until) };
@@ -767,6 +768,7 @@ export const ERRORS: Record<string, string> = {
   NOT_ENOUGH: 'Nicht genug FalCoins.',
   NOT_DONE: 'Die Mission ist noch nicht geschafft.',
   UNAVAILABLE: 'Das gibt es zurzeit nicht zu kaufen.',
+  ALREADY_OWNED: 'Bereits erworben – du kannst erst nach Ablauf erneut kaufen.',
   EMPTY: 'Bitte beschreib kurz, was passiert ist.',
   CREDENTIAL_TOO_OLD_LOGIN_AGAIN: 'Bitte melde dich ab und wieder an.',
   PERMISSION_DENIED: 'Der Server hat den Zugriff verweigert.',

@@ -754,7 +754,7 @@ async function loadCoins() {
 // Zeitlich begrenzte Freischaltungen – ein erneuter Kauf verlängert ab dem bisherigen Ende
 // Game Mode gibt es seit 2.1.8 nicht mehr einzeln, sondern als Beta-Funktion im Beta-Zugriff
 const SHOP = {
-  beta14: { price: 350, field: 'betaUntil', days: 14 }
+  beta14: { price: 350, field: 'betaUntil', days: 30 }
 };
 function extend(from, it) {
   const d = new Date(Math.max(Date.now(), from || 0));
@@ -777,6 +777,7 @@ const purchase = safe(async ({ item }) => {
     const doc = await getDoc(walletPath());
     const f = doc?.fields || {};
     const balance = Number(f.balance?.integerValue) || 0;
+    if ((Number(f[it.field]?.integerValue) || 0) > Date.now()) throw new AccountError('ALREADY_OWNED');
     if (balance < it.price) throw new AccountError('NOT_ENOUGH');
     const until = extend(Number(f[it.field]?.integerValue) || 0, it);
     const fields = { balance: int(balance - it.price), [it.field]: int(until) };

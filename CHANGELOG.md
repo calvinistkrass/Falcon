@@ -2,6 +2,15 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.1.9] – 2026-11-20
+
+### Changed
+- **Beta access now lasts exactly 30 days** (350 FalCoins). While it's active, the shop shows **"Already purchased"** instead of the price; you can buy it again after it expires.
+- **Admin panel**: only beta access can be given or revoked – Game Mode is part of it (PC and Falcon Mobile).
+
+### Fixed
+- **Linux .rpm package**: built on Ubuntu 22.04 now – the packaging tool failed with newer rpmbuild versions (Fedora 41, Ubuntu 24.04).
+
 ## [2.1.8] – 2026-11-20
 
 Falcon Mobile: **Falcon-Mobile-2.1.8.apk**.

@@ -302,8 +302,8 @@ const Account = (() => {
   // ---------------------------------------------------------------------------
   const SHOP = [
     {
-      id: 'beta14', price: 350, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 14 Tage verlängern', title: 'Beta-Zugriff · 14 Tage',
-      text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
+      id: 'beta14', price: 350, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 30 Tage verlängern', title: 'Beta-Zugriff · 30 Tage',
+      text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang.',
       perks: [
         'Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt',
         'Alle weiteren Beta-Funktionen, sobald sie erscheinen'
@@ -333,7 +333,7 @@ const Account = (() => {
         const active = (acc[item.field] || 0) > Date.now();
         const off = item.available === false;
         const buy = h('button', {
-          class: 'btn primary', disabled: off || missing > 0,
+          class: 'btn primary', disabled: off || active || missing > 0,
           onclick: async () => {
             const ok = await confirmDialog({
               title: active ? $t('{name} verlängern?', { name: $t(item.title) }) : $t('{name} kaufen?', { name: $t(item.title) }),
@@ -352,7 +352,7 @@ const Account = (() => {
             renderAll(); render();
             toast($t('{name} aktiv bis {date}', { name: $t(item.title), date: fmtUntil(r.until) }), 'check');
           }
-        }, off ? $t('Zurzeit nicht verfügbar') : missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : active ? $t(item.extendLabel) : $t('Kaufen'));
+        }, off ? $t('Zurzeit nicht verfügbar') : active ? $t('Bereits erworben') : missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : $t('Kaufen'));
         return h('div', { class: `shop-item${active ? ' owned' : ''}` },
           h('span', { class: 'shop-ic' }, icon(item.icon)),
           h('div', { class: 'shop-main' },
@@ -434,7 +434,7 @@ const Account = (() => {
     visits: (e) => $t('Website-Besuche · {date}', { date: new Date(e.label).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long' }) }),
     daily: (e) => $t('Tägliche Belohnung · Tag {n}', { n: e.label }),
     mission: (e) => $t('Mission: {name}', { name: $t(MISSION_TEXT[e.label] || e.label, { goal: { visits20: 20, sites5: 5, gamemode30: 30 }[e.label] || '' }) }),
-    purchase: (e) => $t('Kauf: {item}', { item: e.label === 'gameMode' ? $t('Game Mode · 2 Monate') : e.label === 'beta14' ? $t('Beta-Zugriff · 14 Tage') : e.label })
+    purchase: (e) => $t('Kauf: {item}', { item: e.label === 'gameMode' ? $t('Game Mode · 2 Monate') : e.label === 'beta14' ? $t('Beta-Zugriff') : e.label })
   };
   async function historyDialog() {
     if (!acc.signedIn) return authDialog('signin');
@@ -459,9 +459,9 @@ const Account = (() => {
   // ---------------------------------------------------------------------------
   // Admin: FalCoins aller Nutzer bearbeiten
   // ---------------------------------------------------------------------------
+  // Seit 2.1.9 nur noch Beta verschenken – Game Mode ist darin enthalten
   const GRANTS = [
-    { field: 'gameModeUntil', name: 'Game Mode', icon: 'gamepad', months: 2, give: 'Game Mode für 2 Monate schenken', revoke: 'Game Mode entziehen' },
-    { field: 'betaUntil', name: 'Beta', icon: 'flask', days: 14, give: 'Beta-Zugriff für 14 Tage schenken', revoke: 'Beta-Zugriff entziehen' }
+    { field: 'betaUntil', name: 'Beta', icon: 'flask', days: 30, give: 'Beta-Zugriff für 30 Tage schenken', revoke: 'Beta-Zugriff entziehen' }
   ];
   function walletAdminDialog() {
     const search = h('input', { class: 'field-input', placeholder: $t('Name oder E-Mail suchen'), spellcheck: false });
@@ -756,7 +756,7 @@ const Account = (() => {
   function enforceGameMode() {
     if (state.settings.gameMode && !(acc.signedIn && acc.gameModeOwned)) {
       updateSettings({ gameMode: false });
-      toast($t('Game Mode ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei (350 FalCoins für 14 Tage).'), 'gamepad', { label: $t('Shop'), onClick: () => (acc.signedIn ? shopDialog() : authDialog('signin')) });
+      toast($t('Game Mode ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei (350 FalCoins für 30 Tage).'), 'gamepad', { label: $t('Shop'), onClick: () => (acc.signedIn ? shopDialog() : authDialog('signin')) });
     }
   }
   let accountKnown = false;

@@ -86,8 +86,8 @@ export default function Shop() {
               ) : null}
               {active ? <Text style={s.until}>Aktiv bis {fmtDate(until)}</Text> : null}
               <Button
-                title={off ? 'Zurzeit nicht verfügbar' : missing > 0 ? `Noch ${missing.toLocaleString('de-DE')} FalCoins` : active ? item.extendLabel : 'Kaufen'}
-                disabled={off || missing > 0} loading={busy === item.id} onPress={() => buy(item, active)} />
+                title={off ? 'Zurzeit nicht verfügbar' : active ? 'Bereits erworben' : missing > 0 ? `Noch ${missing.toLocaleString('de-DE')} FalCoins` : 'Kaufen'}
+                disabled={off || active || missing > 0} loading={busy === item.id} onPress={() => buy(item, active)} />
             </Card>
           );
         })}

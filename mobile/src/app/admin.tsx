@@ -41,8 +41,7 @@ function WalletCard({ w, now, onCommit }: { w: AdminWallet; now: number; onCommi
   const gm = w.gameModeUntil > now;
   const beta = w.betaUntil > now;
   const save = () => { const n = Number(value); if (Number.isFinite(n) && n !== w.balance) onCommit({ balance: n }); };
-  const toggleGm = () => { const d = new Date(); d.setMonth(d.getMonth() + 2); onCommit({ gameModeUntil: gm ? 0 : d.getTime() }); };
-  const toggleBeta = () => { const d = new Date(); d.setDate(d.getDate() + 14); onCommit({ betaUntil: beta ? 0 : d.getTime() }); };
+  const toggleBeta = () => { const d = new Date(); d.setDate(d.getDate() + 30); onCommit({ betaUntil: beta ? 0 : d.getTime() }); };
   return (
     <Card style={{ padding: 14, gap: 10 }}>
       <View>
@@ -59,8 +58,7 @@ function WalletCard({ w, now, onCommit }: { w: AdminWallet; now: number; onCommi
       </View>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         {[100, 500, 1000].map((n) => <Button key={n} small variant="ghost" title={`+${n}`} onPress={() => { setValue(String(w.balance + n)); onCommit({ balance: w.balance + n }); }} />)}
-        <Button small variant="ghost" icon="game-controller-outline" title={gm ? 'Game Mode entziehen' : 'Game Mode 2 Monate'} onPress={toggleGm} />
-        <Button small variant="ghost" icon="flask-outline" title={beta ? 'Beta entziehen' : 'Beta 14 Tage'} onPress={toggleBeta} />
+        <Button small variant="ghost" icon="flask-outline" title={beta ? 'Beta entziehen' : 'Beta 30 Tage'} onPress={toggleBeta} />
       </View>
     </Card>
   );

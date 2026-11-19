@@ -11,7 +11,7 @@ function label(e: LogEntry) {
   if (e.type === 'visits') return `Website-Besuche · ${new Date(e.label).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })}`;
   if (e.type === 'daily') return `Tägliche Belohnung · Tag ${e.label}`;
   if (e.type === 'mission') return `Mission: ${(MISSION_TEXT[e.label] || e.label).replace('{goal}', String(GOALS[e.label] || ''))}`;
-  if (e.type === 'purchase') return `Kauf: ${e.label === 'gameMode' ? 'Game Mode · 2 Monate' : e.label === 'beta14' ? 'Beta-Zugriff · 14 Tage' : e.label}`;
+  if (e.type === 'purchase') return `Kauf: ${e.label === 'gameMode' ? 'Game Mode · 2 Monate' : e.label === 'beta14' ? 'Beta-Zugriff' : e.label}`;
   return e.type;
 }
 const ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = { purchase: 'storefront-outline', mission: 'flag-outline', daily: 'gift-outline', visits: 'globe-outline' };
