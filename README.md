@@ -94,8 +94,12 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 
 ## Installation
 
-1. Download **`Falcon-Setup-x.y.z.exe`** from the [releases page](https://github.com/calvinistkrass/Falcon/releases/latest) and run it. After that, Falcon keeps itself up to date.
-2. Windows SmartScreen may warn you because the app isn't code-signed yet. Click **More info → Run anyway**.
+Download Falcon from [falconbrowser.de](https://falconbrowser.de/download) or the [releases page](https://github.com/calvinistkrass/Falcon/releases/latest):
+
+- **Windows:** run **`Falcon-Setup-x.y.z.exe`**. After that, Falcon keeps itself up to date. Windows SmartScreen may warn you because the app isn't code-signed yet – click **More info → Run anyway**.
+- **macOS:** open the `.dmg` for your Mac (Apple chip or Intel) and drag Falcon into Applications. The app isn't signed yet, so open it the first time with right-click → **Open**.
+- **Linux:** install the `.deb` (Ubuntu, Debian, Mint …) or the `.rpm` (Fedora, openSUSE …).
+- **Android:** install **`Falcon-Mobile-x.y.z.apk`** (allow installing from unknown sources when asked).
 
 ### Unlocking passwords with your iPhone or Android phone
 
@@ -141,70 +145,9 @@ npm run dist       # build the installer into dist/
 | `src/overlay/` | Always-on-top overlay window |
 | `.github/workflows/release.yml` | Builds and publishes a release for every version tag |
 
-### Publishing a release
-
-1. Bump `version` in `package.json` and add an entry to [`CHANGELOG.md`](CHANGELOG.md).
-2. Commit, then tag and push:
-   ```bash
-   git tag v1.3.0
-   git push && git push --tags
-   ```
-3. GitHub Actions builds Falcon and publishes the release with the installer and `latest.yml`. Every installed copy of Falcon picks it up automatically.
-
 ### Using your own Firebase project
 
-The account system uses Firebase Authentication (email/password) and Cloud Firestore. To point a fork at your own project, put its web config into `src/firebase-config.js` and use these Firestore rules:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    // Problem reports: anyone may create one, only the developer account may read or manage them
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'you@example.com' && request.auth.token.email_verified == true;
-    }
-    match /reports/{id} {
-      allow create: if request.resource.data.keys().hasOnly(['text', 'category', 'version', 'os', 'url', 'screenshot', 'email', 'uid', 'created', 'status'])
-        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000
-        && request.resource.data.status == 'new'
-        && (!('uid' in request.resource.data) || (request.auth != null && request.resource.data.uid == request.auth.uid))
-        && (!('screenshot' in request.resource.data) || request.resource.data.screenshot.size() <= 900000);
-      allow read, update, delete: if isAdmin();
-    }
-    // FalCoin wallets: owner and developer account
-    match /wallets/{uid} {
-      allow read, create, update: if request.auth != null && (request.auth.uid == uid || isAdmin());
-      allow delete: if isAdmin();
-    }
-    // Public copy without personal data: readable by everyone, status changes by the developer only
-    match /reportsPublic/{id} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(['text', 'category', 'version', 'created', 'status'])
-        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000
-        && request.resource.data.status == 'new';
-      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
-      allow delete: if isAdmin();
-    }
-    // Refund requests: the buyer creates one and may mark the answer as seen, the developer decides
-    match /refunds/{id} {
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending'
-        && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'purchaseId', 'item', 'price', 'reason', 'created', 'status'])
-        && request.resource.data.reason is string && request.resource.data.reason.size() > 0 && request.resource.data.reason.size() <= 1000;
-      allow read: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
-      allow update: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen']));
-      allow delete: if isAdmin();
-    }
-    // An approved refund is noted in the buyer's FalCoin history
-    match /users/{uid}/coinlog/{id} {
-      allow create: if isAdmin();
-    }
-  }
-}
-```
+The account system uses Firebase Authentication (email/password) and Cloud Firestore. To point a fork at your own project, put its web config into `src/firebase-config.js` and set up Firestore security rules so that every user can only access their own data.
 
 ### Adding a language
 
@@ -215,7 +158,7 @@ service cloud.firestore {
 ## Known limitations
 
 - **Netflix, Disney+ and other DRM-protected streaming** don't play, because Electron ships without Widevine.
-- **macOS and Linux** builds are prepared (`npm run dist:all`) but not tested yet.
+- **macOS, Linux and Android** don't update themselves yet – download new versions from the website.
 
 ## License
 
