@@ -3,3 +3,4 @@ dist/
 
 # Obsidian-Vault mit privaten Notizen – nicht ins öffentliche Repo
 /Falcon/
+.claude/

@@ -74,6 +74,9 @@ const Tabs = (() => {
       if (e.button === 0 && !e.target.closest('button')) activate(tab.id);
     });
     el.addEventListener('auxclick', (e) => { if (e.button === 1) close(tab.id); });
+    el.addEventListener('mouseenter', () => Preview.enter(tab));
+    el.addEventListener('mouseleave', () => Preview.leave());
+    el.addEventListener('mousedown', () => Preview.hide(), true);
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); contextMenu(tab, e); });
 
     el.addEventListener('dragstart', (e) => {
@@ -228,7 +231,7 @@ const Tabs = (() => {
     const title = displayTitle(tab);
     const titleEl = el.querySelector('.tab-title');
     if (titleEl.textContent !== title) titleEl.textContent = title;
-    el.title = tab.sleeping ? `${title}\n${$t('Schlafend – wird beim Öffnen neu geladen')}` : title;
+    el.removeAttribute('title'); // ersetzt durch die Tab-Vorschau
 
     let key;
     if (tab.loading && !tab.sleeping) key = 'loading';
@@ -262,6 +265,7 @@ const Tabs = (() => {
     const tab = byId(id);
     if (!tab) return;
     const prev = active();
+    if (prev && prev !== tab) Preview.capture(prev); // letztes Bild merken, bevor der Tab verschwindet
     if (prev && prev !== tab) prev.lastActive = Date.now();
     state.activeId = id;
     tab.lastActive = Date.now();
@@ -544,4 +548,58 @@ const Tabs = (() => {
     startSplit, splitWithNew, endSplit, swapSplit, setVolume, volumePopover, get split() { return split ? { ...split } : null; },
     get closedCount() { return closedTabs.length; }
   };
+})();
+
+// ---------------------------------------------------------------------------
+// Tab-Vorschau: beim Darüberfahren ein kleines Fensterbild mit Titel und Adresse
+// ---------------------------------------------------------------------------
+const Preview = (() => {
+  const img = h('img', { class: 'tp-img', alt: '' });
+  const ph = h('div', { class: 'tp-ph' });
+  const title = h('b', { class: 'tp-title', 'data-no-i18n': '' });
+  const host = h('span', { class: 'tp-host', 'data-no-i18n': '' });
+  const note = h('span', { class: 'tp-note' });
+  const box = h('div', { class: 'tab-preview', 'aria-hidden': 'true' }, h('div', { class: 'tp-shot' }, img, ph), h('div', { class: 'tp-text' }, title, host, note));
+  document.body.append(box);
+  let timer = 0, current = null, shown = false;
+  async function capture(tab) {
+    if (!tab?.webview || !tab.ready || tab.sleeping || isNewTab(tab.url)) return;
+    let id;
+    try { id = tab.webview.getWebContentsId(); } catch { return; }
+    const data = await F.tabThumb(id).catch(() => null);
+    if (data) { tab.thumb = data; tab.thumbUrl = tab.url; if (current === tab && shown) fill(tab); }
+  }
+  function fill(tab) {
+    title.textContent = Tabs.displayTitle(tab);
+    host.textContent = isNewTab(tab.url) ? '' : hostOf(tab.url) || tab.url;
+    note.textContent = tab.sleeping ? $t('Schlafend – wird beim Öffnen neu geladen') : INCOGNITO ? $t('Inkognito') : '';
+    const pic = tab.thumb && !isNewTab(tab.url) ? tab.thumb : '';
+    img.hidden = !pic; ph.hidden = !!pic;
+    if (pic && img.src !== pic) img.src = pic;
+    if (!pic) ph.replaceChildren(tab.favicon ? h('img', { src: tab.favicon, alt: '' }) : icon(isNewTab(tab.url) ? 'plus' : 'globe'));
+  }
+  function place(tab) {
+    const r = tab.el.getBoundingClientRect();
+    const w = 260;
+    box.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
+    box.style.top = `${r.bottom + 6}px`;
+  }
+  function show(tab) {
+    if (!tab.el?.isConnected || [...document.querySelectorAll('.overlay')].some((o) => o.offsetParent) || tab.el.classList.contains('dragging')) return;
+    current = tab; shown = true;
+    fill(tab); place(tab);
+    box.classList.add('show');
+    // Aktiver Tab: frisches Bild; andere Tabs zeigen ihr letztes Bild
+    if (Tabs.active() === tab || !tab.thumb || tab.thumbUrl !== tab.url) capture(tab);
+  }
+  function enter(tab) {
+    clearTimeout(timer);
+    if (shown) { show(tab); return; } // beim Wandern über die Tabs sofort wechseln
+    timer = setTimeout(() => show(tab), 450);
+  }
+  function hide() { clearTimeout(timer); shown = false; current = null; box.classList.remove('show'); }
+  function leave() { clearTimeout(timer); timer = setTimeout(hide, 120); }
+  addEventListener('blur', hide);
+  on('tabs-changed', () => { if (current && !state.tabs.includes(current)) hide(); });
+  return { enter, leave, hide, capture };
 })();

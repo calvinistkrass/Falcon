@@ -2,7 +2,15 @@
 
 All notable changes to Falcon are documented here.
 
-## [2.2.0] – 2026-11-20
+## [2.3.0] – 2026-11-20
+
+### Added
+- **Tab preview**: hover over a tab to see a small picture of the page with its title and address.
+- **RGB mode** (beta): the accent colour slowly cycles through every colour, and the active tab and buttons glow like a gaming keyboard. Pauses automatically in Game Mode.
+- **Deal wishlist** (beta): save games and Falcon checks every 3 hours whether one is free or at least 20% off – with a notification and a direct link to the deal.
+- **Ad blocker in Falcon Mobile**: ads and trackers are blocked in the phone browser too, with a counter in the menu. Can be switched off in the browser menu.
+
+ – 2026-11-20
 
 ### Added
 - **Refunds for shop purchases**: bought something by mistake? Shop → "Request a refund", pick the purchase, enter your email and a reason. The developer approves or declines it in the admin panel; you see the answer as a pop-up the next time you open Falcon. An approved refund returns the FalCoins, removes the unlock and shows up in the FalCoin history (PC and Falcon Mobile).

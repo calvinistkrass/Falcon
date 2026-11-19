@@ -171,8 +171,21 @@ F.on('win-state', (s) => {
 // ---------------------------------------------------------------------------
 (() => {
   let prev = {};
+  // RGB-Modus (Beta): Farbton wandert alle 80 ms ein Stück weiter; pausiert, wenn das Fenster verdeckt ist
+  let rgbTimer = 0, hue = 0;
+  const hsl = (h) => {
+    const f = (n) => { const k = (n + h / 30) % 12; const c = 0.72 * Math.min(0.62, 1 - 0.62); return Math.round(255 * (0.62 - c * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+    return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('');
+  };
+  const rgbTick = () => { if (document.hidden) return; hue = (hue + 1.5) % 360; applyAccent(hsl(hue)); };
+  function setRgb(on) {
+    document.body.classList.toggle('rgb', on);
+    if (on && !rgbTimer) { rgbTimer = setInterval(rgbTick, 80); rgbTick(); }
+    if (!on && rgbTimer) { clearInterval(rgbTimer); rgbTimer = 0; }
+  }
   on('settings', (s) => {
-    applyAccent(s.accent);
+    setRgb(!!s.rgbMode && !s.gameMode);
+    if (!s.rgbMode || s.gameMode) applyAccent(s.accent);
     document.body.classList.toggle('no-bookmarks', !s.showBookmarksBar);
     // Startseite bekommt Akzentfarbe und Suchmaschine über die URL
     if (prev.accent && (prev.accent !== s.accent || prev.searchEngine !== s.searchEngine || prev.language !== s.language || JSON.stringify(prev.newtab) !== JSON.stringify(s.newtab))) {

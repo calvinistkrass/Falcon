@@ -10,6 +10,7 @@ import type { WebView as WebViewType, WebViewMessageEvent, WebViewNavigation } f
 import { Empty, IconName } from '@/components/ui';
 import TabSwitcher from '@/components/TabSwitcher';
 import { CAPTURE_SCRIPT, fillScript, translateUrl, untranslate } from '@/lib/inject';
+import { ADBLOCK_SCRIPT, isAdHost, useAdblock } from '@/lib/adblock';
 import { Tab, errorText, hasBookmark, originOf, useSession } from '@/lib/session';
 import { C, R, hostOf, toUrl } from '@/lib/theme';
 
@@ -31,6 +32,8 @@ export default function Browser() {
   const [editing, setEditing] = useState(false);
   const [switcher, setSwitcher] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [adblock, setAdblock] = useAdblock();
+  const [blocked, setBlocked] = useState<Record<string, number>>({});
 
   const active = tabs.find((t) => t.id === activeId) || tabs[0];
   const nav = navs[active.id] || NO_NAV;
@@ -57,8 +60,9 @@ export default function Browser() {
 
   // Anmeldedaten von der Seite → Speichern anbieten (nicht in Inkognito-Tabs, nicht für „Nie“-Seiten)
   const onMessage = (tab: Tab) => (e: WebViewMessageEvent) => {
-    let msg: { t?: string; u?: string; p?: string };
+    let msg: { t?: string; u?: string; p?: string; n?: number };
     try { msg = JSON.parse(e.nativeEvent.data); } catch { return; }
+    if (msg.t === 'ads') { const n = Number(msg.n) || 0; setBlocked((b) => (b[tab.id] === n ? b : { ...b, [tab.id]: n })); return; }
     if (msg.t !== 'pw' || !msg.p || !user || tab.incognito) return;
     const origin = originOf(e.nativeEvent.url || tab.url);
     if (!origin || pwNever.includes(origin)) return;
@@ -137,7 +141,8 @@ export default function Browser() {
                 incognito={!!t.incognito}
                 onNavigationStateChange={onNav(t)}
                 onMessage={onMessage(t)}
-                injectedJavaScriptBeforeContentLoaded={t.incognito ? undefined : CAPTURE_SCRIPT}
+                injectedJavaScriptBeforeContentLoaded={[t.incognito ? '' : CAPTURE_SCRIPT, adblock ? ADBLOCK_SCRIPT : ''].join('\n') || undefined}
+                onShouldStartLoadWithRequest={(r: { url: string }) => !(adblock && r.url !== t.src && isAdHost(r.url))}
                 onLoadProgress={(e: { nativeEvent: { progress: number } }) =>
                   setNavs((n) => ({ ...n, [t.id]: { ...(n[t.id] || NO_NAV), progress: e.nativeEvent.progress } }))}
                 allowsBackForwardNavigationGestures
@@ -163,12 +168,13 @@ export default function Browser() {
       </View>
 
       <TabSwitcher visible={switcher} onClose={() => setSwitcher(false)} />
-      {menu ? <BrowserMenu tab={active} onClose={() => setMenu(false)} inject={(js) => ref?.injectJavaScript(js)} /> : null}
+      {menu ? <BrowserMenu tab={active} onClose={() => setMenu(false)} inject={(js) => ref?.injectJavaScript(js)}
+        adblock={adblock} blocked={blocked[active.id] || 0} onAdblock={(on) => { setAdblock(on); ref?.reload(); }} /> : null}
     </SafeAreaView>
   );
 }
 
-function BrowserMenu({ tab, onClose, inject }: { tab: Tab; onClose: () => void; inject: (js: string) => void }) {
+function BrowserMenu({ tab, onClose, inject, adblock, blocked, onAdblock }: { tab: Tab; onClose: () => void; inject: (js: string) => void; adblock: boolean; blocked: number; onAdblock: (on: boolean) => void }) {
   const { user, bookmarks, addBookmark, removeBookmark, newTab, navigate, passwords } = useSession();
   const page = /^https?:/.test(tab.url) ? tab.url : '';
   const marked = !!page && hasBookmark(bookmarks, page);
@@ -205,6 +211,8 @@ function BrowserMenu({ tab, onClose, inject }: { tab: Tab; onClose: () => void; 
     { icon: 'language-outline', label: original ? 'Original anzeigen' : 'Seite übersetzen', hidden: !page, onPress: run(translate) },
     { icon: 'share-outline', label: 'Teilen', hidden: !page, onPress: run(() => { Share.share(Platform.OS === 'ios' ? { url: page } : { message: page }).catch(() => {}); }) },
     { icon: 'link-outline', label: 'Link kopieren', hidden: !page, onPress: run(() => { Clipboard.setStringAsync(page).catch(() => {}); }) },
+    { icon: adblock ? 'shield-checkmark-outline' : 'shield-outline', label: adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten',
+      tag: adblock && blocked ? `${blocked} blockiert` : undefined, onPress: run(() => onAdblock(!adblock)) },
     { icon: 'eye-off-outline', label: 'Neuer Inkognito-Tab', onPress: run(() => newTab(true)) },
     { icon: 'bookmarks-outline', label: 'Lesezeichen', onPress: run(() => router.navigate('/bookmarks')) },
     { icon: 'time-outline', label: 'Verlauf', onPress: run(() => router.push('/history')) },

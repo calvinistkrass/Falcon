@@ -309,6 +309,8 @@ const Account = (() => {
       text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang.',
       perks: [
         'Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt',
+        'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten',
+        'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist',
         'Alle weiteren Beta-Funktionen, sobald sie erscheinen'
       ]
     }
@@ -876,6 +878,7 @@ const Account = (() => {
 
   // Game Mode ist nur mit gültiger Freischaltung nutzbar – abgelaufen oder abgemeldet → aus
   function enforceGameMode() {
+    if (state.settings.rgbMode && !(acc.signedIn && acc.beta)) updateSettings({ rgbMode: false });
     if (state.settings.gameMode && !(acc.signedIn && acc.gameModeOwned)) {
       updateSettings({ gameMode: false });
       toast($t('Game Mode ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei (350 FalCoins für 30 Tage).'), 'gamepad', { label: $t('Shop'), onClick: () => (acc.signedIn ? shopDialog() : authDialog('signin')) });
@@ -883,7 +886,7 @@ const Account = (() => {
   }
   let accountKnown = false;
   F.on('account-changed', () => { if (accountKnown) enforceGameMode(); });
-  setInterval(() => { if (accountKnown) { acc = { ...acc, gameModeOwned: (acc.gameModeUntil || 0) > Date.now() || (acc.betaUntil || 0) > Date.now() }; enforceGameMode(); } }, 60_000);
+  setInterval(() => { if (accountKnown) { acc = { ...acc, beta: (acc.betaUntil || 0) > Date.now(), gameModeOwned: (acc.gameModeUntil || 0) > Date.now() || (acc.betaUntil || 0) > Date.now() }; enforceGameMode(); } }, 60_000);
   setTimeout(async () => {
     if (!INCOGNITO) acc = await F.account.state();
     accountKnown = true;

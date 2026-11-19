@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 const pkg = require('../package.json');
 
 const fileUrl = (...p) => pathToFileURL(path.join(__dirname, ...p)).href;
-const CHANNELS = ['extensions-changed', 'account-changed', 'history-replace', 'open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed'];
+const CHANNELS = ['extensions-changed', 'account-changed', 'history-replace', 'open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed', 'wishlist-hit'];
 
 contextBridge.exposeInMainWorld('falcon', {
   incognito: new URLSearchParams(location.search).has('incognito'),
@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('falcon', {
     options: (key) => ipcRenderer.invoke('ext:options', key)
   },
   reportScreenshot: (webContentsId) => ipcRenderer.invoke('report:screenshot', webContentsId),
+  tabThumb: (webContentsId) => ipcRenderer.invoke('tab:thumb', webContentsId),
   screenshot: {
     capture: (webContentsId, mode) => ipcRenderer.invoke('screenshot:capture', webContentsId, mode),
     save: (dataUrl) => ipcRenderer.invoke('screenshot:save', dataUrl)
@@ -71,6 +72,9 @@ contextBridge.exposeInMainWorld('falcon', {
   newtab: {
     chooseImage: () => ipcRenderer.invoke('newtab:choose-image'),
     clearImage: () => ipcRenderer.invoke('newtab:clear-image')
+  },
+  wishlist: {
+    check: () => ipcRenderer.invoke('wishlist:check')
   },
   adblock: {
     stats: (webContentsId) => ipcRenderer.invoke('adblock:stats', webContentsId),

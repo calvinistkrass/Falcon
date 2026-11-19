@@ -94,6 +94,28 @@ const Settings = (() => {
   // Eigene CSS-Variablen gehen nur über setProperty
   $$('.swatch', swatches).forEach((s) => s.style.setProperty('--c', s.dataset.value));
 
+  // RGB-Modus nur mit Beta-Zugriff
+  $('#sRgb').addEventListener('change', (e) => {
+    const acc = typeof Account !== 'undefined' ? Account.state : {};
+    if (e.target.checked && !(acc.signedIn && acc.beta)) {
+      e.target.checked = false;
+      toast(acc.signedIn ? $t('Der RGB-Modus ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'palette',
+        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
+      return;
+    }
+    updateSettings({ rgbMode: e.target.checked });
+  });
+
+  $('#wishEdit').addEventListener('click', () => {
+    const acc = typeof Account !== 'undefined' ? Account.state : {};
+    if (!(acc.signedIn && acc.beta)) {
+      toast(acc.signedIn ? $t('Die Angebots-Wunschliste ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'gamepad',
+        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
+      return;
+    }
+    Wishlist.dialog();
+  });
+
   const toggles = { sBookmarksBar: 'showBookmarksBar', sSidebar: 'showSidebar', sHud: 'showHud', sGame: 'gameMode', sAdblock: 'adblock', sAdblockAnnoy: 'adblockAnnoyances', sPwAuth: 'pwRequireAuth', sDlAsk: 'downloadAsk' };
   for (const [id, key] of Object.entries(toggles)) {
     $(`#${id}`).addEventListener('change', (e) => {
@@ -155,6 +177,7 @@ const Settings = (() => {
     $('#sRamLimit').value = String(s.ramLimit || 0);
     $('#sNetLimit').value = String(s.netLimit || 0);
     $('#sNetGameOnly').checked = s.netLimitGameOnly !== false;
+    $('#sRgb').checked = !!s.rgbMode;
     $('#sNetGameOnly').disabled = !s.netLimit;
     $('#sNtDeals').checked = s.newtab?.showDeals !== false;
     $('#sNtShortcuts').checked = s.newtab?.showShortcuts !== false;
@@ -195,4 +218,52 @@ const Settings = (() => {
   on('settings', sync);
 
   return { open, close, isOpen, get section() { return isOpen() ? section : null; } };
+})();
+
+// ---------------------------------------------------------------------------
+// Angebots-Wunschliste (Einstellungen → Darstellung, Befehlspalette, Hinweis bei Treffern)
+// ---------------------------------------------------------------------------
+const Wishlist = (() => {
+  const list = () => (Array.isArray(state.settings.wishlist) ? state.settings.wishlist : []);
+  const fmtPrice = (n) => `${n.toLocaleString(I18N.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+  function dialog() {
+    const input = h('input', { class: 'field-input', placeholder: $t('Spiel, z. B. Cyberpunk 2077'), maxlength: 80, spellcheck: false });
+    const add = h('button', { class: 'btn primary', type: 'submit' }, icon('plus'), $t('Hinzufügen'));
+    const rows = h('div', { class: 'wish-list' });
+    let hits = [];
+    const render = () => {
+      const l = list();
+      rows.replaceChildren(...(l.length ? l.map((w) => {
+        const hit = hits.find((x) => x.name === w.name);
+        return h('div', { class: 'wish-row' },
+          h('div', { class: 'wish-main' },
+            h('b', { 'data-no-i18n': '' }, w.name),
+            hit ? h('a', { class: `wish-hit ${hit.kind}`, href: '#', onclick: (e) => { e.preventDefault(); Tabs.create(hit.url); close(); } },
+              hit.kind === 'free' ? $t('Gerade kostenlos') : `${fmtPrice(hit.price)} · −${hit.savings} %${hit.store ? ` · ${hit.store}` : ''}`)
+              : h('span', {}, $t('Kein Angebot gerade'))),
+          h('button', { class: 'icon-btn', title: $t('Entfernen'), onclick: () => updateSettings({ wishlist: list().filter((x) => x.name !== w.name) }).then(render) }, icon('x')));
+      }) : [h('p', { class: 'rf-none' }, $t('Noch keine Spiele auf deiner Wunschliste.'))]));
+    };
+    const form = h('form', { class: 'wish-add', onsubmit: async (e) => {
+      e.preventDefault();
+      const name = input.value.trim().replace(/\s+/g, ' ');
+      if (!name) return;
+      if (list().some((x) => x.name.toLowerCase() === name.toLowerCase())) { input.select(); return; }
+      if (list().length >= 30) { toast($t('Höchstens 30 Spiele'), 'warning'); return; }
+      await updateSettings({ wishlist: [...list(), { name, added: Date.now() }] });
+      input.value = ''; render(); refresh();
+    } }, input, add);
+    const box = h('div', { class: 'dialog wish-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' },
+        h('h3', {}, $t('Angebots-Wunschliste')),
+        h('p', { class: 'shop-sub' }, $t('Falcon prüft alle 3 Stunden, ob ein Spiel kostenlos oder um mindestens 20 % reduziert ist, und meldet sich mit einer Benachrichtigung.')),
+        form, rows),
+      h('div', { class: 'dialog-foot' }, h('button', { class: 'btn primary', onclick: () => close() }, $t('Fertig'))));
+    const close = dialogShell(box);
+    const refresh = async () => { hits = await F.wishlist.check(); if (box.isConnected) render(); };
+    render(); refresh();
+    input.focus();
+  }
+  F.on('wishlist-hit', (x) => toast(x.body, 'gamepad', { label: $t('Ansehen'), onClick: () => Tabs.create(x.url) }));
+  return { dialog };
 })();

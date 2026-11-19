@@ -1,7 +1,7 @@
 'use strict';
 // Falcon – Hauptprozess
 
-const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen, protocol, net, webContents } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen, protocol, net, webContents, Notification } = require('electron');
 const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
@@ -60,6 +60,9 @@ const DEFAULTS = {
   ramLimit: 0,
   netLimit: 0,           // Mbit/s, 0 = aus
   netLimitGameOnly: true,
+  rgbMode: false,       // Beta: Akzentfarbe läuft durch den Regenbogen
+  wishlist: [],         // Angebots-Wunschliste [{ name, added }]
+  wishlistSeen: {},     // schon gemeldete Angebote (Schlüssel → Zeit)
   downloadDir: '',
   downloadAsk: false,
   sidePanelWidth: 380,
@@ -566,7 +569,7 @@ ipcMain.handle('downloads:choose-dir', async (e) => {
 // Falcon-Konto & Sync
 // ---------------------------------------------------------------------------
 const SYNC_SETTINGS = ['accent', 'language', 'searchEngine', 'adblock', 'adblockAnnoyances', 'adblockAllow', 'showBookmarksBar', 'showSidebar',
-  'showHud', 'sleepMinutes', 'ramLimit', 'mouseButtons', 'sidebarApps', 'pwNever', 'restoreSession', 'newtab', 'profileColor'];
+  'showHud', 'sleepMinutes', 'ramLimit', 'mouseButtons', 'sidebarApps', 'pwNever', 'restoreSession', 'newtab', 'profileColor', 'wishlist'];
 function applySyncedSettings(patch) {
   settings = { ...settings, ...patch };
   adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
@@ -698,6 +701,64 @@ ipcMain.handle('newtab:deals', async (e) => {
 });
 
 // ---------------------------------------------------------------------------
+// Angebots-Wunschliste: gemerkte Spiele alle 3 Stunden mit CheapShark (Rabatte) und GamerPower (gratis) abgleichen
+// ---------------------------------------------------------------------------
+const WISH_MAX = 30;
+const norm = (s) => String(s || '').toLowerCase().replace(/[™®©:'’\-–—.,!?]/g, ' ').replace(/\s+/g, ' ').trim();
+const sameGame = (a, b) => { const x = norm(a), y = norm(b); return !!x && !!y && (x === y || y.startsWith(x + ' ') || x.startsWith(y + ' ')); };
+async function checkWishlist() {
+  const list = (settings.wishlist || []).slice(0, WISH_MAX);
+  if (!list.length) return [];
+  const https = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : '');
+  const STORES = { 1: 'Steam', 7: 'GOG', 25: 'Epic Games', 3: 'GreenManGaming', 11: 'Humble Store', 8: 'Origin', 13: 'Ubisoft', 15: 'Fanatical' };
+  const free = await loadDeals().then((d) => d.free).catch(() => []);
+  const out = [];
+  for (const w of list) {
+    const gift = free.find((g) => sameGame(w.name, g.title));
+    if (gift) { out.push({ name: w.name, kind: 'free', title: gift.title, url: gift.url, image: gift.image, store: gift.platform, key: `free:${norm(gift.title)}:${gift.ends || ''}` }); continue; }
+    try {
+      const deals = await fetchJson(`https://www.cheapshark.com/api/1.0/deals?title=${encodeURIComponent(w.name)}&onSale=1&sortBy=Price&pageSize=10`);
+      const best = (Array.isArray(deals) ? deals : []).filter((d) => sameGame(w.name, d.title) && Number(d.savings) >= 20)
+        .sort((a, b) => Number(a.salePrice) - Number(b.salePrice))[0];
+      if (best) {
+        out.push({
+          name: w.name, kind: Number(best.salePrice) === 0 ? 'free' : 'sale', title: String(best.title), image: https(best.thumb),
+          url: `https://www.cheapshark.com/redirect?dealID=${encodeURIComponent(best.dealID)}`,
+          price: Number(best.salePrice), normal: Number(best.normalPrice), savings: Math.round(Number(best.savings)), store: STORES[best.storeID] || '',
+          key: `sale:${best.dealID}:${best.salePrice}`
+        });
+      }
+    } catch { /* offline oder API nicht erreichbar */ }
+  }
+  return out;
+}
+async function wishlistTick() {
+  if (!(settings.wishlist || []).length || !(account.state().betaUntil > Date.now())) return;
+  const hits = await checkWishlist().catch(() => []);
+  const seen = { ...(settings.wishlistSeen || {}) };
+  const now = Date.now();
+  for (const [k, at] of Object.entries(seen)) if (now - at > 45 * 86400_000) delete seen[k];
+  const fresh = hits.filter((h) => !seen[h.key]);
+  if (!fresh.length) { settings.wishlistSeen = seen; return; }
+  for (const h of fresh) seen[h.key] = now;
+  settings = { ...settings, wishlistSeen: seen };
+  saveSettings();
+  for (const h of fresh.slice(0, 3)) {
+    const body = h.kind === 'free'
+      ? tr('{title} ist gerade kostenlos ({store}).').replace('{title}', h.title).replace('{store}', h.store || 'PC')
+      : tr('{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.').replace('{title}', h.title).replace('{price}', h.price.toFixed(2)).replace('{normal}', h.normal.toFixed(2)).replace('{savings}', h.savings).replace('{store}', h.store || 'CheapShark');
+    broadcast('wishlist-hit', { ...h, body }, { incognito: false });
+    if (Notification.isSupported()) {
+      const n = new Notification({ title: tr('Spiel von deiner Wunschliste im Angebot'), body, icon: nativeImage.createFromPath(ICON), silent: false });
+      n.on('click', () => { if (alive(win)) { if (win.isMinimized()) win.restore(); win.focus(); win.webContents.send('open-tab', { url: h.url }); } });
+      n.show();
+    }
+  }
+}
+ipcMain.handle('wishlist:check', () => (account.state().betaUntil > Date.now() ? checkWishlist().catch(() => []) : []));
+setTimeout(() => { wishlistTick(); setInterval(wishlistTick, 3 * 60 * 60_000); }, 45_000);
+
+// ---------------------------------------------------------------------------
 // Passwort-Check: Datenlecks (Have I Been Pwned, k-Anonymität), doppelte und schwache Passwörter
 // Nur die ersten 5 Zeichen des SHA-1-Hashs verlassen den PC – nie das Passwort selbst.
 // ---------------------------------------------------------------------------
@@ -772,6 +833,18 @@ ipcMain.handle('ext:popup', (e, key, anchor) => {
   return extensions.openPopup(String(key), w, { right: Number(anchor.right) || 0, bottom: Number(anchor.bottom) || 0 });
 });
 ipcMain.handle('ext:options', (e, key) => (fromNormalUi(e) ? extensions.optionsUrl(String(key)) : null));
+
+// Tab-Vorschau: kleines JPEG des sichtbaren Bereichs (nur im Speicher der Oberfläche)
+ipcMain.handle('tab:thumb', async (e, id) => {
+  if (!isUi(e)) return null;
+  const wc = webContents.fromId(Number(id));
+  if (!wc || wc.isDestroyed() || wc.getType() !== 'webview') return null;
+  try {
+    const img = await wc.capturePage();
+    if (img.isEmpty()) return null;
+    return `data:image/jpeg;base64,${img.resize({ width: 320, quality: 'good' }).toJPEG(72).toString('base64')}`;
+  } catch { return null; }
+});
 
 // Screenshot-Werkzeug: sichtbarer Bereich oder ganze Seite als PNG
 ipcMain.handle('screenshot:capture', async (e, id, mode) => {
@@ -938,6 +1011,7 @@ ipcMain.handle('settings:set', async (e, patch) => {
   settings = { ...settings, ...safe };
   if ('netLimit' in safe || 'netLimitGameOnly' in safe || 'gameMode' in safe) applyNetLimit();
   if ('bookmarks' in safe) account.markDirty('bookmarks');
+  if ('wishlist' in safe) setTimeout(wishlistTick, 3000);
   if (SYNC_SETTINGS.some((k) => k in safe)) account.markDirty('settings');
   if ('adblock' in safe || 'adblockAnnoyances' in safe || 'adblockAllow' in safe) {
     adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });

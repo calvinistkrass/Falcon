@@ -5,6 +5,9 @@ const { app } = require('electron');
 
 const STRINGS = {
   en: {
+    "Spiel von deiner Wunschliste im Angebot": "Game from your wishlist on sale",
+    "{title} ist gerade kostenlos ({store}).": "{title} is free right now ({store}).",
+    "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} costs ${price} instead of ${normal} (−{savings}%) at {store}.",
     'Entpackte Erweiterung laden': 'Load unpacked extension',
     'Deckkraft': 'Opacity',
     'Diese Seite gibt es nicht.': 'This page doesn’t exist.',
@@ -43,6 +46,9 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon wants to show a saved password.'
   },
   fr: {
+    "Spiel von deiner Wunschliste im Angebot": "Jeu de ta liste de souhaits en promo",
+    "{title} ist gerade kostenlos ({store}).": "{title} est gratuit en ce moment ({store}).",
+    "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} coûte {price} $ au lieu de {normal} $ (−{savings} %) chez {store}.",
     'Deckkraft': 'Opacité',
     'Diese Seite gibt es nicht.': 'Cette page n’existe pas.',
     'In Tab öffnen': 'Ouvrir dans un onglet',
@@ -80,6 +86,9 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon souhaite afficher un mot de passe enregistré.'
   },
   es: {
+    "Spiel von deiner Wunschliste im Angebot": "Juego de tu lista de deseos en oferta",
+    "{title} ist gerade kostenlos ({store}).": "{title} está gratis ahora mismo ({store}).",
+    "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} cuesta {price} $ en lugar de {normal} $ (−{savings} %) en {store}.",
     'Deckkraft': 'Opacidad',
     'Diese Seite gibt es nicht.': 'Esta página no existe.',
     'In Tab öffnen': 'Abrir en pestaña',
@@ -117,6 +126,9 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon quiere mostrar una contraseña guardada.'
   },
   tr: {
+    "Spiel von deiner Wunschliste im Angebot": "İstek listendeki oyun indirimde",
+    "{title} ist gerade kostenlos ({store}).": "{title} şu anda ücretsiz ({store}).",
+    "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} şu anda {store} mağazasında {normal} $ yerine {price} $ (−%{savings}).",
     'Deckkraft': 'Opaklık',
     'Diese Seite gibt es nicht.': 'Bu sayfa mevcut değil.',
     'In Tab öffnen': 'Sekmede aç',
