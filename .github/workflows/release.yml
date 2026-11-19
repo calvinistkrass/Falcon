@@ -60,7 +60,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-  linux:
+  # .deb (Ubuntu, Debian, Mint …)
+  linux-deb:
     needs: windows
     runs-on: ubuntu-latest
     steps:
@@ -71,18 +72,43 @@ jobs:
           node-version: 22
           cache: npm
 
-      # .rpm braucht das rpm-Werkzeug
-      - run: sudo apt-get update && sudo apt-get install -y rpm
-
       - run: npm ci
 
-      # Zwei Pakete: .deb (Ubuntu, Debian, Mint …) und .rpm (Fedora, openSUSE …).
-      # Bei einem Fehler landet das Ende der Ausgabe als Hinweis in der Übersicht (ohne Anmeldung lesbar).
+      # Bei einem Fehler landet das Ende der Ausgabe als Hinweis in der Übersicht (ohne Anmeldung lesbar)
       - name: Bauen und veröffentlichen
         shell: bash
         run: |
           set -o pipefail
-          if ! npx electron-builder --linux --publish always 2>&1 | tee build.log; then
+          if ! npx electron-builder --linux deb --publish always 2>&1 | tee build.log; then
+            echo "::error title=Linux-Build fehlgeschlagen::$(tail -c 3500 build.log | tr '\n' ' ' | sed 's/%/%25/g')"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # .rpm (Fedora, openSUSE …) – in einem Fedora-Container, weil rpmbuild auf Ubuntu scheitert
+  linux-rpm:
+    needs: windows
+    runs-on: ubuntu-latest
+    container: fedora:41
+    steps:
+      - name: Werkzeuge installieren
+        run: dnf install -y git rpm-build libxcrypt-compat xz findutils tar which
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Bauen und veröffentlichen
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! npx electron-builder --linux rpm --publish always 2>&1 | tee build.log; then
             echo "::error title=Linux-Build fehlgeschlagen::$(tail -c 3500 build.log | tr '\n' ' ' | sed 's/%/%25/g')"
             exit 1
           fi

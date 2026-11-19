@@ -247,8 +247,8 @@ const Perf = (() => {
       emit('settings', state.settings); // Schalter zurücksetzen
       if (Popover.isOpen(pop)) renderPop();
       toast(acc.signedIn
-        ? $t('Game Mode kostet 150 FalCoins und gilt dann 2 Monate.')
-        : $t('Melde dich an und schalte Game Mode im FalCoin-Shop frei.'), 'gamepad',
+        ? $t('Game Mode ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei (350 FalCoins für 14 Tage).')
+        : $t('Melde dich an und schalte den Beta-Zugriff mit Game Mode im FalCoin-Shop frei.'), 'gamepad',
         { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
       return;
     }

@@ -97,7 +97,14 @@
       "desktop": {
         "Name": "Falcon",
         "StartupWMClass": "Falcon"
-      }
+      },
+      "publish": [
+        {
+          "provider": "github",
+          "releaseType": "release",
+          "publishAutoUpdate": false
+        }
+      ]
     },
     "publish": [
       {
@@ -133,10 +140,7 @@
       "packageName": "falcon-browser"
     },
     "rpm": {
-      "packageName": "falcon-browser",
-      "fpm": [
-        "--rpm-rpmbuild-define=_build_id_links none"
-      ]
+      "packageName": "falcon-browser"
     }
   },
   "devDependencies": {

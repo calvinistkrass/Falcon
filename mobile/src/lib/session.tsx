@@ -27,17 +27,11 @@ type MissionState = { date: string; visits: number; domains: string[]; claimed: 
 
 // ---------- FalCoin-Shop (wie auf dem PC) ----------
 export const SHOP = [
+  // Game Mode gibt es seit 2.1.8 nur noch als Beta-Funktion (wirkt in Falcon auf dem PC)
   {
-    id: 'gameMode', price: 150, icon: 'game-controller-outline', field: 'gameModeUntil', months: 2, title: 'Game Mode · 2 Monate', extendLabel: 'Um 2 Monate verlängern',
-    text: 'Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt. Ab dem Kauf genau 2 Monate aktiv.',
-    note: 'Wirkt in Falcon auf dem PC – du kannst ihn hier kaufen.'
-  },
-  {
-    id: 'beta14', price: 1000, icon: 'flask-outline', field: 'betaUntil', days: 14, title: 'Beta-Zugriff · 14 Tage', extendLabel: 'Um 14 Tage verlängern',
-    text: 'Teste neue Funktionen vor allen anderen. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
-    // Solange es keine Beta-Funktionen gibt, lässt sich der Beta-Zugriff nicht kaufen
-    available: false,
-    unavailableText: 'Zurzeit gibt es keine Beta-Funktionen. Sobald neue erscheinen, kannst du den Beta-Zugriff hier freischalten.'
+    id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 14, title: 'Beta-Zugriff · 14 Tage', extendLabel: 'Um 14 Tage verlängern',
+    text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
+    perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
   }
 ] as const;
 export type ShopItem = (typeof SHOP)[number];
@@ -532,7 +526,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const u = user;
     const it = SHOP.find((x) => x.id === itemId);
     if (!it) throw new FB.ApiError('INVALID');
-    if ('available' in it && it.available === false) throw new FB.ApiError('UNAVAILABLE');
+    if ((it as { available?: boolean }).available === false) throw new FB.ApiError('UNAVAILABLE');
     if (!u) throw new FB.ApiError('SIGNED_OUT');
     // Erst offene FalCoins gutschreiben, damit der Kontostand stimmt
     await flushCoins();

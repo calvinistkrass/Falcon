@@ -9,6 +9,8 @@ import { C, R } from '@/lib/theme';
 
 // Vorteile-Liste (optional je Artikel)
 const perksOf = (item: ShopItem): readonly string[] => ('perks' in item ? (item as { perks: readonly string[] }).perks : []);
+// Optionale Felder je Artikel (Hinweis, „zurzeit nicht kaufbar“)
+const extra = (item: ShopItem) => item as ShopItem & { note?: string; available?: boolean; unavailableText?: string };
 
 export default function Shop() {
   const { user, wallet, refreshCoins, purchase } = useSession();
@@ -53,7 +55,7 @@ export default function Shop() {
           const until = wallet[item.field];
           const active = until > now;
           const missing = item.price - coins;
-          const off = 'available' in item && item.available === false;
+          const off = extra(item).available === false;
           return (
             <Card key={item.id} style={[s.item, active ? s.owned : null]}>
               <View style={s.top}>
@@ -78,9 +80,9 @@ export default function Shop() {
                   ))}
                 </View>
               ) : null}
-              {'note' in item ? <Text style={s.note}>{item.note}</Text> : null}
-              {off && 'unavailableText' in item ? (
-                <View style={s.off}><Ionicons name="time-outline" size={16} color={C.text2} /><Text style={[s.text, { flex: 1 }]}>{item.unavailableText}</Text></View>
+              {extra(item).note ? <Text style={s.note}>{extra(item).note}</Text> : null}
+              {off && extra(item).unavailableText ? (
+                <View style={s.off}><Ionicons name="time-outline" size={16} color={C.text2} /><Text style={[s.text, { flex: 1 }]}>{extra(item).unavailableText}</Text></View>
               ) : null}
               {active ? <Text style={s.until}>Aktiv bis {fmtDate(until)}</Text> : null}
               <Button

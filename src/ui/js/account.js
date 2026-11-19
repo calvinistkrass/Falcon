@@ -301,13 +301,13 @@ const Account = (() => {
   // FalCoin-Shop
   // ---------------------------------------------------------------------------
   const SHOP = [
-    { id: 'gameMode', price: 150, icon: 'gamepad', field: 'gameModeUntil', extendLabel: 'Um 2 Monate verlängern', title: 'Game Mode · 2 Monate', text: 'Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt. Ab dem Kauf genau 2 Monate aktiv.' },
     {
-      id: 'beta14', price: 1000, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 14 Tage verlängern', title: 'Beta-Zugriff · 14 Tage',
-      text: 'Teste neue Funktionen vor allen anderen. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
-      // Solange es keine Beta-Funktionen gibt, lässt sich der Beta-Zugriff nicht kaufen
-      available: false,
-      unavailableText: 'Zurzeit gibt es keine Beta-Funktionen. Sobald neue erscheinen, kannst du den Beta-Zugriff hier freischalten.'
+      id: 'beta14', price: 350, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 14 Tage verlängern', title: 'Beta-Zugriff · 14 Tage',
+      text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 14 Tage lang.',
+      perks: [
+        'Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt',
+        'Alle weiteren Beta-Funktionen, sobald sie erscheinen'
+      ]
     }
   ];
   const fmtUntil = (ms) => new Date(ms).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long', year: 'numeric' });
@@ -690,12 +690,12 @@ const Account = (() => {
         row($t('Name'), acc.displayName || $t('Nicht festgelegt'), h('button', { class: 'btn ghost', onclick: editName }, $t('Ändern'))),
         row($t('Profilfarbe'), $t('Farbe deines Profilbilds.'), swatches),
         row($t('Dieser PC'), acc.deviceName, h('button', { class: 'btn ghost', onclick: editDevice }, $t('Umbenennen'))),
-        row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Im Shop tauschst du sie gegen Game Mode ein.'),
+        row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Im Shop tauschst du sie gegen den Beta-Zugriff mit Game Mode ein.'),
           h('div', { class: 'acc-coin-row' },
             h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale))),
             h('button', { class: 'btn ghost', onclick: () => shopDialog() }, icon('shop'), $t('Shop')))),
         acc.beta ? row($t('Beta-Zugriff'), $t('Aktiv bis {date}', { date: fmtUntil(acc.betaUntil) }), h('span', { class: 'beta-badge big' }, 'Beta')) : null,
-        acc.gameModeOwned ? row($t('Game Mode'), $t('Aktiv bis {date}', { date: fmtUntil(acc.gameModeUntil) }), h('span', { class: 'beta-badge big' }, $t('Aktiv'))) : null),
+        acc.gameModeOwned ? row($t('Game Mode'), (acc.gameModeUntil || 0) > Date.now() ? $t('Aktiv bis {date}', { date: fmtUntil(acc.gameModeUntil) }) : $t('Teil deines Beta-Zugriffs'), h('span', { class: 'beta-badge big' }, $t('Aktiv'))) : null),
 
       h('h3', { class: 's-sub' }, $t('Synchronisierung')),
       h('div', { class: 's-card' },
@@ -756,14 +756,12 @@ const Account = (() => {
   function enforceGameMode() {
     if (state.settings.gameMode && !(acc.signedIn && acc.gameModeOwned)) {
       updateSettings({ gameMode: false });
-      toast(acc.gameModeUntil
-        ? $t('Game Mode ist abgelaufen. Im FalCoin-Shop kannst du ihn für 2 Monate freischalten.')
-        : $t('Game Mode gibt es jetzt im FalCoin-Shop: 150 FalCoins für 2 Monate.'), 'gamepad', { label: $t('Shop'), onClick: () => (acc.signedIn ? shopDialog() : authDialog('signin')) });
+      toast($t('Game Mode ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei (350 FalCoins für 14 Tage).'), 'gamepad', { label: $t('Shop'), onClick: () => (acc.signedIn ? shopDialog() : authDialog('signin')) });
     }
   }
   let accountKnown = false;
   F.on('account-changed', () => { if (accountKnown) enforceGameMode(); });
-  setInterval(() => { if (accountKnown) { acc = { ...acc, gameModeOwned: (acc.gameModeUntil || 0) > Date.now() }; enforceGameMode(); } }, 60_000);
+  setInterval(() => { if (accountKnown) { acc = { ...acc, gameModeOwned: (acc.gameModeUntil || 0) > Date.now() || (acc.betaUntil || 0) > Date.now() }; enforceGameMode(); } }, 60_000);
   setTimeout(async () => {
     if (!INCOGNITO) acc = await F.account.state();
     accountKnown = true;

@@ -100,7 +100,8 @@ function publicState() {
     gameModeUntil: data.gameModeUntil || 0,
     daily: { available: data.lastDaily !== today(), streak: data.lastDaily === today() ? data.streak || 0 : nextStreak() - 1, next: dailyReward(data.lastDaily === today() ? (data.streak || 0) + 1 : nextStreak()) },
     missions: missionList(),
-    gameModeOwned: (data.gameModeUntil || 0) > Date.now(),
+    // Game Mode: mit Beta-Zugriff oder einer früher gekauften/geschenkten Game-Mode-Freischaltung
+    gameModeOwned: (data.gameModeUntil || 0) > Date.now() || (data.betaUntil || 0) > Date.now(),
     admin: !!data.admin
   };
 }
@@ -751,10 +752,9 @@ async function loadCoins() {
 // FalCoin-Shop
 // ---------------------------------------------------------------------------
 // Zeitlich begrenzte Freischaltungen – ein erneuter Kauf verlängert ab dem bisherigen Ende
+// Game Mode gibt es seit 2.1.8 nicht mehr einzeln, sondern als Beta-Funktion im Beta-Zugriff
 const SHOP = {
-  // available: false → kann nicht gekauft werden (zurzeit gibt es keine Beta-Funktionen)
-  beta14: { price: 1000, field: 'betaUntil', days: 14, available: false },
-  gameMode: { price: 150, field: 'gameModeUntil', months: 2 }
+  beta14: { price: 350, field: 'betaUntil', days: 14 }
 };
 function extend(from, it) {
   const d = new Date(Math.max(Date.now(), from || 0));

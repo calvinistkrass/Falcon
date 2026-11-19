@@ -128,7 +128,8 @@ async function fetchDownloads() {
     const windows = has((n) => /\.exe$/i.test(n) && !/blockmap/i.test(n));
     const android = has((n) => /\.apk$/i.test(n));
     const macDone = has((n) => /-mac-.*\.dmg$/i.test(n));
-    const linuxDone = has((n) => /\.(deb|rpm)$/i.test(n));
+    // Linux ist erst fertig, wenn .deb und .rpm da sind (zwei getrennte Jobs)
+    const linuxDone = has((n) => /\.deb$/i.test(n)) && has((n) => /\.rpm$/i.test(n));
     if (!windows || !android || !macDone || !linuxDone) data.build = { version: run.head_branch.slice(1), windows, android, mac: macDone, linux: linuxDone };
   }
   try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }

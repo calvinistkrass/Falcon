@@ -2,6 +2,15 @@
 
 All notable changes to Falcon are documented here.
 
+## [Unreleased]
+
+### Changed
+- **Game Mode is now a beta feature**: it's no longer sold on its own in the FalCoin shop but included in **beta access**. Game Mode unlocks bought or gifted earlier stay valid until they expire.
+- **Beta access can be bought again – now for 350 FalCoins** (14 days, buying again extends it), on the PC and in Falcon Mobile.
+
+### Fixed
+- **Linux .rpm package**: built in a Fedora container now, because rpmbuild failed on Ubuntu (2.1.6 and 2.1.7 only had the .deb).
+
 ## [2.1.7] – 2026-11-19
 
 ### Fixed
