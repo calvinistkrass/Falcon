@@ -164,7 +164,10 @@ const s = StyleSheet.create({
   btnText: { fontSize: 15.5, fontWeight: '700' },
   btnGhost: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: C.line2 },
   btnShine: { position: 'absolute', top: 0, left: 0, right: 0, height: '50%', borderTopLeftRadius: R.md, borderTopRightRadius: R.md, backgroundColor: 'rgba(255,255,255,0.12)' },
-  fieldFocus: { borderColor: C.accent, backgroundColor: '#22202f', shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 3 },
+  // Nur Farben ändern: Schatten/elevation beim Fokus baut die Ansicht auf Android neu auf – das Feld verliert den Fokus und springt
+  fieldFocus: Platform.OS === 'ios'
+    ? { borderColor: C.accent, backgroundColor: '#22202f', shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }
+    : { borderColor: C.accent, backgroundColor: '#22202f' },
   toggle: { width: 48, height: 28, borderRadius: 14, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line2, justifyContent: 'center', overflow: 'hidden' },
   knob: { position: 'absolute', width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   field: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 50, paddingHorizontal: 14, borderRadius: R.md, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line },

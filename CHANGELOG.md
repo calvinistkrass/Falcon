@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.1] – 2026-11-20
+
+### Fixed
+- **Falcon Mobile (Android): text fields** – tapping the email or password field no longer makes the focus jump between the fields, so you can type again (sign-in, sign-up and all other forms).
+
 ## [2.3.0] – 2026-11-20
 
 ### Added
