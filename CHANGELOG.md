@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.1.7] – 2026-11-19
+
+### Fixed
+- **Linux .rpm package** (Fedora, openSUSE) is built again – in 2.1.6 only the .deb package was published.
+
+### Changed
+- The download page shows for every platform (Windows, macOS, Linux, Android) whether its new version is still being prepared.
+
 ## [2.1.6] – 2026-11-19
 
 Falcon Mobile: **Falcon-Mobile-2.1.6.apk** (no changes to the app).
