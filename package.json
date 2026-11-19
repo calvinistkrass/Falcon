@@ -10,7 +10,9 @@
     "start": "electron .",
     "dist": "electron-builder --win",
     "dist:all": "electron-builder -wml",
-    "release": "electron-builder --win --publish always"
+    "release": "electron-builder --win --publish always",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
   },
   "build": {
     "appId": "com.falcon.browser",
@@ -41,21 +43,98 @@
     },
     "mac": {
       "icon": "assets/falcon.png",
-      "category": "public.app-category.games"
+      "category": "public.app-category.games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "Falcon-${version}-mac-${arch}.${ext}",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Websites wie Discord können die Kamera nutzen.",
+        "NSMicrophoneUsageDescription": "Websites wie Discord können das Mikrofon nutzen."
+      }
     },
     "linux": {
       "icon": "assets/falcon.png",
       "target": [
-        "AppImage"
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
-      "category": "Network"
+      "artifactName": "Falcon-${version}-linux-${arch}.${ext}",
+      "category": "Network",
+      "executableName": "falcon",
+      "synopsis": "Der schnelle Browser für Gamer",
+      "maintainer": "Falcon <noreply@falconbrowser.de>",
+      "mimeTypes": [
+        "x-scheme-handler/http",
+        "x-scheme-handler/https",
+        "text/html"
+      ],
+      "desktop": {
+        "Name": "Falcon",
+        "StartupWMClass": "Falcon"
+      }
     },
     "publish": [
       {
         "provider": "github",
         "releaseType": "release"
       }
-    ]
+    ],
+    "protocols": [
+      {
+        "name": "Web",
+        "schemes": [
+          "http",
+          "https"
+        ]
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "html",
+          "htm",
+          "xhtml"
+        ],
+        "name": "HTML-Dokument",
+        "role": "Viewer"
+      }
+    ],
+    "dmg": {
+      "title": "Falcon ${version}",
+      "artifactName": "Falcon-${version}-mac-${arch}.${ext}"
+    },
+    "deb": {
+      "packageName": "falcon-browser"
+    },
+    "rpm": {
+      "packageName": "falcon-browser"
+    }
   },
   "devDependencies": {
     "electron": "^33.4.11",
@@ -68,5 +147,6 @@
     "koffi": "^3.3.7",
     "tldts": "^7.4.19"
   },
-  "repository": "github:calvinistkrass/Falcon"
+  "repository": "github:calvinistkrass/Falcon",
+  "homepage": "https://falconbrowser.de"
 }

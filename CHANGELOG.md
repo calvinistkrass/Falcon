@@ -2,6 +2,17 @@
 
 All notable changes to Falcon are documented here.
 
+## [Unreleased]
+
+### Added
+- **Falcon for macOS and Linux**: every release now also contains
+  - macOS: `Falcon-x.y.z-mac-arm64.dmg` (Apple silicon) and `Falcon-x.y.z-mac-x64.dmg` (Intel). The app isn't signed by Apple yet – right-click → Open on first launch.
+  - Linux: `Falcon-x.y.z-linux-amd64.deb` (Ubuntu, Debian, Mint) and `Falcon-x.y.z-linux-x86_64.rpm` (Fedora, openSUSE).
+- macOS app menu (Cmd+C/V/X/A/Q work), links and HTML files from other macOS apps open in Falcon, and "Make default browser" works on macOS and Linux.
+
+### Changed
+- On macOS and Linux, a new version is offered as a download from GitHub (the app can't replace itself there yet).
+
 ## [2.1.5] – 2026-11-19
 
 Falcon Mobile: **Falcon-Mobile-2.1.5.apk**.

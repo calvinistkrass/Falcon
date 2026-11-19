@@ -1,7 +1,8 @@
 'use strict';
-// Falcon als Standardbrowser: Registrierung unter HKCU und Abfrage der aktuellen Auswahl.
-// Windows lässt Programme den Standardbrowser nicht selbst setzen – Falcon registriert sich
-// und öffnet dann die passende Seite der Windows-Einstellungen.
+// Falcon als Standardbrowser.
+// Windows: Registrierung unter HKCU; Windows lässt Programme den Standardbrowser nicht selbst setzen –
+// Falcon registriert sich und öffnet dann die passende Seite der Windows-Einstellungen.
+// macOS/Linux: über Electron (Launch Services bzw. xdg-settings) – macOS fragt dabei selbst nach.
 
 const { app, shell } = require('electron');
 const { execFile } = require('child_process');
@@ -12,7 +13,8 @@ const PROG_HTML = 'FalconHTML';
 const CLIENT_KEY = `HKCU\\Software\\Clients\\StartMenuInternet\\${APP_NAME}`;
 const FILE_TYPES = ['.htm', '.html', '.shtml', '.xht', '.xhtml', '.svg', '.webp', '.pdf'];
 
-const supported = () => process.platform === 'win32';
+const IS_WIN = process.platform === 'win32';
+const supported = () => IS_WIN || process.platform === 'darwin' || (process.platform === 'linux' && app.isPackaged);
 
 function reg(args) {
   return new Promise((resolve) => {
@@ -29,7 +31,7 @@ function command() {
 
 /** Schreibt die Registrierung (nur HKCU, keine Adminrechte nötig). */
 async function register() {
-  if (!supported()) return false;
+  if (!IS_WIN) return false;
   const exe = process.execPath;
   const icon = `"${exe}",0`;
   const cmd = command();
@@ -57,6 +59,7 @@ async function register() {
 /** true, wenn Windows https-Links an Falcon gibt. */
 async function isDefault() {
   if (!supported()) return false;
+  if (!IS_WIN) return app.isDefaultProtocolClient('https');
   const out = await reg(['query', 'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\UserChoice', '/v', 'ProgId']);
   return !!out && new RegExp(`ProgId\\s+REG_SZ\\s+${PROG_URL}\\b`, 'i').test(out);
 }
@@ -64,6 +67,12 @@ async function isDefault() {
 /** Registrieren und die Windows-Einstellungen direkt bei Falcon öffnen. */
 async function makeDefault() {
   if (!supported()) return false;
+  if (!IS_WIN) {
+    const ok = app.setAsDefaultProtocolClient('http') && app.setAsDefaultProtocolClient('https');
+    // Linux: Desktop-Datei aus dem .deb-Paket (falcon.desktop) als Standardbrowser setzen
+    if (process.platform === 'linux') execFile('xdg-settings', ['set', 'default-web-browser', 'falcon.desktop'], () => {});
+    return ok;
+  }
   await register();
   try {
     await shell.openExternal(`ms-settings:defaultapps?registeredAppUser=${encodeURIComponent(APP_NAME)}`);
@@ -77,7 +86,7 @@ async function makeDefault() {
 async function refreshRegistration() {
   // Falcon bei Windows als Browser eintragen, falls das fehlt oder der Pfad nicht mehr stimmt –
   // damit Falcon unter „Standard-Apps“ auftaucht (der Installer trägt es ab 1.9.2 ebenfalls ein)
-  if (!supported() || !app.isPackaged) return;
+  if (!IS_WIN || !app.isPackaged) return;
   const [cmd, registered] = await Promise.all([
     reg(['query', `HKCU\\Software\\Classes\\${PROG_URL}\\shell\\open\\command`, '/ve']),
     reg(['query', 'HKCU\\Software\\RegisteredApplications', '/v', APP_NAME])
@@ -91,7 +100,7 @@ function urlFromArgv(argv) {
   const args = argv.slice(app.isPackaged ? 1 : 2).filter((a) => a && !a.startsWith('--'));
   for (const a of args) {
     if (/^https?:\/\//i.test(a)) return a;
-    if (/^[a-z]:[\\/]/i.test(a) && FILE_TYPES.some((ext) => a.toLowerCase().endsWith(ext))) {
+    if ((/^[a-z]:[\\/]/i.test(a) || a.startsWith('/')) && FILE_TYPES.some((ext) => a.toLowerCase().endsWith(ext))) {
       return require('url').pathToFileURL(a).href;
     }
   }

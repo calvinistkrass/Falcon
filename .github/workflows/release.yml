@@ -1,6 +1,7 @@
 # Baut Falcon für Windows und veröffentlicht ein GitHub-Release, sobald ein Versions-Tag
 # (z. B. v1.2.0) gepusht wird. Falcon erkennt das neue Release dann als Update.
-# Danach wird Falcon Mobile für Android (APK) gebaut und an dasselbe Release angehängt.
+# Danach werden die macOS- und Linux-Version sowie Falcon Mobile für Android (APK) gebaut und an
+# dasselbe Release angehängt.
 name: Release
 
 on:
@@ -36,6 +37,48 @@ jobs:
 
       - name: Bauen und veröffentlichen
         run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  mac:
+    needs: windows
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Ohne Apple-Entwicklerzertifikat: nicht signiert/notarisiert (arm64 wird ad hoc signiert)
+      - name: Bauen und veröffentlichen
+        run: npx electron-builder --mac --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+  linux:
+    needs: windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # .rpm braucht das rpm-Werkzeug
+      - run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - run: npm ci
+
+      # Zwei Pakete: .deb (Ubuntu, Debian, Mint …) und .rpm (Fedora, openSUSE …)
+      - name: Bauen und veröffentlichen
+        run: npx electron-builder --linux --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

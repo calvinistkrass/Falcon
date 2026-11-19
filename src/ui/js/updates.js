@@ -37,7 +37,7 @@ const Updates = (() => {
     const hint = $('#upHint');
     hint.classList.toggle('hidden', !(s.portable || s.state === 'downloading' || s.state === 'downloaded'));
     hint.textContent = s.portable
-      ? $t('Die portable Version kann sich nicht selbst aktualisieren. Lade die neue Datei von GitHub herunter.')
+      ? $t('Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von GitHub herunter.')
       : s.state === 'downloaded'
         ? (countdown
           ? $t('Falcon startet in {n} s neu, installiert das Update im Hintergrund und öffnet sich danach wieder. Deine Tabs bleiben erhalten.', { n: countdown.left })

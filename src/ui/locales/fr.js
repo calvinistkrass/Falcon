@@ -68,6 +68,7 @@ I18N.add('fr', {
   "Drucken …": "Imprimer…",
   "Duplizieren": "Dupliquer",
   "Einfügen": "Coller",
+  "Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von GitHub herunter.": "Cette version ne peut pas se mettre à jour toute seule. Télécharge la nouvelle version sur GitHub.",
   "Zurzeit nicht verfügbar": "Indisponible pour le moment",
   "Zurzeit gibt es keine Beta-Funktionen. Sobald neue erscheinen, kannst du den Beta-Zugriff hier freischalten.": "Il n’y a actuellement aucune fonction bêta. Dès que de nouvelles arrivent, tu pourras débloquer l’accès bêta ici.",
   "Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Im Shop tauschst du sie gegen Game Mode ein.": "Tu reçois un FalCoin pour chaque site visité lorsque tu es connecté. Échange-les contre le Game Mode dans la boutique.",

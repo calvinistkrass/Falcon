@@ -1256,6 +1256,17 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
+  // macOS: Links und HTML-Dateien aus anderen Apps kommen als Ereignis (auch schon vor dem Start)
+  let pendingOpen = null;
+  const openFromOs = (url) => {
+    if (alive(win)) { if (win.isMinimized()) win.restore(); win.focus(); win.webContents.send('open-tab', url); } else pendingOpen = url;
+  };
+  app.on('open-url', (e, url) => { e.preventDefault(); if (/^https?:/i.test(url)) openFromOs(url); });
+  app.on('open-file', (e, file) => { e.preventDefault(); openFromOs(pathToFileURL(file).href); });
+  app.on('browser-window-created', (_e, w) => {
+    if (!pendingOpen) return;
+    w.webContents.once('did-finish-load', () => { if (pendingOpen) { setTimeout(() => { w.webContents.send('open-tab', pendingOpen); pendingOpen = null; }, 300); } });
+  });
   app.on('second-instance', (_e, argv) => {
     if (!win) return;
     if (win.isMinimized()) win.restore();
@@ -1266,7 +1277,12 @@ if (!gotLock) {
 
   app.whenReady().then(async () => {
     loadSettings();
-    Menu.setApplicationMenu(null);
+    // macOS braucht ein App-Menü, sonst funktionieren Cmd+C/V/X/A/Q nicht; Windows/Linux zeigen keins
+    Menu.setApplicationMenu(IS_MAC ? Menu.buildFromTemplate([
+      { role: 'appMenu' },
+      { role: 'editMenu' },
+      { label: 'Fenster', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { type: 'separator' }, { role: 'front' }] }
+    ]) : null);
     setupAdblock(session.defaultSession);
     for (const ses of [session.defaultSession, incognitoSession()]) {
       if (ses !== session.defaultSession) adblock.attach(ses);

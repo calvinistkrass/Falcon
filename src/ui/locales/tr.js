@@ -68,6 +68,7 @@ I18N.add('tr', {
   "Drucken …": "Yazdır…",
   "Duplizieren": "Çoğalt",
   "Einfügen": "Yapıştır",
+  "Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von GitHub herunter.": "Bu sürüm kendini güncelleyemez. Yeni sürümü GitHub’dan indir.",
   "Zurzeit nicht verfügbar": "Şu anda mevcut değil",
   "Zurzeit gibt es keine Beta-Funktionen. Sobald neue erscheinen, kannst du den Beta-Zugriff hier freischalten.": "Şu anda beta özelliği yok. Yenileri gelir gelmez beta erişimini buradan açabilirsin.",
   "Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Im Shop tauschst du sie gegen Game Mode ein.": "Oturum açıkken ziyaret ettiğin her web sitesi için bir FalCoin alırsın. Mağazada bunları Game Mode ile değiştirirsin.",

@@ -38,6 +38,10 @@ function repository() {
 }
 
 const isPortable = () => !!process.env.PORTABLE_EXECUTABLE_DIR;
+// Selbst aktualisieren kann nur der Windows-Installer. Die macOS-Version ist nicht von Apple signiert
+// (Squirrel.Mac verlangt das), .deb/.rpm kommen über den Paketmanager – dort öffnet Falcon wie bei der
+// portablen .exe die Release-Seite.
+const manualUpdate = () => (process.platform === 'win32' ? isPortable() : true);
 
 function releaseUrl(version) {
   const r = repository();
@@ -66,7 +70,7 @@ function init(sender, cache) {
   remember = (v) => cache?.set(v);
   const known = cache?.get();
   if (known && newer(known.version, pkg.version)) {
-    status = { ...status, state: 'available', available: known.version, notes: known.notes || '', portable: isPortable(), url: releaseUrl(known.version) };
+    status = { ...status, state: 'available', available: known.version, notes: known.notes || '', portable: manualUpdate(), url: releaseUrl(known.version) };
   } else if (known) {
     remember(null); // inzwischen installiert
   }
@@ -85,7 +89,7 @@ function init(sender, cache) {
   autoUpdater.on('update-available', (info) => {
     const notes = plainNotes(info.releaseNotes);
     remember({ version: info.version, notes });
-    setStatus({ state: 'available', available: info.version, notes, portable: isPortable(), url: releaseUrl(info.version), checkedAt: Date.now() });
+    setStatus({ state: 'available', available: info.version, notes, portable: manualUpdate(), url: releaseUrl(info.version), checkedAt: Date.now() });
   });
   autoUpdater.on('download-progress', (p) => setStatus({ state: 'downloading', percent: Math.round(p.percent) }));
   autoUpdater.on('update-downloaded', (info) => setStatus({ state: 'downloaded', available: info.version }));

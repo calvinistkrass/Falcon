@@ -108,12 +108,17 @@ async function fetchDownloads() {
   };
   const exe = findAsset((n) => /\.exe$/i.test(n) && !/blockmap/i.test(n));
   const apk = findAsset((n) => /^Falcon-Mobile-.*\.apk$/i.test(n));
+  const pick = (re) => { const f = findAsset((n) => re.test(n)); return f ? { url: f.a.browser_download_url, size: f.a.size, version: verOf(f.a.name), date: f.r.published_at } : null; };
+  const mac = { arm64: pick(/-mac-arm64\.dmg$/i), x64: pick(/-mac-x64\.dmg$/i) };
+  const linux = { deb: pick(/-linux-[\w]+\.deb$/i), rpm: pick(/-linux-[\w]+\.rpm$/i) };
   const data = {
     version: exe ? exe.r.tag_name.replace(/^v/, '') : '',
     url: exe ? exe.a.browser_download_url : FALLBACK,
     size: exe ? exe.a.size : 0,
     date: exe ? exe.r.published_at : '',
     apk: apk ? { url: apk.a.browser_download_url, size: apk.a.size, version: verOf(apk.a.name), date: apk.r.published_at } : null,
+    mac: mac.arm64 || mac.x64 ? mac : null,
+    linux: linux.deb || linux.rpm ? linux : null,
     build: null
   };
   const run = runs?.workflow_runs?.[0];
@@ -122,7 +127,9 @@ async function fetchDownloads() {
     const has = (test) => !!target && (target.assets || []).some((x) => test(x.name));
     const windows = has((n) => /\.exe$/i.test(n) && !/blockmap/i.test(n));
     const android = has((n) => /\.apk$/i.test(n));
-    if (!windows || !android) data.build = { version: run.head_branch.slice(1), windows, android };
+    const macDone = has((n) => /-mac-.*\.dmg$/i.test(n));
+    const linuxDone = has((n) => /\.(deb|rpm)$/i.test(n));
+    if (!windows || !android || !macDone || !linuxDone) data.build = { version: run.head_branch.slice(1), windows, android, mac: macDone, linux: linuxDone };
   }
   try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
   return data;
@@ -149,13 +156,26 @@ function renderDownloads(d) {
     document.querySelectorAll('[data-apk-label]').forEach((el) => { el.textContent = 'Bald verfügbar'; });
   }
 
+  // macOS und Linux: je zwei Downloads (Apple-Chip/Intel, .deb/.rpm)
+  const meta = (x) => (x ? [x.version && `Version ${x.version}`, x.size && mb(x.size), x.date && dateDe(x.date)].filter(Boolean).join(' · ') : '');
+  const fill = (attr, metaAttr, group, keys) => {
+    document.querySelectorAll(`[${metaAttr}]`).forEach((el) => { el.textContent = group ? meta(group[keys[0]] || group[keys[1]]) : 'Erscheint mit dem nächsten Release'; });
+    document.querySelectorAll(`[${attr}]`).forEach((a) => {
+      const x = group?.[a.getAttribute(attr)];
+      if (x) { a.href = x.url; a.classList.remove('is-off'); a.removeAttribute('aria-disabled'); }
+      else { a.classList.add('is-off'); a.setAttribute('aria-disabled', 'true'); }
+    });
+  };
+  fill('data-mac', 'data-mac-meta', d.mac, ['arm64', 'x64']);
+  fill('data-linux', 'data-linux-meta', d.linux, ['deb', 'rpm']);
+
   // Neue Version wird gerade gebaut → Hinweis oben auf jeder Seite und pro Plattform auf der Download-Seite
   document.querySelectorAll('.build-banner').forEach((el) => el.remove());
-  document.querySelectorAll('[data-build-win], [data-build-apk]').forEach((el) => { el.hidden = true; });
+  document.querySelectorAll('[data-build-win], [data-build-apk], [data-build-mac], [data-build-linux]').forEach((el) => { el.hidden = true; });
   const b = d.build;
   if (!b) return;
   const main = document.querySelector('main');
-  if (main) {
+  if (main && (!b.windows || !b.android)) {
     const text = b.windows
       ? `<b>Die neue Android-Version wird für den Download vorbereitet.</b> Sie ist in den nächsten Minuten bis Stunden verfügbar – Falcon ${b.version} für Windows ist schon da.`
       : `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} ist in den nächsten Minuten bis Stunden verfügbar.`;
@@ -168,6 +188,14 @@ function renderDownloads(d) {
   if (!b.windows) {
     document.querySelectorAll('[data-build-win]').forEach((el) => {
       el.innerHTML = `${SPIN}<span>Version ${b.version} wird gerade für den Download vorbereitet. Bis dahin bekommst du ${d.version ? `Version ${d.version}` : 'die bisherige Version'} – sie aktualisiert sich danach automatisch.</span>`;
+      el.hidden = false;
+    });
+  }
+  for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux']]) {
+    // Nur melden, wenn es diese Plattform schon in einem Release gab (sonst baut der Lauf sie evtl. gar nicht)
+    if (b[key] || !d[key]) continue;
+    document.querySelectorAll(`[${attr}]`).forEach((el) => {
+      el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet.</span>`;
       el.hidden = false;
     });
   }
@@ -193,7 +221,7 @@ else {
 async function detectDevice() {
   const ua = navigator.userAgent || '';
   const uad = navigator.userAgentData;
-  let platform = 'windows', name = '', model = '', version = '';
+  let platform = 'windows', name = '', model = '', version = '', arch = '';
   if (/Android/i.test(ua)) {
     platform = 'android';
     version = (ua.match(/Android ([\d.]+)/) || [])[1] || '';
@@ -215,7 +243,8 @@ async function detectDevice() {
   // Chromium nennt das echte Modell und die Windows-Version nur auf Nachfrage
   if (uad?.getHighEntropyValues) {
     try {
-      const h = await uad.getHighEntropyValues(['model', 'platformVersion']);
+      const h = await uad.getHighEntropyValues(['model', 'platformVersion', 'architecture']);
+      if (platform === 'mac' && h.architecture) arch = h.architecture === 'arm' ? 'arm64' : 'x64';
       if (h.model) model = h.model;
       if (platform === 'windows' && h.platformVersion) version = Number(h.platformVersion.split('.')[0]) >= 13 ? '11' : '10';
       if (platform === 'android' && h.platformVersion) version = h.platformVersion.replace(/\.0(\.0)?$/, '');
@@ -224,16 +253,15 @@ async function detectDevice() {
   if (model === 'K' || /^Linux/i.test(model)) model = ''; // gekürzte Kennung neuer Chrome-Versionen
   const os = { windows: 'Windows', android: 'Android', ios: name === 'iPad' ? 'iPadOS' : 'iOS', mac: 'macOS', linux: 'Linux' }[platform];
   const device = model || name;
-  return { platform, label: [device, version ? `${os} ${version}` : (model ? os : '')].filter(Boolean).join(' · ') };
+  return { platform, arch, label: [device, arch === 'arm64' ? 'Apple-Chip' : arch === 'x64' && platform === 'mac' ? 'Intel' : '', version ? `${os} ${version}` : (model ? os : '')].filter(Boolean).join(' · ') };
 }
 
 const PLATFORM_KEY = 'falcon.platform';
 const picker = document.querySelector('[data-platform]');
-const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Falcon auf iPhone & iPad', mac: 'Kostenlos herunterladen', linux: 'Kostenlos herunterladen' };
+const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Falcon auf iPhone & iPad', mac: 'Für macOS herunterladen', linux: 'Für Linux herunterladen' };
 const SOON = {
   ios: { title: 'Falcon für iPhone & iPad', text: 'Eine eigene App für iPhone und iPad gibt es noch nicht. Bis dahin zeigt dir die Falcon-Web-App deine Lesezeichen und die Tabs deiner PCs.', btn: 'Zur Falcon-Web-App', href: '/app' },
-  mac: { title: 'Falcon für macOS', text: 'Falcon für macOS ist in Vorbereitung. Bis dahin gibt es Falcon für Windows 10 und 11 und die Android-App.', btn: 'Windows-Version ansehen', href: '#windows' },
-  linux: { title: 'Falcon für Linux', text: 'Falcon für Linux ist in Vorbereitung. Bis dahin gibt es Falcon für Windows 10 und 11 und die Android-App.', btn: 'Windows-Version ansehen', href: '#windows' }
+
 };
 
 // Eigenes Auswahlmenü: der ganze Knopf öffnet die Liste; Maus, Touch und Tastatur
@@ -316,6 +344,11 @@ if (picker) {
   document.querySelector('[data-soon-btn]')?.addEventListener('click', (e) => {
     if (e.currentTarget.getAttribute('href') === '#windows') { e.preventDefault(); showPlatform('windows'); }
   });
+  // Links wie /download#linux auf derselben Seite
+  addEventListener('hashchange', () => {
+    const p = { '#android': 'android', '#windows': 'windows', '#ios': 'ios', '#mac': 'mac', '#linux': 'linux' }[location.hash];
+    if (p) showPlatform(p);
+  });
   picker.addEventListener('change', () => {
     showPlatform(picker.value);
     try { localStorage.setItem(PLATFORM_KEY, picker.value); } catch { /* egal */ }
@@ -326,15 +359,20 @@ detectDevice().then((dev) => {
   document.querySelectorAll('[data-cta]').forEach((a) => {
     const label = a.querySelector('[data-cta-label]');
     if (label) label.textContent = HOME_CTA[dev.platform];
-    if (dev.platform === 'android' || dev.platform === 'ios') a.href = `/download#${dev.platform}`;
+    if (dev.platform !== 'windows') a.href = `/download#${dev.platform}`;
   });
   if (!picker) return;
   let chosen = '';
   try { chosen = localStorage.getItem(PLATFORM_KEY) || ''; } catch { /* egal */ }
-  const fromHash = { '#android': 'android', '#windows': 'windows', '#ios': 'ios' }[location.hash] || '';
+  const fromHash = { '#android': 'android', '#windows': 'windows', '#ios': 'ios', '#mac': 'mac', '#linux': 'linux' }[location.hash] || '';
   const info = document.querySelector('[data-detected]');
   if (info) info.textContent = dev.label ? `Erkannt: ${dev.label}` : 'Wähle deine Plattform';
   document.querySelector('.dl-picker')?.removeAttribute('hidden');
+  // Intel-Mac erkannt → Intel-Knopf als Hauptknopf
+  if (dev.platform === 'mac' && dev.arch === 'x64') {
+    const arm = document.querySelector('[data-mac="arm64"]'), intel = document.querySelector('[data-mac="x64"]');
+    if (arm && intel) { arm.classList.replace('btn-primary', 'btn-ghost'); arm.classList.add('dl-second'); intel.classList.replace('btn-ghost', 'btn-primary'); intel.classList.remove('dl-second'); arm.before(intel); }
+  }
   showPlatform(fromHash || chosen || dev.platform);
 });
 
