@@ -140,7 +140,10 @@
       "packageName": "falcon-browser"
     },
     "rpm": {
-      "packageName": "falcon-browser"
+      "packageName": "falcon-browser",
+      "fpm": [
+        "--debug"
+      ]
     }
   },
   "devDependencies": {

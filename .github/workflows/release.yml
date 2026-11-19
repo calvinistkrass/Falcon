@@ -86,14 +86,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # .rpm (Fedora, openSUSE …) – in einem Fedora-Container, weil rpmbuild auf Ubuntu scheitert
+  # .rpm (Fedora, openSUSE …) – auf Ubuntu 22.04: dessen rpmbuild (4.17) verträgt sich mit dem fpm von
+  # electron-builder; mit rpmbuild 4.18+ (Ubuntu 24.04, Fedora 41) scheiterte der Build
   linux-rpm:
     needs: windows
-    runs-on: ubuntu-latest
-    container: fedora:41
+    runs-on: ubuntu-22.04
     steps:
-      - name: Werkzeuge installieren
-        run: dnf install -y git rpm-build libxcrypt-compat xz findutils tar which
+      - name: rpmbuild installieren
+        run: sudo apt-get update && sudo apt-get install -y rpm
 
       - uses: actions/checkout@v4
 
