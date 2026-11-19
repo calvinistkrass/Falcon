@@ -175,10 +175,15 @@ function renderDownloads(d) {
   const b = d.build;
   if (!b) return;
   const main = document.querySelector('main');
-  if (main && (!b.windows || !b.android)) {
-    const text = b.windows
-      ? `<b>Die neue Android-Version wird für den Download vorbereitet.</b> Sie ist in den nächsten Minuten bis Stunden verfügbar – Falcon ${b.version} für Windows ist schon da.`
-      : `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} ist in den nächsten Minuten bis Stunden verfügbar.`;
+  if (main) {
+    // Welche Plattformen sind schon da, welche werden noch gebaut?
+    const all = [['windows', 'Windows'], ['mac', 'macOS'], ['linux', 'Linux'], ['android', 'Android']];
+    const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} und ${xs[xs.length - 1]}`);
+    const pending = all.filter(([k]) => !b[k]).map(([, n]) => n);
+    const ready = all.filter(([k]) => b[k]).map(([, n]) => n);
+    const text = !b.windows
+      ? `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} für ${list(pending)} ist in den nächsten Minuten bis Stunden verfügbar.`
+      : `<b>Falcon ${b.version} für ${list(pending)} wird für den Download vorbereitet.</b> Das dauert noch einige Minuten bis Stunden – ${list(ready)} ${ready.length > 1 ? 'sind' : 'ist'} schon da.`;
     const bar = document.createElement('div');
     bar.className = 'build-banner';
     bar.setAttribute('role', 'status');
@@ -192,10 +197,9 @@ function renderDownloads(d) {
     });
   }
   for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux']]) {
-    // Nur melden, wenn es diese Plattform schon in einem Release gab (sonst baut der Lauf sie evtl. gar nicht)
-    if (b[key] || !d[key]) continue;
+    if (b[key]) continue;
     document.querySelectorAll(`[${attr}]`).forEach((el) => {
-      el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet.</span>`;
+      el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet. Das dauert noch einige Minuten bis Stunden.</span>`;
       el.hidden = false;
     });
   }
