@@ -356,7 +356,6 @@ if (picker) {
   });
   picker.addEventListener('change', () => {
     showPlatform(picker.value);
-    try { localStorage.setItem(PLATFORM_KEY, picker.value); } catch { /* egal */ }
   });
 }
 detectDevice().then((dev) => {
@@ -367,8 +366,8 @@ detectDevice().then((dev) => {
     if (dev.platform !== 'windows') a.href = `/download#${dev.platform}`;
   });
   if (!picker) return;
-  let chosen = '';
-  try { chosen = localStorage.getItem(PLATFORM_KEY) || ''; } catch { /* egal */ }
+  // Immer das erkannte Gerät zeigen (frühere Versionen merkten sich eine Handauswahl – die wird entfernt)
+  try { localStorage.removeItem(PLATFORM_KEY); } catch { /* egal */ }
   const fromHash = { '#android': 'android', '#windows': 'windows', '#ios': 'ios', '#mac': 'mac', '#linux': 'linux' }[location.hash] || '';
   const info = document.querySelector('[data-detected]');
   if (info) info.textContent = dev.label ? `Erkannt: ${dev.label}` : 'Wähle deine Plattform';
@@ -378,7 +377,7 @@ detectDevice().then((dev) => {
     const arm = document.querySelector('[data-mac="arm64"]'), intel = document.querySelector('[data-mac="x64"]');
     if (arm && intel) { arm.classList.replace('btn-primary', 'btn-ghost'); arm.classList.add('dl-second'); intel.classList.replace('btn-ghost', 'btn-primary'); intel.classList.remove('dl-second'); arm.before(intel); }
   }
-  showPlatform(fromHash || chosen || dev.platform);
+  showPlatform(fromHash || dev.platform);
 });
 
 // Neuerungen der aktuellen Version aus CHANGELOG.md (Download-Seite)
