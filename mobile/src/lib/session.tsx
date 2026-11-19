@@ -8,7 +8,7 @@ import { load, save } from './storage';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.1.7';
+export const APP_VERSION = '2.1.8';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
