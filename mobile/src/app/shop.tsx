@@ -96,6 +96,7 @@ export default function Shop() {
         <View style={{ flex: 1 }}><Button title="Missionen" icon="flag-outline" variant="ghost" small onPress={() => router.push('/rewards')} /></View>
         <View style={{ flex: 1 }}><Button title="Verlauf" icon="time-outline" variant="ghost" small onPress={() => router.push('/coinlog')} /></View>
       </View>
+      <View style={{ marginTop: 10 }}><Button title="Rückerstattung beantragen" icon="refresh-outline" variant="ghost" small onPress={() => router.push('/refund')} /></View>
     </Screen>
   );
 }

@@ -642,6 +642,12 @@ const accountHandlers = {
   claimMission: (a) => account.claimMission(a),
   // Nur für das Admin-Konto (zusätzlich durch die Firestore-Regeln geschützt)
   listWallets: () => (account.state().admin ? account.listWallets() : { ok: false, error: 'FORBIDDEN' }),
+  listPurchases: () => account.listPurchases(),
+  requestRefund: (a) => account.requestRefund(a),
+  refundNotices: () => account.refundNotices(),
+  markRefundSeen: (a) => account.markRefundSeen(a),
+  adminListRefunds: () => (account.state().admin ? account.adminListRefunds() : { ok: false, error: 'FORBIDDEN' }),
+  adminDecideRefund: (a) => (account.state().admin ? account.adminDecideRefund(a) : { ok: false, error: 'FORBIDDEN' }),
   adminUpdateWallet: (a) => (account.state().admin ? account.adminUpdateWallet(a) : { ok: false, error: 'FORBIDDEN' })
 };
 ipcMain.handle('account', async (e, action, arg) => {

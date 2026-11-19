@@ -353,7 +353,7 @@ function dialogShell(content, onDismiss) {
   return close;
 }
 
-function openForm({ title, description, fields, submitLabel = $t('Speichern'), onSubmit }) {
+function openForm({ title, description, fields, submitLabel = $t('Speichern'), onSubmit, onCancel }) {
   const error = h('p', { class: 'dialog-error' });
   const inputs = fields.map((f) => {
     if (f.type === 'select') {
@@ -373,9 +373,9 @@ function openForm({ title, description, fields, submitLabel = $t('Speichern'), o
       h('div', { class: 'fields' }, fields.map((f, i) => h('label', {}, f.label, inputs[i]))),
       error),
     h('div', { class: 'dialog-foot' },
-      h('button', { type: 'button', class: 'btn ghost', onclick: () => close() }, $t('Abbrechen')),
+      h('button', { type: 'button', class: 'btn ghost', onclick: () => { onCancel?.(); close(); } }, $t('Abbrechen')),
       h('button', { type: 'submit', class: 'btn primary' }, submitLabel)));
-  const close = dialogShell(form);
+  const close = dialogShell(form, () => onCancel?.());
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = Object.fromEntries(inputs.map((i) => [i.name, i.value]));
@@ -387,14 +387,14 @@ function openForm({ title, description, fields, submitLabel = $t('Speichern'), o
   inputs[0]?.select();
 }
 
-function confirmDialog({ title, message, confirmLabel = 'OK', danger = false }) {
+function confirmDialog({ title, message, confirmLabel = 'OK', danger = false, alert = false }) {
   return new Promise((resolve) => {
     let done = false;
     const finish = (v) => { if (!done) { done = true; resolve(v); } close(); };
     const box = h('div', { class: 'dialog', role: 'alertdialog' },
       h('div', { class: 'dialog-body' }, h('h3', {}, title), message ? h('p', {}, message) : null),
       h('div', { class: 'dialog-foot' },
-        h('button', { class: 'btn ghost', onclick: () => finish(false) }, $t('Abbrechen')),
+        alert ? null : h('button', { class: 'btn ghost', onclick: () => finish(false) }, $t('Abbrechen')),
         h('button', { class: `btn ${danger ? 'danger-solid' : 'primary'}`, onclick: () => finish(true) }, confirmLabel)));
     const close = dialogShell(box, () => { if (!done) { done = true; resolve(false); } });
     box.querySelector('.dialog-foot .btn:last-child').focus();

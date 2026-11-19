@@ -188,6 +188,20 @@ service cloud.firestore {
       allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
       allow delete: if isAdmin();
     }
+    // Refund requests: the buyer creates one and may mark the answer as seen, the developer decides
+    match /refunds/{id} {
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'purchaseId', 'item', 'price', 'reason', 'created', 'status'])
+        && request.resource.data.reason is string && request.resource.data.reason.size() > 0 && request.resource.data.reason.size() <= 1000;
+      allow read: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen']));
+      allow delete: if isAdmin();
+    }
+    // An approved refund is noted in the buyer's FalCoin history
+    match /users/{uid}/coinlog/{id} {
+      allow create: if isAdmin();
+    }
   }
 }
 ```

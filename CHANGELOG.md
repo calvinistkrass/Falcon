@@ -2,7 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
-## [2.1.9] – 2026-11-20
+## [2.2.0] – 2026-11-20
+
+### Added
+- **Refunds for shop purchases**: bought something by mistake? Shop → "Request a refund", pick the purchase, enter your email and a reason. The developer approves or declines it in the admin panel; you see the answer as a pop-up the next time you open Falcon. An approved refund returns the FalCoins, removes the unlock and shows up in the FalCoin history (PC and Falcon Mobile).
+- **Admin panel**: list of open refund requests with Approve / Decline (optional reason), a counter in the account menu and a notice at startup.
+
+### Fixed
+- **macOS build**: the .dmg step is retried when the disk-image tool fails on the build machine (2.1.8 and 2.1.9 were missing some .dmg files).
+
+ – 2026-11-20
 
 ### Changed
 - **Beta access now lasts exactly 30 days** (350 FalCoins). While it's active, the shop shows **"Already purchased"** instead of the price; you can buy it again after it expires.

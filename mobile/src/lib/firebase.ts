@@ -109,6 +109,14 @@ export async function commit(writes: unknown[], token: string) {
   return request<{ writeResults?: { transformResults?: { integerValue?: string }[] }[] }>(
     `${ROOT.replace(/\/documents$/, '')}/documents:commit`, { method: 'POST', token, body: { writes } });
 }
+/** Einfache Abfrage: alle Dokumente einer Sammlung mit feld == wert */
+export async function runQuery(collection: string, field: string, value: string, token: string): Promise<Doc[]> {
+  const r = await request<{ document?: Doc }[]>(`${ROOT}:runQuery`, {
+    method: 'POST', token,
+    body: { structuredQuery: { from: [{ collectionId: collection }], where: { fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: value } } } } }
+  });
+  return (Array.isArray(r) ? r : []).filter((x) => x.document).map((x) => x.document as Doc);
+}
 /** Dokument schreiben – optional nur, wenn es (nicht) existiert bzw. sich seit updateTime nicht geändert hat. */
 export async function putDoc(path: string, fields: Record<string, any>, token: string | undefined, pre?: { exists?: boolean; updateTime?: string }, mask?: string[]) {
   const q: string[] = [];

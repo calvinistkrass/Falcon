@@ -913,6 +913,106 @@ const claimMission = safe(async ({ id }) => {
   return { reward: mission.reward };
 });
 
+
+// ---------------------------------------------------------------------------
+// Rückerstattungen: Nutzer beantragt (refunds/{id}), Admin genehmigt oder lehnt ab,
+// der Nutzer sieht die Entscheidung beim nächsten Start als Hinweis (E-Mails kann Falcon nicht senden)
+// ---------------------------------------------------------------------------
+const fromRefund = (d) => {
+  const f = d.fields || {};
+  return {
+    id: d.name.split('/').pop(), uid: f.uid?.stringValue || '', email: f.email?.stringValue || '', name: f.name?.stringValue || '',
+    purchaseId: f.purchaseId?.stringValue || '', item: f.item?.stringValue || '', price: Number(f.price?.integerValue) || 0,
+    reason: f.reason?.stringValue || '', created: Number(f.created?.integerValue) || 0, status: f.status?.stringValue || 'pending',
+    note: f.note?.stringValue || '', decidedAt: Number(f.decidedAt?.integerValue) || 0, seen: !!f.seen?.booleanValue
+  };
+};
+async function runQuery(collection, field, value) {
+  const res = await request(`${STORE}:runQuery`, {
+    method: 'POST', token: await token(),
+    body: { structuredQuery: { from: [{ collectionId: collection }], where: { fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: value } } } } }
+  });
+  return (Array.isArray(res) ? res : []).filter((r) => r.document).map((r) => r.document);
+}
+/** Eigene Käufe (neueste zuerst) mit Hinweis, ob schon eine Rückerstattung läuft. */
+const listPurchases = safe(async () => {
+  if (!load()) throw new AccountError('SIGNED_OUT');
+  const [res, mine] = await Promise.all([
+    request(`${STORE}/users/${data.uid}/purchases?pageSize=50`, { token: await token() }),
+    runQuery('refunds', 'uid', data.uid).catch(() => [])
+  ]);
+  const refunds = mine.map(fromRefund);
+  const purchases = (res.documents || []).map((d) => {
+    const f = d.fields || {};
+    const id = d.name.split('/').pop();
+    const r = refunds.find((x) => x.purchaseId === id);
+    return { id, item: f.item?.stringValue || '', price: Number(f.price?.integerValue) || 0, at: Number(f.at?.integerValue) || 0, until: Number(f.until?.integerValue) || 0, refund: r ? r.status : null };
+  }).sort((a, b) => b.at - a.at);
+  return { purchases, email: data.email || '' };
+});
+const requestRefund = safe(async ({ purchaseId, email, reason }) => {
+  if (!load()) throw new AccountError('SIGNED_OUT');
+  const text = String(reason || '').trim().slice(0, 1000);
+  const mail = String(email || '').trim().slice(0, 200);
+  if (!text) throw new AccountError('EMPTY');
+  if (!/^\S+@\S+\.\S+$/.test(mail)) throw new AccountError('INVALID_EMAIL');
+  if (!/^[\w-]{6,64}$/.test(String(purchaseId))) throw new AccountError('INVALID');
+  const p = await getDoc(`users/${data.uid}/purchases/${purchaseId}`);
+  if (!p) throw new AccountError('INVALID');
+  const mine = (await runQuery('refunds', 'uid', data.uid).catch(() => [])).map(fromRefund);
+  if (mine.some((r) => r.purchaseId === purchaseId)) throw new AccountError('ALREADY_REQUESTED');
+  const f = p.fields || {};
+  await request(`${STORE}/refunds`, {
+    method: 'POST', token: await token(),
+    body: { fields: {
+      uid: str(data.uid), email: str(mail), name: str(data.displayName || ''), purchaseId: str(purchaseId),
+      item: str(f.item?.stringValue || ''), price: int(Number(f.price?.integerValue) || 0), reason: str(text), created: int(Date.now()), status: str('pending')
+    } }
+  });
+  return {};
+});
+/** Entschiedene, noch nicht gezeigte Rückerstattungen (für den Hinweis beim Start). */
+const refundNotices = safe(async () => {
+  if (!load()) return { refunds: [] };
+  const refunds = (await runQuery('refunds', 'uid', data.uid)).map(fromRefund).filter((r) => r.status !== 'pending' && !r.seen);
+  return { refunds };
+});
+const markRefundSeen = safe(async ({ id }) => {
+  if (!load() || !/^[\w-]{6,64}$/.test(String(id))) throw new AccountError('INVALID');
+  await request(`${STORE}/refunds/${id}?updateMask.fieldPaths=seen&currentDocument.exists=true`, { method: 'PATCH', token: await token(), body: { fields: { seen: { booleanValue: true } } } });
+  return {};
+});
+// Admin
+const adminListRefunds = safe(async () => {
+  const res = await request(`${STORE}/refunds?pageSize=200`, { token: await token() });
+  // Offene zuerst, darin die neuesten oben
+  const refunds = (res.documents || []).map(fromRefund)
+    .sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.created - a.created);
+  return { refunds };
+});
+const adminDecideRefund = safe(async ({ id, approve, note = '' }) => {
+  if (!/^[\w-]{6,64}$/.test(String(id))) throw new AccountError('INVALID');
+  const doc = await getDoc(`refunds/${id}`);
+  if (!doc) throw new AccountError('INVALID');
+  const r = fromRefund(doc);
+  if (r.status !== 'pending') throw new AccountError('ALREADY_DECIDED');
+  const msg = String(note || '').trim().slice(0, 500);
+  const decided = { status: str(approve ? 'approved' : 'denied'), decidedAt: int(Date.now()), note: str(msg) };
+  const writes = [{ update: { name: docName(`refunds/${id}`), fields: decided }, updateMask: { fieldPaths: Object.keys(decided) }, currentDocument: { updateTime: doc.updateTime } }];
+  if (approve) {
+    // FalCoins zurück, Freischaltung zurücknehmen, im Verlauf des Nutzers vermerken
+    writes.push({ transform: { document: docName(walletPath(r.uid)), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(r.price) } }] } });
+    const field = SHOP_FIELDS[r.item];
+    if (field) writes.push({ update: { name: docName(walletPath(r.uid)), fields: { [field]: int(0) } }, updateMask: { fieldPaths: [field] }, currentDocument: { exists: true } });
+    writes.push({ update: { name: docName(`users/${r.uid}/coinlog/${crypto.randomUUID()}`), fields: { type: str('refund'), amount: int(r.price), label: str(r.item), at: int(Date.now()) } }, currentDocument: { exists: false } });
+  }
+  await request(commitUrl(), { method: 'POST', token: await token(), body: { writes } });
+  if (approve && r.uid === data?.uid) await loadCoins();
+  return {};
+});
+// Welche Freischaltung ein Artikel setzt (auch für frühere Artikel, die es nicht mehr im Shop gibt)
+const SHOP_FIELDS = { beta14: 'betaUntil', gameMode: 'gameModeUntil' };
+
 // ---------------------------------------------------------------------------
 // Admin: Wallets aller Nutzer ansehen und Kontostände ändern
 // ---------------------------------------------------------------------------
@@ -976,5 +1076,6 @@ module.exports = {
   KINDS, init, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
   updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale, remoteTabs,
   submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins, purchase, refreshCoins, listWallets, adminUpdateWallet, coinLog, claimDaily, claimMission, trackGameModeMinute,
+  listPurchases, requestRefund, refundNotices, markRefundSeen, adminListRefunds, adminDecideRefund,
   _test: { encrypt, decrypt, MERGE }
 };

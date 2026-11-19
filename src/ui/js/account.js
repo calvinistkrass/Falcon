@@ -15,6 +15,9 @@ const Account = (() => {
     ['tabs', 'Offene Tabs für andere PCs', 'devices']
   ];
   const ERRORS = {
+    ALREADY_REQUESTED: 'Für diesen Kauf läuft schon eine Rückerstattung.',
+    ALREADY_DECIDED: 'Über diesen Antrag wurde schon entschieden.',
+    ALREADY_OWNED: 'Bereits erworben – du kannst erst nach Ablauf erneut kaufen.',
     EMAIL_EXISTS: 'Für diese E-Mail-Adresse gibt es schon ein Konto.',
     EMAIL_NOT_FOUND: 'E-Mail-Adresse oder Passwort ist falsch.',
     INVALID_PASSWORD: 'E-Mail-Adresse oder Passwort ist falsch.',
@@ -111,7 +114,7 @@ const Account = (() => {
           h('button', { class: 'menu-item', onclick: () => { closePop(); rewardsDialog(); } }, icon('flag'), h('span', { class: 'menu-label' }, $t('Missionen')),
             missionsReady() ? h('span', { class: 'mission-dot' }, String(missionsReady())) : null),
           h('button', { class: 'menu-item', onclick: () => { closePop(); historyDialog(); } }, icon('clock'), h('span', { class: 'menu-label' }, $t('FalCoin-Verlauf'))),
-          acc.admin ? h('button', { class: 'menu-item', onclick: () => { closePop(); walletAdminDialog(); } }, icon('coin'), h('span', { class: 'menu-label' }, $t('FalCoins der Nutzer verwalten')), h('span', { class: 'admin-tag' }, 'Admin')) : null,
+          acc.admin ? h('button', { class: 'menu-item', onclick: () => { closePop(); walletAdminDialog(); } }, icon('coin'), h('span', { class: 'menu-label' }, $t('FalCoins der Nutzer verwalten')), pendingRefunds ? h('span', { class: 'mission-dot', title: $t('Offene Rückerstattungen') }, String(pendingRefunds)) : null, h('span', { class: 'admin-tag' }, 'Admin')) : null,
           h('button', { class: 'menu-item', onclick: () => { closePop(); remoteTabsDialog(); } }, icon('devices'), h('span', { class: 'menu-label' }, $t('Tabs von anderen PCs'))),
           h('button', { class: 'menu-item', onclick: () => { closePop(); Settings.open('account'); } }, icon('user'), h('span', { class: 'menu-label' }, $t('Konto & Sync verwalten'))),
           h('button', { class: 'menu-item', onclick: () => { closePop(); signOut(); } }, icon('logout'), h('span', { class: 'menu-label' }, $t('Abmelden')))
@@ -322,7 +325,9 @@ const Account = (() => {
           h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), balance)),
         h('p', { class: 'shop-sub' }, $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.')),
         list),
-      h('div', { class: 'dialog-foot' }, h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
+      h('div', { class: 'dialog-foot' },
+        h('button', { class: 'btn ghost', onclick: () => { close(); refundDialog(); } }, icon('restore'), $t('Rückerstattung beantragen')),
+        h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
     const close = dialogShell(box);
     // Aktuellen Kontostand vom Server holen
     F.account.refreshCoins().then(async () => { acc = await F.account.state(); renderAll(); if (box.isConnected) render(); });
@@ -434,7 +439,8 @@ const Account = (() => {
     visits: (e) => $t('Website-Besuche · {date}', { date: new Date(e.label).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long' }) }),
     daily: (e) => $t('Tägliche Belohnung · Tag {n}', { n: e.label }),
     mission: (e) => $t('Mission: {name}', { name: $t(MISSION_TEXT[e.label] || e.label, { goal: { visits20: 20, sites5: 5, gamemode30: 30 }[e.label] || '' }) }),
-    purchase: (e) => $t('Kauf: {item}', { item: e.label === 'gameMode' ? $t('Game Mode · 2 Monate') : e.label === 'beta14' ? $t('Beta-Zugriff') : e.label })
+    purchase: (e) => $t('Kauf: {item}', { item: e.label === 'gameMode' ? $t('Game Mode · 2 Monate') : e.label === 'beta14' ? $t('Beta-Zugriff') : e.label }),
+    refund: (e) => $t('Rückerstattung: {item}', { item: e.label === 'gameMode' ? $t('Game Mode') : e.label === 'beta14' ? $t('Beta-Zugriff') : e.label })
   };
   async function historyDialog() {
     if (!acc.signedIn) return authDialog('signin');
@@ -450,10 +456,85 @@ const Account = (() => {
     if (!r.ok) { list.replaceChildren(h('div', { class: 'rt-empty' }, errorText(r.error))); return; }
     if (!r.entries.length) { list.replaceChildren(h('div', { class: 'rt-empty' }, $t('Noch keine Einträge'))); return; }
     list.replaceChildren(...r.entries.map((e) => h('div', { class: 'hist-row' },
-      h('span', { class: `hist-ic ${e.amount < 0 ? 'out' : 'in'}` }, icon(e.type === 'purchase' ? 'shop' : e.type === 'mission' ? 'flag' : e.type === 'daily' ? 'coin' : 'globe')),
+      h('span', { class: `hist-ic ${e.amount < 0 ? 'out' : 'in'}` }, icon(e.type === 'purchase' ? 'shop' : e.type === 'refund' ? 'restore' : e.type === 'mission' ? 'flag' : e.type === 'daily' ? 'coin' : 'globe')),
       h('div', { class: 'hist-main' }, h('b', {}, (LOG_TEXT[e.type] || ((x) => x.type))(e)),
         h('small', {}, new Date(e.at).toLocaleString(I18N.locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))),
       h('b', { class: `hist-amount ${e.amount < 0 ? 'out' : 'in'}` }, `${e.amount > 0 ? '+' : ''}${e.amount.toLocaleString(I18N.locale)}`))));
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // Rückerstattung beantragen (Käufe aus Versehen) – Entscheidung kommt beim nächsten Start als Hinweis
+  // ---------------------------------------------------------------------------
+  const ITEM_NAME = (id) => (id === 'beta14' ? $t('Beta-Zugriff') : id === 'gameMode' ? $t('Game Mode') : id);
+  const REFUND_STATE = { pending: 'Beantragt', approved: 'Erstattet', denied: 'Abgelehnt' };
+  async function refundDialog() {
+    if (!acc.signedIn) return authDialog('signin');
+    const body = h('div', { class: 'rf-body' }, h('div', { class: 'rt-empty' }, h('span', { class: 'spinner' })));
+    const send = h('button', { class: 'btn primary', type: 'button', disabled: true }, $t('Antrag senden'));
+    const box = h('div', { class: 'dialog rf-dialog', role: 'dialog' },
+      h('div', { class: 'dialog-body' },
+        h('h3', {}, $t('Rückerstattung beantragen')),
+        h('p', { class: 'shop-sub' }, $t('Etwas aus Versehen gekauft? Wähle den Kauf aus und sag kurz, warum. Die Antwort bekommst du beim nächsten Start von Falcon.')),
+        body),
+      h('div', { class: 'dialog-foot' }, h('button', { class: 'btn ghost', onclick: () => close() }, $t('Abbrechen')), send));
+    const close = dialogShell(box);
+    const r = await F.account.listPurchases();
+    if (!r.ok) { body.replaceChildren(h('div', { class: 'rt-empty' }, errorText(r.error))); return; }
+    if (!r.purchases.length) { body.replaceChildren(h('div', { class: 'rt-empty' }, $t('Du hast noch nichts im Shop gekauft.'))); return; }
+    const fmt = (ms) => new Date(ms).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long', year: 'numeric' });
+    const select = h('select', { class: 'field-input' }, r.purchases.map((p) => h('option', { value: p.id, disabled: !!p.refund },
+      `${ITEM_NAME(p.item)} · ${p.price.toLocaleString(I18N.locale)} FalCoins · ${fmt(p.at)}${p.refund ? ` – ${$t(REFUND_STATE[p.refund] || p.refund)}` : ''}`)));
+    const first = r.purchases.find((p) => !p.refund);
+    if (first) select.value = first.id;
+    const email = h('input', { class: 'field-input', type: 'email', value: r.email || '', placeholder: $t('E-Mail-Adresse'), spellcheck: false });
+    const reason = h('textarea', { class: 'field-input rf-reason', rows: 4, maxlength: 1000, placeholder: $t('Warum möchtest du den Kauf zurückgeben?') });
+    const error = h('p', { class: 'dialog-error' });
+    body.replaceChildren(
+      h('div', { class: 'fields' },
+        h('label', {}, $t('Kauf'), select),
+        h('label', {}, $t('E-Mail-Adresse'), email),
+        h('label', {}, $t('Grund'), reason)),
+      error);
+    const check = () => { send.disabled = !first || !reason.value.trim() || !/^\S+@\S+\.\S+$/.test(email.value.trim()); };
+    reason.addEventListener('input', check); email.addEventListener('input', check); check();
+    if (!first) error.textContent = $t('Für alle deine Käufe läuft schon eine Rückerstattung.');
+    send.addEventListener('click', async () => {
+      send.disabled = true; error.textContent = '';
+      const res = await F.account.requestRefund({ purchaseId: select.value, email: email.value, reason: reason.value });
+      if (!res.ok) { error.textContent = errorText(res.error); check(); return; }
+      close();
+      toast($t('Antrag gesendet – die Antwort bekommst du beim nächsten Start von Falcon.'), 'check');
+    });
+    reason.focus();
+  }
+
+  // Entschiedene Rückerstattungen beim Start anzeigen (statt einer E-Mail)
+  async function showRefundNotices() {
+    const r = await F.account.refundNotices();
+    if (!r.ok) return;
+    for (const x of r.refunds) {
+      const ok = x.status === 'approved';
+      await confirmDialog({
+        title: ok ? $t('Rückerstattung genehmigt') : $t('Rückerstattung abgelehnt'),
+        message: (ok
+          ? $t('Du hast {n} FalCoins für „{item}“ zurückbekommen. Der Kauf wurde rückgängig gemacht.', { n: x.price.toLocaleString(I18N.locale), item: ITEM_NAME(x.item) })
+          : $t('Deine Rückerstattung für „{item}“ wurde abgelehnt.', { item: ITEM_NAME(x.item) })) + (x.note ? `\n\n${$t('Nachricht')}: ${x.note}` : ''),
+        confirmLabel: $t('OK'), alert: true
+      });
+      await F.account.markRefundSeen({ id: x.id });
+    }
+    if (r.refunds.some((x) => x.status === 'approved')) { acc = await F.account.state(); renderAll(); }
+  }
+  // Admin: offene Anträge beim Start melden
+  let pendingRefunds = 0;
+  async function checkPendingRefunds() {
+    if (!acc.admin) return;
+    const r = await F.account.adminListRefunds();
+    if (!r.ok) return;
+    pendingRefunds = r.refunds.filter((x) => x.status === 'pending').length;
+    renderAll();
+    if (pendingRefunds) toast(pendingRefunds === 1 ? $t('1 neuer Antrag auf Rückerstattung') : $t('{n} neue Anträge auf Rückerstattung', { n: pendingRefunds }), 'coin', { label: $t('Ansehen'), onClick: () => walletAdminDialog() });
   }
 
   // ---------------------------------------------------------------------------
@@ -464,12 +545,53 @@ const Account = (() => {
     { field: 'betaUntil', name: 'Beta', icon: 'flask', days: 30, give: 'Beta-Zugriff für 30 Tage schenken', revoke: 'Beta-Zugriff entziehen' }
   ];
   function walletAdminDialog() {
+    // Rückerstattungen: offene Anträge genehmigen oder ablehnen
+    const refundsBox = h('section', { class: 'rf-admin' });
+    async function loadRefunds() {
+      const r = await F.account.adminListRefunds();
+      if (!r.ok) { refundsBox.replaceChildren(); return; }
+      const open = r.refunds.filter((x) => x.status === 'pending');
+      const done = r.refunds.filter((x) => x.status !== 'pending').slice(0, 5);
+      pendingRefunds = open.length; renderAll();
+      const fmt = (ms) => new Date(ms).toLocaleString(I18N.locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const decide = async (x, approve) => {
+        let note = '';
+        if (approve) {
+          if (!(await confirmDialog({ title: $t('Rückerstattung genehmigen?'), message: $t('{name} bekommt {n} FalCoins zurück, „{item}“ wird entzogen.', { name: x.name || x.email, n: x.price.toLocaleString(I18N.locale), item: ITEM_NAME(x.item) }), confirmLabel: $t('Genehmigen') }))) return;
+        } else {
+          const ok = await new Promise((resolve) => openForm({
+            title: $t('Rückerstattung ablehnen'), description: $t('Optional: eine kurze Begründung – der Nutzer sieht sie beim nächsten Start.'),
+            fields: [{ name: 'note', label: $t('Begründung'), placeholder: $t('z. B. Der Kauf wurde schon genutzt.') }], submitLabel: $t('Ablehnen'),
+            onSubmit: ({ note: n }) => { note = n; resolve(true); }, onCancel: () => resolve(false)
+          }));
+          if (!ok) return;
+        }
+        const res = await F.account.adminDecideRefund({ id: x.id, approve, note });
+        if (!res.ok) { toast(errorText(res.error), 'warning'); return; }
+        toast(approve ? $t('Rückerstattung genehmigt') : $t('Rückerstattung abgelehnt'), 'check');
+        loadRefunds(); load();
+      };
+      refundsBox.replaceChildren(...[
+        h('h4', { class: 'rf-title' }, $t('Rückerstattungen'), open.length ? h('span', { class: 'mission-dot' }, String(open.length)) : null),
+        open.length ? h('div', { class: 'rf-list' }, open.map((x) => h('div', { class: 'rf-row' },
+          h('div', { class: 'rf-main' },
+            h('b', { 'data-no-i18n': '' }, `${x.name || x.email.split('@')[0]} · ${ITEM_NAME(x.item)} · ${x.price.toLocaleString(I18N.locale)} FalCoins`),
+            h('span', { 'data-no-i18n': '' }, `${x.email} · ${fmt(x.created)}`),
+            h('p', { 'data-no-i18n': '' }, x.reason)),
+          h('div', { class: 'rf-actions' },
+            h('button', { class: 'btn primary sm', onclick: () => decide(x, true) }, $t('Genehmigen')),
+            h('button', { class: 'btn ghost sm', onclick: () => decide(x, false) }, $t('Ablehnen')))))) : h('p', { class: 'rf-none' }, $t('Keine offenen Anträge.')),
+        done.length ? h('details', { class: 'rf-done' }, h('summary', {}, $t('Zuletzt entschieden')),
+          done.map((x) => h('div', { class: 'rf-done-row', 'data-no-i18n': '' }, `${x.status === 'approved' ? '✓' : '✕'} ${x.name || x.email} · ${ITEM_NAME(x.item)} · ${x.price} · ${fmt(x.decidedAt)}${x.note ? ` – ${x.note}` : ''}`))) : null].filter(Boolean));
+    }
+    loadRefunds();
     const search = h('input', { class: 'field-input', placeholder: $t('Name oder E-Mail suchen'), spellcheck: false });
     const list = h('div', { class: 'wa-list' }, h('div', { class: 'rt-empty' }, h('span', { class: 'spinner' })));
     const box = h('div', { class: 'dialog wa-dialog', role: 'dialog' },
       h('div', { class: 'dialog-body' },
         h('h3', {}, $t('FalCoins der Nutzer verwalten')),
         h('p', { class: 'shop-sub' }, $t('Nur für dein Admin-Konto sichtbar. Änderungen gelten sofort.')),
+        refundsBox,
         search, list),
       h('div', { class: 'dialog-foot' }, h('button', { class: 'btn primary', onclick: () => close() }, $t('Schließen'))));
     const close = dialogShell(box);
@@ -766,8 +888,9 @@ const Account = (() => {
     if (!INCOGNITO) acc = await F.account.state();
     accountKnown = true;
     enforceGameMode();
+    if (!INCOGNITO && acc.signedIn) { showRefundNotices().catch(() => {}); checkPendingRefunds().catch(() => {}); }
     if (acc.signedIn && acc.daily?.available) toast($t('Deine tägliche Belohnung wartet: +{n} FalCoins', { n: acc.daily.next }), 'coin', { label: $t('Abholen'), onClick: () => claimDaily() });
   }, 8000);
 
-  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, shopDialog, walletAdminDialog, rewardsDialog, historyDialog, get state() { return acc; } };
+  return { open: openPop, renderSettings, authDialog, refresh, remoteTabsDialog, loadRemoteTabs, openUrl, shopDialog, walletAdminDialog, rewardsDialog, historyDialog, refundDialog, get state() { return acc; } };
 })();

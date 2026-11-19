@@ -53,9 +53,20 @@ jobs:
 
       - run: npm ci
 
-      # Ohne Apple-Entwicklerzertifikat: nicht signiert/notarisiert (arm64 wird ad hoc signiert)
+      # Ohne Apple-Entwicklerzertifikat: nicht signiert/notarisiert (arm64 wird ad hoc signiert).
+      # hdiutil (für die .dmg) schlägt auf den macOS-Runnern gelegentlich fehl („Resource busy“) → bis zu 3 Versuche
       - name: Bauen und veröffentlichen
-        run: npx electron-builder --mac --publish always
+        shell: bash
+        run: |
+          set -o pipefail
+          for i in 1 2 3; do
+            if npx electron-builder --mac --publish always 2>&1 | tee build.log; then exit 0; fi
+            echo "Versuch $i fehlgeschlagen – hänge alte Laufwerke aus und versuche es erneut"
+            for v in /Volumes/Falcon*; do [ -e "$v" ] && hdiutil detach "$v" -force || true; done
+            sleep 20
+          done
+          echo "::error title=Mac-Build fehlgeschlagen::$(grep -iE 'error|⨯|hdiutil' build.log | tail -c 3500 | tr '\n' ' ' | sed 's/%/%25/g')"
+          exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false

@@ -2,20 +2,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, CoinIcon, Empty, Screen } from '@/components/ui';
-import { AdminWallet, errorText, fmtDate, useSession } from '@/lib/session';
+import { AdminWallet, ITEM_NAME, Refund, errorText, fmtDate, useSession } from '@/lib/session';
 import { C, R } from '@/lib/theme';
 
 export default function Admin() {
-  const { admin, adminWallets, adminUpdateWallet } = useSession();
+  const { admin, adminWallets, adminUpdateWallet, adminRefunds, adminDecideRefund } = useSession();
   const [list, setList] = useState<AdminWallet[] | null>(null);
+  const [refunds, setRefunds] = useState<Refund[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [now] = useState(Date.now);
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try { setList(await adminWallets()); } catch (e) { setError(errorText(e)); }
+    adminRefunds().then(setRefunds).catch(() => setRefunds([]));
     setLoading(false);
-  }, [adminWallets]);
+  }, [adminWallets, adminRefunds]);
   useEffect(() => { if (!admin) return; const t = setTimeout(load, 0); return () => clearTimeout(t); }, [admin, load]);
 
   if (!admin) return <Screen title="Admin"><Empty icon="shield-outline" title="Kein Zugriff" text="Nur für das Admin-Konto." /></Screen>;
@@ -24,10 +26,34 @@ export default function Admin() {
     catch (e) { Alert.alert('Nicht gespeichert', errorText(e)); }
   };
 
+  const decide = (r: Refund, approve: boolean) => {
+    const run = async (note = '') => {
+      try { await adminDecideRefund(r, approve, note); Alert.alert(approve ? 'Rückerstattung genehmigt' : 'Rückerstattung abgelehnt', 'Der Nutzer sieht die Antwort beim nächsten Start.'); load(); }
+      catch (e) { Alert.alert('Nicht gespeichert', errorText(e)); }
+    };
+    if (approve) Alert.alert('Rückerstattung genehmigen?', `${r.name || r.email} bekommt ${r.price.toLocaleString('de-DE')} FalCoins zurück, „${ITEM_NAME(r.item)}“ wird entzogen.`, [{ text: 'Abbrechen', style: 'cancel' }, { text: 'Genehmigen', onPress: () => run() }]);
+    else Alert.alert('Rückerstattung ablehnen?', 'Der Nutzer sieht die Ablehnung beim nächsten Start.', [{ text: 'Abbrechen', style: 'cancel' }, { text: 'Ablehnen', style: 'destructive', onPress: () => run() }]);
+  };
+  const open = refunds.filter((r) => r.status === 'pending');
+
   return (
     <Screen title="FalCoins verwalten" scroll={false}>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.text2} />} keyboardShouldPersistTaps="handled">
         <Text style={s.small}>Nur für dein Admin-Konto sichtbar. Änderungen gelten sofort.</Text>
+        <Card style={{ padding: 14, gap: 10 }}>
+          <Text style={s.name}>Rückerstattungen{open.length ? ` (${open.length})` : ''}</Text>
+          {!open.length ? <Text style={s.small}>Keine offenen Anträge.</Text> : open.map((r) => (
+            <View key={r.id} style={s.refund}>
+              <Text style={s.refundTitle}>{r.name || r.email.split('@')[0]} · {ITEM_NAME(r.item)} · {r.price.toLocaleString('de-DE')} FalCoins</Text>
+              <Text style={s.small}>{r.email} · {fmtDate(r.created)}</Text>
+              <Text style={s.reason}>{r.reason}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Button small title="Genehmigen" icon="checkmark" onPress={() => decide(r, true)} />
+                <Button small variant="ghost" title="Ablehnen" icon="close" onPress={() => decide(r, false)} />
+              </View>
+            </View>
+          ))}
+        </Card>
         {error ? <Empty icon="cloud-offline-outline" title="Nicht geladen" text={error} />
           : !list ? <ActivityIndicator color={C.accent} style={{ marginTop: 30 }} />
             : list.map((w) => <WalletCard key={w.uid} w={w} now={now} onCommit={(p) => commit(w, p)} />)}
@@ -67,6 +93,9 @@ function WalletCard({ w, now, onCommit }: { w: AdminWallet; now: number; onCommi
 const s = StyleSheet.create({
   small: { color: C.text3, fontSize: 12.5, lineHeight: 17 },
   name: { color: C.text, fontSize: 15.5, fontWeight: '700' },
+  refund: { gap: 4, padding: 12, borderRadius: R.sm, backgroundColor: C.raised },
+  refundTitle: { color: C.text, fontSize: 14, fontWeight: '700' },
+  reason: { color: C.text2, fontSize: 14, lineHeight: 19, marginVertical: 4 },
   input: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 12, borderRadius: R.sm, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line },
   inputText: { flex: 1, color: C.text, fontSize: 15, fontWeight: '700', height: '100%' }
 });

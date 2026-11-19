@@ -11,10 +11,11 @@ function label(e: LogEntry) {
   if (e.type === 'visits') return `Website-Besuche · ${new Date(e.label).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })}`;
   if (e.type === 'daily') return `Tägliche Belohnung · Tag ${e.label}`;
   if (e.type === 'mission') return `Mission: ${(MISSION_TEXT[e.label] || e.label).replace('{goal}', String(GOALS[e.label] || ''))}`;
+  if (e.type === 'refund') return `Rückerstattung: ${e.label === 'gameMode' ? 'Game Mode' : e.label === 'beta14' ? 'Beta-Zugriff' : e.label}`;
   if (e.type === 'purchase') return `Kauf: ${e.label === 'gameMode' ? 'Game Mode · 2 Monate' : e.label === 'beta14' ? 'Beta-Zugriff' : e.label}`;
   return e.type;
 }
-const ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = { purchase: 'storefront-outline', mission: 'flag-outline', daily: 'gift-outline', visits: 'globe-outline' };
+const ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = { purchase: 'storefront-outline', refund: 'refresh-outline', mission: 'flag-outline', daily: 'gift-outline', visits: 'globe-outline' };
 
 export default function CoinLog() {
   const { user, wallet, coinLog } = useSession();

@@ -8,7 +8,7 @@ import { load, save } from './storage';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.1.9';
+export const APP_VERSION = '2.2.0';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -18,6 +18,18 @@ export type Tab = { id: string; src: string; nonce: number; url: string; title: 
 export type Wallet = { balance: number; pending: number; betaUntil: number; gameModeUntil: number; lastDaily: string; streak: number };
 export type Mission = { id: string; goal: number; reward: number; progress: number; done: boolean; claimed: boolean; pcOnly?: boolean };
 export type LogEntry = { type: string; amount: number; label: string; at: number };
+export type Purchase = { id: string; item: string; price: number; at: number; until: number; refund: string | null };
+export type Refund = { id: string; uid: string; email: string; name: string; purchaseId: string; item: string; price: number; reason: string; created: number; status: string; note: string; decidedAt: number; seen: boolean };
+export const ITEM_NAME = (id: string) => (id === 'beta14' ? 'Beta-Zugriff' : id === 'gameMode' ? 'Game Mode' : id);
+const SHOP_FIELDS: Record<string, string> = { beta14: 'betaUntil', gameMode: 'gameModeUntil' };
+const fromRefund = (d: FB.Doc): Refund => {
+  const f = d.fields || {};
+  return {
+    id: d.name.split('/').pop() as string, uid: FB.text(f.uid), email: FB.text(f.email), name: FB.text(f.name), purchaseId: FB.text(f.purchaseId),
+    item: FB.text(f.item), price: FB.num(f.price), reason: FB.text(f.reason), created: FB.num(f.created), status: FB.text(f.status) || 'pending',
+    note: FB.text(f.note), decidedAt: FB.num(f.decidedAt), seen: !!f.seen?.booleanValue
+  };
+};
 export type Report = { id: string; text?: string; category?: string; version?: string; created?: string; status?: string; url?: string; email?: string; os?: string };
 export type AdminWallet = { uid: string; email: string; name: string; balance: number; betaUntil: number; gameModeUntil: number };
 type User = { uid: string; email: string; name: string; emailVerified: boolean };
@@ -79,6 +91,13 @@ type Ctx = {
   purchase: (item: string) => Promise<{ until: number }>;
   refreshCoins: () => Promise<void>;
   coinLog: () => Promise<LogEntry[]>;
+  // Rückerstattungen
+  listPurchases: () => Promise<Purchase[]>;
+  requestRefund: (r: { purchaseId: string; email: string; reason: string }) => Promise<void>;
+  refundNotices: () => Promise<Refund[]>;
+  markRefundSeen: (id: string) => Promise<void>;
+  adminRefunds: () => Promise<Refund[]>;
+  adminDecideRefund: (r: Refund, approve: boolean, note?: string) => Promise<void>;
   // Sync-Daten bearbeiten
   addBookmark: (url: string, title: string) => Promise<void>;
   removeBookmark: (url: string) => Promise<void>;
@@ -567,6 +586,67 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }).sort((a, b) => b.at - a.at);
   }, [user, token, flushCoins]);
 
+  // ---------- Rückerstattungen (Antrag → Admin entscheidet → Hinweis beim nächsten Start) ----------
+  const listPurchases = useCallback(async () => {
+    if (!user) throw new FB.ApiError('SIGNED_OUT');
+    const t = await token();
+    const [docs, mine] = await Promise.all([
+      FB.listDocs(`users/${user.uid}/purchases`, t),
+      FB.runQuery('refunds', 'uid', user.uid, t).catch(() => [] as FB.Doc[])
+    ]);
+    const refunds = mine.map(fromRefund);
+    return docs.map((d) => {
+      const f = d.fields || {};
+      const id = d.name.split('/').pop() as string;
+      return { id, item: FB.text(f.item), price: FB.num(f.price), at: FB.num(f.at), until: FB.num(f.until), refund: refunds.find((r) => r.purchaseId === id)?.status || null };
+    }).sort((a, b) => b.at - a.at);
+  }, [user, token]);
+  const requestRefund = useCallback(async ({ purchaseId, email, reason }: { purchaseId: string; email: string; reason: string }) => {
+    if (!user) throw new FB.ApiError('SIGNED_OUT');
+    const text = reason.trim().slice(0, 1000);
+    const mail = email.trim().slice(0, 200);
+    if (!text) throw new FB.ApiError('EMPTY_REASON');
+    if (!/^\S+@\S+\.\S+$/.test(mail)) throw new FB.ApiError('INVALID_EMAIL');
+    if (!/^[\w-]{6,64}$/.test(purchaseId)) throw new FB.ApiError('INVALID');
+    const t = await token();
+    const p = await FB.getDoc(`users/${user.uid}/purchases/${purchaseId}`, t);
+    if (!p) throw new FB.ApiError('INVALID');
+    const mine = (await FB.runQuery('refunds', 'uid', user.uid, t).catch(() => [] as FB.Doc[])).map(fromRefund);
+    if (mine.some((r) => r.purchaseId === purchaseId)) throw new FB.ApiError('ALREADY_REQUESTED');
+    await FB.addDoc('refunds', {
+      uid: FB.str(user.uid), email: FB.str(mail), name: FB.str(user.name || ''), purchaseId: FB.str(purchaseId),
+      item: FB.str(FB.text(p.fields?.item)), price: FB.int(FB.num(p.fields?.price)), reason: FB.str(text), created: FB.int(Date.now()), status: FB.str('pending')
+    }, t);
+  }, [user, token]);
+  const refundNotices = useCallback(async () => {
+    if (!user) return [];
+    return (await FB.runQuery('refunds', 'uid', user.uid, await token())).map(fromRefund).filter((r) => r.status !== 'pending' && !r.seen);
+  }, [user, token]);
+  const markRefundSeen = useCallback(async (id: string) => {
+    if (!/^[\w-]{6,64}$/.test(id)) throw new FB.ApiError('INVALID');
+    await FB.putDoc(`refunds/${id}`, { seen: { booleanValue: true } }, await token(), { exists: true }, ['seen']);
+  }, [token]);
+  const adminRefunds = useCallback(async () => {
+    const docs = await FB.query('refunds', 'pageSize=200', await token());
+    return docs.map(fromRefund).sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.created - a.created);
+  }, [token]);
+  const adminDecideRefund = useCallback(async (r: Refund, approve: boolean, note = '') => {
+    const t = await token();
+    const doc = await FB.getDoc(`refunds/${r.id}`, t);
+    if (!doc) throw new FB.ApiError('INVALID');
+    if (fromRefund(doc).status !== 'pending') throw new FB.ApiError('ALREADY_DECIDED');
+    const decided = { status: FB.str(approve ? 'approved' : 'denied'), decidedAt: FB.int(Date.now()), note: FB.str(note.trim().slice(0, 500)) };
+    const writes: unknown[] = [{ update: { name: FB.docName(`refunds/${r.id}`), fields: decided }, updateMask: { fieldPaths: Object.keys(decided) }, currentDocument: { updateTime: doc.updateTime } }];
+    if (approve) {
+      writes.push({ transform: { document: FB.docName(`wallets/${r.uid}`), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(r.price) } }] } });
+      const field = SHOP_FIELDS[r.item];
+      if (field) writes.push({ update: { name: FB.docName(`wallets/${r.uid}`), fields: { [field]: FB.int(0) } }, updateMask: { fieldPaths: [field] }, currentDocument: { exists: true } });
+      writes.push(...logWrites(r.uid, { type: 'refund', amount: r.price, label: r.item }));
+    }
+    await FB.commit(writes, t);
+    if (approve && user && r.uid === user.uid) await refreshCoins();
+  }, [token, user, refreshCoins]);
+
   // ---------- Missionen (Fortschritt wird auf diesem Handy gezählt, wie auf jedem PC) ----------
   const mcur = mstate.date === today(new Date(clock)) ? mstate : { date: today(new Date(clock)), visits: 0, domains: [], claimed: [] };
   const missions: Mission[] = MISSIONS.map((x) => {
@@ -738,6 +818,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     signIn, signUp, signOut, reload: async () => { if (user) { await flushCoins(); await flushHistory(); await reloadFor(user); pushTabs(true); } },
     updateName, changePassword, deleteAccount, resendVerification,
     claimDaily, claimMission, purchase, refreshCoins, coinLog,
+    listPurchases, requestRefund, refundNotices, markRefundSeen, adminRefunds, adminDecideRefund,
     addBookmark, removeBookmark, savePassword, deletePassword, clearHistory, removeHistory, neverSave,
     submitReport, publicReports, adminReports, updateReport, deleteReport, adminWallets, adminUpdateWallet,
     openUrl, navigate, newTab, closeTab, closeAllTabs, switchTab, updateTab, visited
@@ -770,6 +851,9 @@ export const ERRORS: Record<string, string> = {
   UNAVAILABLE: 'Das gibt es zurzeit nicht zu kaufen.',
   ALREADY_OWNED: 'Bereits erworben – du kannst erst nach Ablauf erneut kaufen.',
   EMPTY: 'Bitte beschreib kurz, was passiert ist.',
+  EMPTY_REASON: 'Bitte gib einen Grund an.',
+  ALREADY_REQUESTED: 'Für diesen Kauf läuft schon eine Rückerstattung.',
+  ALREADY_DECIDED: 'Über diesen Antrag wurde schon entschieden.',
   CREDENTIAL_TOO_OLD_LOGIN_AGAIN: 'Bitte melde dich ab und wieder an.',
   PERMISSION_DENIED: 'Der Server hat den Zugriff verweigert.',
   SIGNED_OUT: 'Bitte melde dich zuerst an.'

@@ -1092,3 +1092,21 @@ select.field-input { cursor: pointer; }
   .btn, .btn.primary::before, .switch span::after, input[type="checkbox"]::after { transition: none !important; }
   #bootLoader *, #bootLoader { animation: none !important; }
 }
+
+/* Rückerstattungen */
+.rf-dialog { width: min(520px, 100%); }
+.rf-reason { height: auto; min-height: 92px; padding: 9px 11px; resize: vertical; line-height: 1.45; font: inherit; }
+.rf-admin { margin: 14px 0 16px; padding: 12px 14px; border-radius: var(--r-md, 10px); background: var(--chrome); box-shadow: inset 0 0 0 1px var(--line-2); }
+.rf-title { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font: 600 13px var(--font-display); }
+.rf-list { display: grid; gap: 8px; }
+.rf-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px; border-radius: 8px; background: rgb(255 255 255 / .03); }
+.rf-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.rf-main b { font-size: 12.5px; }
+.rf-main span { color: var(--text-3); font-size: 11.5px; }
+.rf-main p { margin: 4px 0 0; color: var(--text-2); font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+.rf-actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.rf-none { margin: 0; color: var(--text-3); font-size: 12px; }
+.rf-done { margin-top: 8px; color: var(--text-3); font-size: 11.5px; }
+.rf-done summary { cursor: pointer; }
+.rf-done-row { padding: 3px 0; }
+.dialog[role="alertdialog"] .dialog-body p { white-space: pre-line; }
