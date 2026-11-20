@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.4] – 2026-11-20
+
+### Fixed
+- **Crash when playing videos** (e.g. YouTube): Falcon no longer forces graphics settings that made the GPU process crash on some graphics drivers. If the graphics process still crashes, Falcon keeps running, and after repeated crashes it switches to a safe video mode.
+
 ## [2.3.3] – 2026-11-20
 
 ### Fixed

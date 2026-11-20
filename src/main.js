@@ -36,9 +36,19 @@ if (process.platform === 'win32') app.setAppUserModelId('com.falcon.browser');
 // Interne Seiten wie falcon://downloads
 protocol.registerSchemesAsPrivileged([{ scheme: 'falcon', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
-app.commandLine.appendSwitch('ignore-gpu-blocklist');
+// Grafik: Chromium wählt selbst, was zur Grafikkarte passt. Früher erzwungene Schalter (ignore-gpu-blocklist, enable-zero-copy)
+// ließen auf manchen Treibern den GPU-Prozess beim Abspielen von Videos abstürzen – nach mehreren Abstürzen beendete Chromium Falcon ganz.
+app.commandLine.appendSwitch('disable-gpu-process-crash-limit'); // GPU-Prozess darf neu starten, Falcon läuft weiter
+let gpuSafeMode = false;
+try { gpuSafeMode = !!JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'settings.json'), 'utf8')).gpuSafeMode; } catch { /* erster Start */ }
+if (gpuSafeMode) app.commandLine.appendSwitch('disable-accelerated-video-decode'); // sicherer Videomodus nach wiederholten GPU-Abstürzen
+let gpuCrashes = 0;
+app.on('child-process-gone', (_e, d) => {
+  if (d.type !== 'GPU' || d.reason === 'clean-exit' || d.reason === 'killed') return;
+  gpuCrashes++;
+  console.warn(`GPU-Prozess beendet (${d.reason}, ${d.exitCode}) – ${gpuCrashes}. Mal`);
+  if (gpuCrashes >= 2 && !gpuSafeMode && !settings.gpuSafeMode) { settings = { ...settings, gpuSafeMode: true }; saveSettings(); }
+});
 
 // ---------------------------------------------------------------------------
 // Einstellungen
