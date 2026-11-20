@@ -226,6 +226,7 @@ const Tabs = (() => {
     el.setAttribute('aria-selected', String(act));
     el.classList.toggle('sleeping', tab.sleeping);
     el.classList.toggle('frozen', !!tab.frozen);
+    tab.webview?.classList.toggle('newtab', isNewTab(tab.url)); // Startseite ohne weißen Hintergrund (kein Aufblitzen)
     el.querySelector('.tab-close').title = $t('Tab schließen (Strg+W)');
 
     const title = displayTitle(tab);

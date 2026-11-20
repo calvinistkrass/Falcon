@@ -274,6 +274,9 @@ body.no-sidebar #content { border-top-left-radius: 0; }
 body.no-sidebar #sidepanel { margin-left: 6px; }
 #views { position: absolute; inset: 0; }
 #views webview { position: absolute; inset: 0; width: 100%; height: 100%; visibility: hidden; }
+/* Webseiten ohne eigenen Hintergrund bekommen wie in Chrome Weiß – sonst scheint die dunkle Oberfläche durch (schwarze Schrift auf Dunkel) */
+#views webview, #spBody webview { background: #fff; }
+#views webview.newtab { background: transparent; }
 #views webview.active { visibility: visible; }
 
 #sidepanel {

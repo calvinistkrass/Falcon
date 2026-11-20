@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.3] – 2026-11-20
+
+### Fixed
+- **Pages without their own background** (e.g. some sign-in and account pages) now load on white like in Chrome instead of showing black text on a dark background.
+
 ## [2.3.2] – 2026-11-20
 
 ### Added
