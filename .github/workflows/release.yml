@@ -97,6 +97,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # latest-linux.yml: Linux-Versionen bis 2.3.5 erkennen neue Versionen nur über diese Datei
+      # (electron-builder legt sie wegen publishAutoUpdate: false nicht selbst an). Ab 2.3.6 fragt Falcon
+      # unter Linux zusätzlich direkt die GitHub-API.
+      - name: latest-linux.yml hochladen
+        shell: bash
+        run: |
+          set -e
+          VERSION=$(node -p "require('./package.json').version")
+          FILE="Falcon-${VERSION}-linux-amd64.deb"
+          SHA=$(openssl dgst -sha512 -binary "dist/${FILE}" | base64 -w0)
+          SIZE=$(stat -c %s "dist/${FILE}")
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          printf 'version: %s\nfiles:\n  - url: %s\n    sha512: %s\n    size: %s\npath: %s\nsha512: %s\nreleaseDate: '"'"'%s'"'"'\n' \
+            "$VERSION" "$FILE" "$SHA" "$SIZE" "$FILE" "$SHA" "$DATE" > dist/latest-linux.yml
+          cat dist/latest-linux.yml
+          gh release upload "v${VERSION}" dist/latest-linux.yml --clobber --repo "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # .rpm (Fedora, openSUSE …) – auf Ubuntu 22.04: dessen rpmbuild (4.17) verträgt sich mit dem fpm von
   # electron-builder; mit rpmbuild 4.18+ (Ubuntu 24.04, Fedora 41) scheiterte der Build
   linux-rpm:

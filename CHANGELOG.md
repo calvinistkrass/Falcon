@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.6] – 2026-11-20
+
+### Fixed
+- **Linux: update check** – Falcon on Linux (.deb and .rpm, e.g. Debian 13) now detects new versions again. Previously it always reported that it was up to date. macOS checks for updates the same way.
+
 ## [2.3.5] – 2026-11-20
 
 ### Changed

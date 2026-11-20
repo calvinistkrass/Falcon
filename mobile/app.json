@@ -2,7 +2,7 @@
   "expo": {
     "name": "Falcon",
     "slug": "falcon-mobile",
-    "version": "2.3.5",
+    "version": "2.3.6",
     "scheme": "falcon",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

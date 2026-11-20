@@ -8,7 +8,9 @@
  * Release-Seite, damit man die neue Datei herunterladen kann.
  */
 
-const { app } = require('electron');
+const { app, net } = require('electron');
+const fs = require('fs');
+const path = require('path');
 const { autoUpdater } = require('electron-updater');
 const pkg = require('../package.json');
 
@@ -42,6 +44,54 @@ const isPortable = () => !!process.env.PORTABLE_EXECUTABLE_DIR;
 // (Squirrel.Mac verlangt das), .deb/.rpm kommen über den Paketmanager – dort öffnet Falcon wie bei der
 // portablen .exe die Release-Seite.
 const manualUpdate = () => (process.platform === 'win32' ? isPortable() : true);
+
+// Linux (.deb/.rpm) und macOS: Die Linux-Builds laden kein latest-linux.yml hoch (zwei getrennte Jobs für
+// .deb und .rpm würden sich sonst überschreiben) – electron-updater bekäme dort nur einen 404 und meldete
+// „aktuell“. Deshalb fragt Falcon auf diesen Systemen die GitHub-API direkt nach dem neuesten Release, das
+// eine Datei für dieses System enthält.
+const apiCheck = () => process.platform !== 'win32';
+
+/** Welche Release-Datei passt zu diesem System? */
+function assetPattern() {
+  if (process.platform === 'darwin') {
+    const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+    return new RegExp(`-mac-${arch}\\.dmg$`, 'i');
+  }
+  let type = '';
+  try { type = fs.readFileSync(path.join(process.resourcesPath, 'package-type'), 'utf8').trim(); } catch { /* unbekannt */ }
+  if (type === 'rpm') return /-linux-x86_64\.rpm$/i;
+  if (type === 'deb') return /-linux-amd64\.deb$/i;
+  return /-linux-[^.]+\.(deb|rpm)$/i;
+}
+
+async function checkViaApi() {
+  const r = repository();
+  setStatus({ state: 'checking' });
+  try {
+    const res = await net.fetch(`https://api.github.com/repos/${r.owner}/${r.repo}/releases?per_page=10`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Falcon-Updater' },
+    });
+    if (!res.ok) throw new Error(`GitHub antwortet mit ${res.status}`);
+    const releases = await res.json();
+    const pattern = assetPattern();
+    const latest = (Array.isArray(releases) ? releases : [])
+      .filter((rel) => !rel.draft && !rel.prerelease && (rel.assets || []).some((a) => pattern.test(a.name)))
+      .map((rel) => ({ version: String(rel.tag_name || '').replace(/^v/i, ''), notes: rel.body || '' }))
+      .filter((rel) => /^\d+\.\d+\.\d+/.test(rel.version))
+      .sort((a, b) => (newer(a.version, b.version) ? -1 : newer(b.version, a.version) ? 1 : 0))[0];
+    if (latest && newer(latest.version, pkg.version)) {
+      const notes = plainNotes(latest.notes);
+      remember({ version: latest.version, notes });
+      setStatus({ state: 'available', available: latest.version, notes, portable: true, url: releaseUrl(latest.version), checkedAt: Date.now() });
+    } else {
+      remember(null);
+      setStatus({ state: 'latest', checkedAt: Date.now() });
+    }
+  } catch (err) {
+    setStatus({ state: 'error', error: String(err?.message || err).split('\n')[0].slice(0, 200) });
+  }
+  return status;
+}
 
 function releaseUrl(version) {
   const r = repository();
@@ -78,6 +128,12 @@ function init(sender, cache) {
   if (!app.isPackaged) { setStatus({ state: 'dev' }); return; }
   if (!repo) { setStatus({ state: 'unconfigured' }); return; }
 
+  if (apiCheck()) {
+    configured = true;
+    setInterval(check, CHECK_INTERVAL_MS);
+    return;
+  }
+
   autoUpdater.setFeedURL({ provider: 'github', owner: repo.owner, repo: repo.repo });
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -111,6 +167,7 @@ function check() {
   if (!configured) return Promise.resolve(status);
   if (['checking', 'downloading', 'downloaded'].includes(status.state)) return Promise.resolve(status);
   lastCheck = Date.now();
+  if (apiCheck()) return checkViaApi();
   return autoUpdater.checkForUpdates().then(() => status).catch(() => status);
 }
 
