@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream-Daten für Linux: Name, Beschreibung und Screenshots im Software-Center (GNOME Software, KDE Discover) -->
+<component type="desktop-application">
+  <id>de.falconbrowser.Falcon</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Falcon</name>
+  <summary>The fast browser built for gamers</summary>
+  <summary xml:lang="de">Der schnelle Browser für Gamer</summary>
+  <developer id="de.falconbrowser">
+    <name>Falcon</name>
+  </developer>
+  <description>
+    <p>Falcon is a fast, focused Chromium browser built for gamers. It stays light while you play and brings the things gamers need right into the browser.</p>
+    <p xml:lang="de">Falcon ist ein schneller, schlanker Chromium-Browser für Gamer. Er bleibt leicht, während du spielst, und bringt alles, was Gamer brauchen, direkt in den Browser.</p>
+    <ul>
+      <li>Game Mode and a live performance monitor for CPU and memory</li>
+      <li xml:lang="de">Game Mode und Leistungsanzeige für CPU und Arbeitsspeicher</li>
+      <li>Built-in ad blocker</li>
+      <li xml:lang="de">Eingebauter Werbeblocker</li>
+      <li>Split view, command palette (Ctrl+K) and tab preview</li>
+      <li xml:lang="de">Geteilte Ansicht, Befehlspalette (Strg+K) und Tab-Vorschau</li>
+      <li>Free games and deals from Steam, Epic and GOG</li>
+      <li xml:lang="de">Gratis-Spiele und Angebote von Steam, Epic und GOG</li>
+      <li>Password manager and passkeys</li>
+      <li xml:lang="de">Passwort-Manager und Passkeys</li>
+      <li>Falcon account with end-to-end encrypted sync, FalCoins, daily rewards and missions</li>
+      <li xml:lang="de">Falcon-Konto mit Ende-zu-Ende-verschlüsseltem Sync, FalCoins, täglicher Belohnung und Missionen</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">falcon.desktop</launchable>
+  <icon type="stock">falcon</icon>
+  <url type="homepage">https://falconbrowser.de</url>
+  <url type="bugtracker">https://github.com/calvinistkrass/Falcon/issues</url>
+  <url type="vcs-browser">https://github.com/calvinistkrass/Falcon</url>
+  <categories>
+    <category>Network</category>
+    <category>WebBrowser</category>
+  </categories>
+  <keywords>
+    <keyword>browser</keyword>
+    <keyword>web</keyword>
+    <keyword>gaming</keyword>
+    <keyword>chromium</keyword>
+  </keywords>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Start page with shortcuts, search and free games</caption>
+      <caption xml:lang="de">Startseite mit Verknüpfungen, Suche und Gratis-Spielen</caption>
+      <image type="source" width="1440" height="900">https://www.falconbrowser.de/assets/screenshots/start.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Performance monitor and Game Mode</caption>
+      <caption xml:lang="de">Leistungsanzeige und Game Mode</caption>
+      <image type="source" width="1440" height="900">https://www.falconbrowser.de/assets/screenshots/game-mode.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Split view</caption>
+      <caption xml:lang="de">Geteilte Ansicht</caption>
+      <image type="source" width="1440" height="900">https://www.falconbrowser.de/assets/screenshots/split-view.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Command palette (Ctrl+K)</caption>
+      <caption xml:lang="de">Befehlspalette (Strg+K)</caption>
+      <image type="source" width="1440" height="900">https://www.falconbrowser.de/assets/screenshots/command-palette.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Free games and deals</caption>
+      <caption xml:lang="de">Gratis-Spiele und Angebote</caption>
+      <image type="source" width="1440" height="900">https://www.falconbrowser.de/assets/screenshots/deals.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Account, sync and FalCoins</caption>
+      <caption xml:lang="de">Konto, Sync und FalCoins</caption>
+      <image type="source" width="1440" height="900">https://www.falconbrowser.de/assets/screenshots/account.jpg</image>
+    </screenshot>
+  </screenshots>
+  <provides>
+    <binary>falcon</binary>
+  </provides>
+  <content_rating type="oars-1.1"/>
+</component>

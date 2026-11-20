@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.8] – 2026-11-20
+
+### Fixed
+- **Linux: app icon** – Falcon now shows its icon in the app menu, dock and taskbar (the icon is installed in all standard sizes).
+
+### Added
+- **Linux: details in the software center** – when installing the .deb or .rpm, the software center (e.g. GNOME Software, KDE Discover) shows a description, screenshots and links to the website.
+
 ## [2.3.7] – 2026-11-20
 
 ### Added

@@ -1,7 +1,7 @@
 {
   "name": "falcon-browser",
   "productName": "Falcon",
-  "version": "2.3.7",
+  "version": "2.3.8",
   "description": "A fast, focused Chromium browser built for gamers.",
   "main": "src/main.js",
   "author": "Calvin Bandle",
@@ -69,7 +69,7 @@
       }
     },
     "linux": {
-      "icon": "assets/falcon.png",
+      "icon": "build/icons",
       "target": [
         {
           "target": "deb",
@@ -85,17 +85,19 @@
         }
       ],
       "artifactName": "Falcon-${version}-linux-${arch}.${ext}",
-      "category": "Network",
+      "category": "Network;WebBrowser",
       "executableName": "falcon",
       "synopsis": "Der schnelle Browser für Gamer",
       "maintainer": "Falcon <noreply@falconbrowser.de>",
       "mimeTypes": [
-        "x-scheme-handler/http",
-        "x-scheme-handler/https",
         "text/html"
       ],
       "desktop": {
         "Name": "Falcon",
+        "GenericName": "Web Browser",
+        "GenericName[de]": "Webbrowser",
+        "Comment[de]": "Der schnelle Browser für Gamer",
+        "Keywords": "browser;web;internet;gaming;",
         "StartupWMClass": "Falcon"
       },
       "publish": [
@@ -104,7 +106,8 @@
           "releaseType": "release",
           "publishAutoUpdate": false
         }
-      ]
+      ],
+      "description": "The fast browser built for gamers – Game Mode, ad blocker, split view, free games and deals."
     },
     "publish": [
       {
@@ -137,12 +140,16 @@
       "artifactName": "Falcon-${version}-mac-${arch}.${ext}"
     },
     "deb": {
-      "packageName": "falcon-browser"
+      "packageName": "falcon-browser",
+      "fpm": [
+        "build/linux/falcon.metainfo.xml=/usr/share/metainfo/de.falconbrowser.Falcon.metainfo.xml"
+      ]
     },
     "rpm": {
       "packageName": "falcon-browser",
       "fpm": [
-        "--debug"
+        "--debug",
+        "build/linux/falcon.metainfo.xml=/usr/share/metainfo/de.falconbrowser.Falcon.metainfo.xml"
       ]
     }
   },
