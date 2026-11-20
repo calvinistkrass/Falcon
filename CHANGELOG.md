@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.5] – 2026-11-20
+
+### Changed
+- Maintenance release without changes to the app.
+
 ## [2.3.4] – 2026-11-20
 
 ### Fixed
