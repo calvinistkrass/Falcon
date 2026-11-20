@@ -1,6 +1,7 @@
 import type { ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '@/lib/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -10,14 +11,17 @@ const icon = (on: IconName, off: IconName) =>
   };
 
 export default function TabLayout() {
+  // Platz für die Navigationsleiste des Handys (Gesten-Leiste oder |||  ○  <) – Android zeichnet randlos
+  const { bottom } = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: C.text,
         tabBarInactiveTintColor: C.text3,
-        tabBarStyle: { backgroundColor: C.bg2, borderTopColor: C.line, height: 86, paddingTop: 8 },
+        tabBarStyle: { backgroundColor: C.bg2, borderTopColor: C.line, height: 62 + bottom, paddingTop: 8, paddingBottom: Math.max(bottom, 8) },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarAllowFontScaling: false, // große Systemschrift schnitt „Lesezeichen“ ab
         sceneStyle: { backgroundColor: C.bg }
       }}
     >

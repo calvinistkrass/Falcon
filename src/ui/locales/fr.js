@@ -68,6 +68,8 @@ I18N.add('fr', {
   "Drucken …": "Imprimer…",
   "Duplizieren": "Dupliquer",
   "Einfügen": "Coller",
+  "RGB-Modus ausschalten": "Désactiver le mode RGB",
+  "RGB-Modus einschalten": "Activer le mode RGB",
   "Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist": "Liste de souhaits promos – Falcon te prévient quand un jeu est gratuit ou en promo",
   "Die Angebots-Wunschliste ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.": "La liste de souhaits promos est une fonction bêta. Débloque l’accès bêta dans la boutique FalCoins.",
   "Angebots-Wunschliste": "Liste de souhaits promos",

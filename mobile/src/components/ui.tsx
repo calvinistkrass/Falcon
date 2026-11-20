@@ -40,8 +40,10 @@ export function Button({ title, onPress, icon, variant = 'primary', loading, dis
   );
   const off = disabled || loading;
   return (
+    // Schatten-Stil bleibt immer gleich (nur die Deckkraft ändert sich): elevation an/aus baut die Ansicht auf Android neu auf
+    // und nimmt einem gerade benutzten Eingabefeld den Fokus (z. B. wenn „Registrieren“ beim Tippen aktiv wird)
     <Animated.View style={[{ transform: [{ scale }], opacity: disabled ? 0.5 : 1 },
-      variant !== 'ghost' && !disabled && { shadowColor: glow, shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 }]}>
+      variant !== 'ghost' && { shadowColor: glow, shadowOpacity: disabled ? 0 : 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 }]}>
       <Pressable onPress={onPress} disabled={off} onPressIn={() => spring(0.96)} onPressOut={() => spring(1)} accessibilityRole="button" accessibilityState={{ disabled: !!off }}>
         {variant === 'ghost' ? (
           <View style={[s.btn, small && s.btnSmall, s.btnGhost]}>{content}</View>
@@ -132,7 +134,7 @@ export function Empty({ icon, title, text, children }: { icon: IconName; title: 
 /** Unterseite mit Zurück-Knopf (Shop, Passwörter, …) */
 export function Screen({ title, right, children, scroll = true }: { title: string; right?: React.ReactNode; children: React.ReactNode; scroll?: boolean }) {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'bottom']}>
       <View style={s.head}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate('/account'))} hitSlop={10} style={s.back} accessibilityLabel="Zurück">
           <Ionicons name="chevron-back" size={24} color={C.text} />

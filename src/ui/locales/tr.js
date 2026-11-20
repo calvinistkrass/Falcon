@@ -68,6 +68,8 @@ I18N.add('tr', {
   "Drucken …": "Yazdır…",
   "Duplizieren": "Çoğalt",
   "Einfügen": "Yapıştır",
+  "RGB-Modus ausschalten": "RGB modunu kapat",
+  "RGB-Modus einschalten": "RGB modunu aç",
   "Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist": "İndirim istek listesi – bir oyun ücretsiz veya indirimli olduğunda Falcon haber verir",
   "Die Angebots-Wunschliste ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.": "İndirim istek listesi bir beta özelliğidir. Beta erişimini FalCoin mağazasında aç.",
   "Angebots-Wunschliste": "İndirim istek listesi",

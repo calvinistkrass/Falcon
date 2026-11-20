@@ -2,6 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.2] – 2026-11-20
+
+### Added
+- **Command palette** (Ctrl+K): open the deal wishlist and turn RGB mode on or off.
+
+### Fixed
+- **Falcon Mobile (Android): navigation bar** – the phone's navigation buttons no longer cover the app's tab bar, sub-pages and the browser menu.
+- **Falcon Mobile (Android): buttons** – a button becoming available while you type (e.g. "Sign up") no longer takes the focus away from the text field.
+- **Falcon Mobile: tab bar** – "Bookmarks" is no longer cut off with large system fonts.
+
 ## [2.3.1] – 2026-11-20
 
 ### Fixed

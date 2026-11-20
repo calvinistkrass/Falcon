@@ -2,7 +2,7 @@
 // (Lesezeichen, Inkognito, Passwörter ausfüllen und speichern, Seite übersetzen, teilen, melden)
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -182,6 +182,7 @@ function BrowserMenu({ tab, onClose, inject, adblock, blocked, onAdblock }: { ta
   const host = hostOf(page);
   const logins = origin ? passwords.filter((p) => p.origin === origin || hostOf(p.origin) === host) : [];
   const original = untranslate(page);
+  const { bottom } = useSafeAreaInsets();
 
   // Der Fingertipp, der das Menü öffnet, darf es nicht gleich wieder schließen oder einen Eintrag auslösen
   const [ready, setReady] = useState(false);
@@ -223,7 +224,7 @@ function BrowserMenu({ tab, onClose, inject, adblock, blocked, onAdblock }: { ta
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={[s.backdrop, { pointerEvents: ready ? 'auto' : 'none' }]} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable style={[s.sheet, { paddingBottom: 30 + bottom }]} onPress={() => {}}>
           {page ? <Text style={s.sheetHost} numberOfLines={1}>{tab.incognito ? 'Inkognito · ' : ''}{host}</Text> : null}
           {items.filter((i) => !i.hidden).map((i) => (
             <Pressable key={i.label} onPress={i.onPress} style={({ pressed }) => [s.item, pressed && { backgroundColor: C.raised }]} accessibilityLabel={i.label}>

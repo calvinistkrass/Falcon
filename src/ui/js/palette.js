@@ -46,6 +46,8 @@ const Palette = (() => {
       { label: 'Screenshot: Ganze Seite', icon: 'file', words: 'screenshot full page', run: () => Screenshot.capture('full'), when: web },
       { label: 'Seite übersetzen', icon: 'globe', words: 'translate übersetzen google', run: () => Translate.translate(), when: web },
       typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'Tägliche Belohnung & Missionen', icon: 'coin', words: 'daily reward missions falcoins', run: () => Account.rewardsDialog() } : null,
+      { label: 'Angebots-Wunschliste', icon: 'gamepad', words: 'wishlist wunschliste angebote deals sale beta', run: () => document.getElementById('wishEdit')?.click() },
+      { label: state.settings.rgbMode ? 'RGB-Modus ausschalten' : 'RGB-Modus einschalten', icon: 'palette', words: 'rgb regenbogen neon beta farbe', run: () => { const c = document.getElementById('sRgb'); c.checked = !state.settings.rgbMode; c.dispatchEvent(new Event('change')); } },
       typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'FalCoin-Verlauf', icon: 'clock', words: 'falcoins history verlauf', run: () => Account.historyDialog() } : null,
       { label: 'Fehler melden …', icon: 'bug', words: 'bug report feedback', run: () => Report.open() },
       { label: 'Gemeldete Fehler', icon: 'bug', words: 'falcon://reports bugs', run: () => openInternalPage('falcon://reports/') },
