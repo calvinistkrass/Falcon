@@ -817,5 +817,10 @@ I18N.add('es', {
   "Das bekommst du:": "Qué obtienes:",
   "Seite übersetzen – per Rechtsklick auf eine Seite oder mit Strg+K": "Traducir página: clic derecho en una página o Ctrl+K",
   "Alle weiteren Beta-Funktionen, sobald sie erscheinen": "Todas las próximas funciones beta en cuanto salgan",
-  "Öffnen": "Abrir"
+  "Öffnen": "Abrir",
+  "Downloadlink kopieren": "Copiar enlace de descarga",
+  "Downloads-Ordner öffnen": "Abrir carpeta de descargas",
+  "Nach dem Download öffnen": "Abrir al terminar",
+  "Wird nach dem Download geöffnet": "Se abrirá al terminar",
+  "Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen": "Clic: abrir al terminar · Clic derecho: más acciones"
 });

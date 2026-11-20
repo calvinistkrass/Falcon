@@ -102,6 +102,8 @@ const ICONS = {
   chevronsRight: '<path d="m6 7 5 5-5 5M13 7l5 5-5 5"/>',
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/>',
   usbKey: '<rect x="8" y="9" width="8" height="12.5" rx="2"/><path d="M10 9V4.5a2 2 0 0 1 4 0V9M12 13.5v3"/>',
+  pause: '<path d="M9 5.5v13M15 5.5v13"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z"/>',
   monitor: '<rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/>'
 };
 

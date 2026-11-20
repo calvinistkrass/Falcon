@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.3.7] – 2026-11-20
+
+### Added
+- **Download window: click and right-click** – click a running download in the download window (top right) to open it automatically once it has finished (click again to turn it off). Right-click a download for more actions: open when done, open, show in folder, pause/resume, download again, copy download link, open downloads folder, show all downloads, cancel or remove from the list.
+
 ## [2.3.6] – 2026-11-20
 
 ### Fixed

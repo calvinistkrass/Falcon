@@ -351,6 +351,8 @@ ipcMain.handle('adblock:update', async () => { await adblock.update(); return ad
 // Downloads
 // ---------------------------------------------------------------------------
 const downloadItems = new Map();
+// Fertige Downloads aus dieser Sitzung (für „Erneut herunterladen“ im Download-Fenster, auch in Inkognito)
+const finishedDownloads = new Map();
 const downloadDir = () => {
   const dir = settings.downloadDir;
   return dir && fs.existsSync(dir) ? dir : app.getPath('downloads');
@@ -405,6 +407,7 @@ function setupDownloads(ses) {
         id, state, name: item.getFilename(), url: item.getURL(),
         received: item.getReceivedBytes(), total: item.getTotalBytes(), paused: item.isPaused(), ...extra
       };
+      data.openWhenDone = !!item.falconOpenWhenDone;
       broadcast('download', data, { incognito });
       if (entry) {
         Object.assign(entry, { state, name: data.name, received: data.received, total: data.total, paused: data.paused, path: item.getSavePath() || entry.path });
@@ -431,11 +434,45 @@ function setupDownloads(ses) {
     item.on('updated', (_ev, state) => report(state));
     item.once('done', (_ev, state) => {
       downloadItems.delete(id);
+      finishedDownloads.set(id, { url: item.getURL(), ses });
       report(state, { path: item.getSavePath() });
+      // „Nach dem Download öffnen“ (Linksklick oder Rechtsklick-Menü im Download-Fenster)
+      if (state === 'completed' && item.falconOpenWhenDone && item.getSavePath()) shell.openPath(item.getSavePath());
     });
   });
 }
 ipcMain.handle('download:cancel', (_e, id) => { downloadItems.get(id)?.cancel(); return true; });
+// Aktionen aus dem Download-Fenster in der Symbolleiste
+ipcMain.handle('download:control', (_e, id, action, value) => {
+  const item = downloadItems.get(id);
+  const entry = () => dlEntries().find((x) => x.id === id);
+  switch (action) {
+    case 'open-when-done':
+      if (!item) return false;
+      item.falconOpenWhenDone = !!value;
+      item.emit('updated', {}, item.getState()); // Status sofort an die Fenster schicken
+      return true;
+    case 'pause':
+      if (!item) return false;
+      item.userPaused = true; item.pause();
+      if (entry()) { entry().paused = true; pushToDownloadPages(dlView(entry())); }
+      item.emit('updated', {}, item.getState());
+      return true;
+    case 'resume':
+      if (!item) return false;
+      item.userPaused = false; if (item.canResume()) item.resume();
+      if (entry()) { entry().paused = false; pushToDownloadPages(dlView(entry())); }
+      item.emit('updated', {}, item.getState());
+      return true;
+    case 'retry': {
+      const f = finishedDownloads.get(id);
+      if (!f || !/^(https?|data|blob):/i.test(f.url)) return false;
+      f.ses.downloadURL(f.url);
+      return true;
+    }
+  }
+  return false;
+});
 
 // Aktionen der Seite falcon://downloads – nur von dieser Seite aus erlaubt
 const fromFalconPage = (e, page) => { try { const u = new URL(e.senderFrame.url); return u.protocol === 'falcon:' && u.hostname === page; } catch { return false; } };

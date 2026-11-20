@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('falcon', {
   openPath: (p) => ipcRenderer.invoke('open-external', p),
   showInFolder: (p) => ipcRenderer.invoke('show-in-folder', p),
   cancelDownload: (id) => ipcRenderer.invoke('download:cancel', id),
+  downloadControl: (id, action, value) => ipcRenderer.invoke('download:control', id, action, value),
   downloads: {
     dir: () => ipcRenderer.invoke('downloads:dir'),
     chooseDir: () => ipcRenderer.invoke('downloads:choose-dir'),

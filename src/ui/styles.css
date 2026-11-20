@@ -365,6 +365,8 @@ body.resizing webview { pointer-events: none; }
 .dl-empty { padding: 28px 16px 34px; text-align: center; color: var(--text-3); }
 .dl-item { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--r); }
 .dl-item:hover { background: var(--hover); }
+.dl-item.done, .dl-item.running { cursor: pointer; }
+.dl-item.open-when-done .dl-file { box-shadow: 0 0 0 2px var(--accent); }
 .dl-file { width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--raised-2); display: grid; place-items: center; color: var(--text-2); flex: none; position: relative; }
 .dl-file small { position: absolute; bottom: -3px; right: -5px; font: 700 8px/1 var(--font); padding: 2px 3px; border-radius: 3px; background: var(--accent); color: var(--accent-fg); text-transform: uppercase; max-width: 32px; overflow: hidden; }
 .dl-body { flex: 1; min-width: 0; }

@@ -62,6 +62,8 @@ const Downloads = (() => {
   const running = (d) => d.state === 'started' || d.state === 'progressing';
 
   function meta(d) {
+    if (running(d) && d.paused) return `${$t('Pausiert')} · ${d.total ? $t('{done} von {total}', { done: formatBytes(d.received), total: formatBytes(d.total) }) : formatBytes(d.received)}`;
+    if (running(d) && d.openWhenDone) return `${d.total ? $t('{done} von {total}', { done: formatBytes(d.received), total: formatBytes(d.total) }) : formatBytes(d.received)} · ${$t('Wird nach dem Download geöffnet')}`;
     if (running(d)) return d.total ? $t('{done} von {total}', { done: formatBytes(d.received), total: formatBytes(d.total) }) : formatBytes(d.received);
     if (d.state === 'completed') return `${formatBytes(d.total || d.received)} · ${hostOf(d.url) || $t('Fertig')}`;
     if (d.state === 'cancelled') return $t('Abgebrochen');
@@ -78,8 +80,10 @@ const Downloads = (() => {
       const pct = d.total ? Math.min(100, (d.received / d.total) * 100) : 0;
       const done = d.state === 'completed';
       return h('div', {
-        class: `dl-item${done ? ' done' : ''}`, title: done ? $t('Öffnen') : '',
-        onclick: (e) => { if (done && !e.target.closest('button')) F.openPath(d.path); }
+        class: `dl-item${done ? ' done' : ''}${running(d) ? ' running' : ''}${d.openWhenDone ? ' open-when-done' : ''}`,
+        title: done ? $t('Öffnen') : running(d) ? $t('Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen') : '',
+        onclick: (e) => { if (!e.target.closest('button')) primary(d); },
+        oncontextmenu: (e) => { e.preventDefault(); e.stopPropagation(); itemMenu(d, e); }
       },
       h('div', { class: 'dl-file' }, icon('file'), ext ? h('small', {}, ext) : null),
       h('div', { class: 'dl-body' },
@@ -90,6 +94,40 @@ const Downloads = (() => {
         running(d) ? h('button', { class: 'tb-btn sm', title: $t('Abbrechen'), onclick: () => F.cancelDownload(d.id) }, icon('x')) : null,
         done ? h('button', { class: 'tb-btn sm', title: $t('Im Ordner anzeigen'), onclick: () => F.showInFolder(d.path) }, icon('folder')) : null));
     }));
+  }
+
+  // Linksklick: fertige Downloads öffnen, laufende nach dem Download automatisch öffnen (erneut klicken = aus)
+  function primary(d) {
+    d = items.get(d.id) || d; // aktueller Stand, nicht der vom letzten Zeichnen
+    if (d.state === 'completed') { F.openPath(d.path); return; }
+    if (running(d)) F.downloadControl(d.id, 'open-when-done', !d.openWhenDone);
+  }
+
+  function forget(id) {
+    items.delete(id);
+    renderList();
+    renderButton();
+  }
+
+  function itemMenu(d, e) {
+    d = items.get(d.id) || d;
+    const done = d.state === 'completed';
+    const failed = d.state === 'cancelled' || d.state === 'interrupted' || d.state === 'failed';
+    showMenu([
+      running(d) ? { label: $t('Nach dem Download öffnen'), checked: !!d.openWhenDone, onClick: () => F.downloadControl(d.id, 'open-when-done', !d.openWhenDone) } : null,
+      done ? { label: $t('Öffnen'), icon: 'external', onClick: () => F.openPath(d.path) } : null,
+      done ? { label: $t('Im Ordner anzeigen'), icon: 'folder', onClick: () => F.showInFolder(d.path) } : null,
+      running(d) && !d.paused ? { label: $t('Pausieren'), icon: 'pause', onClick: () => F.downloadControl(d.id, 'pause') } : null,
+      running(d) && d.paused ? { label: $t('Fortsetzen'), icon: 'play', onClick: () => F.downloadControl(d.id, 'resume') } : null,
+      failed ? { label: $t('Erneut herunterladen'), icon: 'reload', onClick: () => { F.downloadControl(d.id, 'retry'); forget(d.id); } } : null,
+      '-',
+      /^https?:/i.test(d.url) ? { label: $t('Downloadlink kopieren'), icon: 'link', onClick: () => { F.copy(d.url); toast($t('Adresse kopiert'), 'copy'); } } : null,
+      { label: $t('Downloads-Ordner öffnen'), icon: 'folder', onClick: () => F.downloads.openDir() },
+      { label: $t('Alle Downloads anzeigen'), icon: 'download', shortcut: kb('Strg+J'), onClick: () => openInternalPage(DOWNLOADS_URL) },
+      '-',
+      running(d) ? { label: $t('Abbrechen'), icon: 'x', danger: true, onClick: () => F.cancelDownload(d.id) } : null,
+      !running(d) ? { label: $t('Aus der Liste entfernen'), icon: 'trash', onClick: () => forget(d.id) } : null
+    ], { point: { x: e.clientX, y: e.clientY } });
   }
 
   function renderButton() {

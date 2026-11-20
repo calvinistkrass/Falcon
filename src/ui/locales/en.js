@@ -817,5 +817,10 @@ I18N.add('en', {
   "Das bekommst du:": "What you get:",
   "Seite übersetzen – per Rechtsklick auf eine Seite oder mit Strg+K": "Translate page – right-click a page or press Ctrl+K",
   "Alle weiteren Beta-Funktionen, sobald sie erscheinen": "All further beta features as soon as they’re released",
-  "Öffnen": "Open"
+  "Öffnen": "Open",
+  "Downloadlink kopieren": "Copy download link",
+  "Downloads-Ordner öffnen": "Open downloads folder",
+  "Nach dem Download öffnen": "Open when done",
+  "Wird nach dem Download geöffnet": "Opens when done",
+  "Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen": "Click: open when done · Right-click: more actions"
 });

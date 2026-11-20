@@ -817,5 +817,10 @@ I18N.add('tr', {
   "Das bekommst du:": "Neler alırsın:",
   "Seite übersetzen – per Rechtsklick auf eine Seite oder mit Strg+K": "Sayfayı çevir – sayfaya sağ tıkla veya Ctrl+K",
   "Alle weiteren Beta-Funktionen, sobald sie erscheinen": "Yayınlandıkça diğer tüm beta özellikleri",
-  "Öffnen": "Aç"
+  "Öffnen": "Aç",
+  "Downloadlink kopieren": "İndirme bağlantısını kopyala",
+  "Downloads-Ordner öffnen": "İndirilenler klasörünü aç",
+  "Nach dem Download öffnen": "Bitince aç",
+  "Wird nach dem Download geöffnet": "Bitince açılacak",
+  "Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen": "Tıkla: bitince aç · Sağ tık: diğer işlemler"
 });
