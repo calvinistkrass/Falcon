@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.4.1] – 2026-11-21
+
+### Added
+- **Falcon Mobile: loading screen** – the app now starts with the same animated Falcon loading screen as on the PC. It disappears once everything has loaded (sign-in, your saved tabs and your account data).
+
+### Changed
+- No changes to the PC app – this release is also a good opportunity to try the new automatic updates on Linux and Android.
+
 ## [2.4.0] – 2026-11-21
 
 ### Added

@@ -9,7 +9,7 @@ import { loadTabs, saveTabs } from './tabstore';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.4.0';
+export const APP_VERSION = '2.4.1';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -74,6 +74,8 @@ type Ctx = {
   admin: boolean;
   betaActive: boolean;
   loadingData: boolean;
+  /** Gespeicherte Tabs sind gelesen (für den Ladebildschirm) */
+  tabsReady: boolean;
   dataError: string | null;
   tabs: Tab[];
   activeId: string;
@@ -786,6 +788,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Tabs nach dem Neustart wiederherstellen (seit 2.4.0) – Inkognito-Tabs werden nie gespeichert
   const tabsRestored = useRef(false);
+  const [tabsReady, setTabsReady] = useState(false);
   const tabSnapshot = useCallback(() => {
     const keep = tabs.filter((t) => !t.incognito && /^https?:/i.test(t.url));
     return { activeId, tabs: keep.map((t) => ({ id: t.id, url: t.url, title: t.title })) };
@@ -804,7 +807,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setActiveId((cur) => (saved.tabs.some((t) => t.id === saved.activeId) ? saved.activeId : saved.tabs[saved.tabs.length - 1].id) || cur);
       }
       tabsRestored.current = true;
-    }).catch(() => { tabsRestored.current = true; });
+      setTabsReady(true);
+    }).catch(() => { tabsRestored.current = true; setTabsReady(true); });
     return () => { cancelled = true; };
   }, []);
   useEffect(() => {
@@ -845,7 +849,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [wallet]);
 
   const value: Ctx = {
-    status, user, bookmarks, passwords, history, devices, wallet, daily, missions, admin, loadingData, dataError, tabs, activeId,
+    status, user, bookmarks, passwords, history, devices, wallet, daily, missions, admin, loadingData, tabsReady, dataError, tabs, activeId,
     searchEngine: typeof settings.searchEngine === 'string' ? settings.searchEngine : 'google',
     betaActive: wallet.betaUntil > clock,
     pwNever: Array.isArray(settings.pwNever) ? settings.pwNever as string[] : [],
