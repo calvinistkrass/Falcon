@@ -4,8 +4,8 @@
  *
  * Das Repository steht in package.json unter "repository" (z. B. "github:name/falcon").
  * Die installierte Version (NSIS-Installer) lädt Updates herunter und installiert sie beim
- * Neustart. Die portable .exe kann sich nicht selbst ersetzen – dort öffnet Falcon die
- * Release-Seite, damit man die neue Datei herunterladen kann.
+ * Neustart, ebenso seit 2.4.0 die Linux-Pakete (.deb/.rpm). Die portable .exe und macOS können sich nicht
+ * selbst ersetzen – dort öffnet Falcon die Download-Seite auf falconbrowser.de.
  */
 
 const { app, net } = require('electron');
@@ -40,16 +40,25 @@ function repository() {
 }
 
 const isPortable = () => !!process.env.PORTABLE_EXECUTABLE_DIR;
-// Selbst aktualisieren kann nur der Windows-Installer. Die macOS-Version ist nicht von Apple signiert
-// (Squirrel.Mac verlangt das), .deb/.rpm kommen über den Paketmanager – dort öffnet Falcon wie bei der
-// portablen .exe die Release-Seite.
-const manualUpdate = () => (process.platform === 'win32' ? isPortable() : true);
+/** Linux: „deb“ oder „rpm“, wenn Falcon aus dem Paket installiert ist (electron-builder legt die Datei an) */
+let pkgType = null;
+function linuxPackage() {
+  if (pkgType === null) {
+    try { pkgType = fs.readFileSync(path.join(process.resourcesPath, 'package-type'), 'utf8').trim(); } catch { pkgType = ''; }
+  }
+  return pkgType;
+}
+// Seit 2.4.0 aktualisiert sich auch die Linux-Version (.deb/.rpm) selbst wie unter Windows: Download im
+// Hintergrund, Installation beim Neustart über den Paketmanager (Linux fragt dafür einmal nach dem Passwort).
+const linuxAuto = () => process.platform === 'linux' && ['deb', 'rpm'].includes(linuxPackage());
+// Nicht selbst aktualisieren können: portable .exe und macOS (nicht von Apple signiert – Squirrel.Mac
+// verlangt das). Dort öffnet Falcon die Download-Seite auf falconbrowser.de.
+const manualUpdate = () => (process.platform === 'win32' ? isPortable() : !linuxAuto());
 
-// Linux (.deb/.rpm) und macOS: Die Linux-Builds laden kein latest-linux.yml hoch (zwei getrennte Jobs für
-// .deb und .rpm würden sich sonst überschreiben) – electron-updater bekäme dort nur einen 404 und meldete
-// „aktuell“. Deshalb fragt Falcon auf diesen Systemen die GitHub-API direkt nach dem neuesten Release, das
-// eine Datei für dieses System enthält.
-const apiCheck = () => process.platform !== 'win32';
+// macOS (und Linux ohne Paket, z. B. entpackt): Falcon fragt die GitHub-API direkt nach dem neuesten Release,
+// das eine Datei für dieses System enthält. .deb/.rpm nutzen seit 2.4.0 electron-updater mit latest-linux.yml
+// (der Release-Workflow trägt dort .deb und .rpm ein).
+const apiCheck = () => process.platform === 'darwin' || (process.platform === 'linux' && !linuxAuto());
 
 /** Welche Release-Datei passt zu diesem System? */
 function assetPattern() {
@@ -82,7 +91,7 @@ async function checkViaApi() {
     if (latest && newer(latest.version, pkg.version)) {
       const notes = plainNotes(latest.notes);
       remember({ version: latest.version, notes });
-      setStatus({ state: 'available', available: latest.version, notes, portable: true, url: releaseUrl(latest.version), checkedAt: Date.now() });
+      setStatus({ state: 'available', available: latest.version, notes, portable: true, url: releaseUrl(), checkedAt: Date.now() });
     } else {
       remember(null);
       setStatus({ state: 'latest', checkedAt: Date.now() });
@@ -93,10 +102,10 @@ async function checkViaApi() {
   return status;
 }
 
-function releaseUrl(version) {
-  const r = repository();
-  if (!r) return null;
-  return `https://github.com/${r.owner}/${r.repo}/releases${version ? `/tag/v${version}` : '/latest'}`;
+/** Download-Seite für Versionen, die sich nicht selbst aktualisieren (seit 2.4.0 falconbrowser.de statt GitHub) */
+function releaseUrl() {
+  const hash = process.platform === 'darwin' ? '#mac' : process.platform === 'linux' ? '#linux' : '#windows';
+  return `https://falconbrowser.de/download${hash}`;
 }
 
 function setStatus(patch) {
@@ -120,7 +129,7 @@ function init(sender, cache) {
   remember = (v) => cache?.set(v);
   const known = cache?.get();
   if (known && newer(known.version, pkg.version)) {
-    status = { ...status, state: 'available', available: known.version, notes: known.notes || '', portable: manualUpdate(), url: releaseUrl(known.version) };
+    status = { ...status, state: 'available', available: known.version, notes: known.notes || '', portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto() };
   } else if (known) {
     remember(null); // inzwischen installiert
   }
@@ -145,7 +154,7 @@ function init(sender, cache) {
   autoUpdater.on('update-available', (info) => {
     const notes = plainNotes(info.releaseNotes);
     remember({ version: info.version, notes });
-    setStatus({ state: 'available', available: info.version, notes, portable: manualUpdate(), url: releaseUrl(info.version), checkedAt: Date.now() });
+    setStatus({ state: 'available', available: info.version, notes, portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto(), checkedAt: Date.now() });
   });
   autoUpdater.on('download-progress', (p) => setStatus({ state: 'downloading', percent: Math.round(p.percent) }));
   autoUpdater.on('update-downloaded', (info) => setStatus({ state: 'downloaded', available: info.version }));

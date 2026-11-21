@@ -37,7 +37,11 @@ const Updates = (() => {
     const hint = $('#upHint');
     hint.classList.toggle('hidden', !(s.portable || s.state === 'downloading' || s.state === 'downloaded'));
     hint.textContent = s.portable
-      ? $t('Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von GitHub herunter.')
+      ? $t('Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von falconbrowser.de herunter.')
+      : s.state === 'downloaded' && s.linux
+        ? (countdown
+          ? $t('Falcon startet in {n} s neu und installiert das Update. Linux fragt dafür einmal nach deinem Passwort. Deine Tabs bleiben erhalten.', { n: countdown.left })
+          : $t('Beim Neustart installiert Falcon das Update – Linux fragt dafür einmal nach deinem Passwort. Mit „Später“ wird es beim Schließen von Falcon installiert.'))
       : s.state === 'downloaded'
         ? (countdown
           ? $t('Falcon startet in {n} s neu, installiert das Update im Hintergrund und öffnet sich danach wieder. Deine Tabs bleiben erhalten.', { n: countdown.left })
@@ -46,7 +50,7 @@ const Updates = (() => {
     const action = $('#upAction');
     action.disabled = s.state === 'downloading';
     action.textContent = s.state === 'downloaded' ? (countdown ? $t('Jetzt neu starten') : $t('Neu starten und aktualisieren'))
-      : s.portable ? $t('Auf GitHub öffnen')
+      : s.portable ? $t('Von falconbrowser.de herunterladen')
       : s.state === 'downloading' ? $t('Wird heruntergeladen …')
       : $t('Herunterladen');
   }

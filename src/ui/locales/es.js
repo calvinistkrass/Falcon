@@ -832,5 +832,9 @@ I18N.add('es', {
   "Unbekannt": "Desconocido",
   "Übersetzung": "Traducción",
   "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Traducir página – traduce sitios web directamente a tu idioma",
-  "Alle Tabs schließen": "Cerrar todas las pestañas"
+  "Alle Tabs schließen": "Cerrar todas las pestañas",
+  "Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von falconbrowser.de herunter.": "Esta versión no puede actualizarse sola. Descarga la nueva versión desde falconbrowser.de.",
+  "Falcon startet in {n} s neu und installiert das Update. Linux fragt dafür einmal nach deinem Passwort. Deine Tabs bleiben erhalten.": "Falcon se reinicia en {n} s e instala la actualización. Linux te pedirá tu contraseña una vez. Tus pestañas se conservan.",
+  "Beim Neustart installiert Falcon das Update – Linux fragt dafür einmal nach deinem Passwort. Mit „Später“ wird es beim Schließen von Falcon installiert.": "Falcon instala la actualización al reiniciarse: Linux te pedirá tu contraseña una vez. Con «Más tarde» se instala al cerrar Falcon.",
+  "Von falconbrowser.de herunterladen": "Descargar desde falconbrowser.de"
 });

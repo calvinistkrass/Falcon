@@ -2,6 +2,19 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.4.0] – 2026-11-21
+
+### Added
+- **Linux: automatic updates** – Falcon on Linux (.deb and .rpm) now updates itself like on Windows: the update is downloaded in the background and installed when Falcon restarts. Linux asks for your password once to install it. Applies from the next update after 2.4.0.
+- **Falcon Mobile (Android): updates inside the app** – Falcon downloads the new version itself and opens the Android installer; you only confirm the installation (the first time, Android asks you to allow Falcon to install apps).
+- **Close all tabs** – on the PC in the tab right-click menu and the command palette (Ctrl+K), in Falcon Mobile in the tab overview.
+
+### Fixed
+- **Falcon Mobile: tabs are kept** – your open tabs are still there after closing and reopening the app (incognito tabs are never saved).
+
+### Changed
+- **Update downloads from falconbrowser.de** – versions that can’t update themselves (macOS, portable) now point to the download page on falconbrowser.de instead of GitHub.
+
 ## [2.3.9] – 2026-11-21
 
 ### Changed

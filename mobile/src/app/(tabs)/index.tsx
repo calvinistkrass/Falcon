@@ -23,7 +23,8 @@ export default function Start() {
   const [q, setQ] = useState('');
   const [games, setGames] = useState<Game[]>([]);
   const [claiming, setClaiming] = useState(false);
-  const { update, download, dismiss } = useAppUpdate();
+  const { update, download, dismiss, progress, error: updateError, openWebsite } = useAppUpdate();
+  const downloading = typeof progress === 'number';
 
   useEffect(() => {
     fetchJson<any[]>('https://www.gamerpower.com/api/giveaways?platform=pc&type=game&sort-by=popularity')
@@ -69,12 +70,24 @@ export default function Start() {
               <View style={s.updateIc}><Ionicons name="arrow-down-circle" size={24} color={C.accent} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>Neue Version verfügbar</Text>
-                <Text style={s.cardText}>Falcon Mobile {update.version}{update.size ? ` · ${Math.round(update.size / 1048576)} MB` : ''} – herunterladen und über die bisherige App installieren.</Text>
+                <Text style={s.cardText}>
+                  Falcon Mobile {update.version}{update.size ? ` · ${Math.round(update.size / 1048576)} MB` : ''}
+                  {downloading ? ` – wird heruntergeladen … ${Math.round(progress * 100)} %`
+                    : progress === 'ready' ? ' – bestätige die Installation im Fenster von Android.'
+                    : ' – Falcon lädt das Update herunter, danach bestätigst du nur noch die Installation.'}
+                </Text>
               </View>
             </View>
+            {downloading ? <View style={s.updateBar}><View style={[s.updateBarFill, { width: `${Math.round(progress * 100)}%` }]} /></View> : null}
+            {updateError ? <Text style={s.updateError}>{updateError}</Text> : null}
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1 }}><Button title="Später" variant="ghost" small onPress={dismiss} /></View>
-              <View style={{ flex: 1 }}><Button title="Herunterladen" icon="download-outline" small onPress={download} /></View>
+              <View style={{ flex: 1 }}>
+                {updateError ? <Button title="falconbrowser.de" variant="ghost" small onPress={openWebsite} />
+                  : <Button title="Später" variant="ghost" small onPress={dismiss} disabled={downloading} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button title={progress === 'ready' ? 'Installieren' : 'Aktualisieren'} icon="download-outline" small onPress={download} loading={downloading} />
+              </View>
             </View>
           </Card>
         ) : null}
@@ -146,6 +159,9 @@ const s = StyleSheet.create({
   tileText: { color: C.text2, fontSize: 12.5, maxWidth: 76 },
   daily: { marginTop: 18, padding: 16, gap: 14 },
   update: { marginBottom: 18, padding: 16, gap: 14, borderColor: 'rgba(124,108,255,0.45)' },
+  updateBar: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  updateBarFill: { height: '100%', borderRadius: 2, backgroundColor: C.accent },
+  updateError: { color: C.danger, fontSize: 13, lineHeight: 18 },
   updateIc: { width: 42, height: 42, borderRadius: 12, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
   dailyIc: { width: 42, height: 42, borderRadius: 12, backgroundColor: C.goldSoft, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { color: C.text, fontSize: 16, fontWeight: '700' },

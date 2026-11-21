@@ -832,5 +832,9 @@ I18N.add('tr', {
   "Unbekannt": "Bilinmiyor",
   "Übersetzung": "Çeviri",
   "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Sayfayı çevir – web sitelerini doğrudan kendi dilinde çevir",
-  "Alle Tabs schließen": "Tüm sekmeleri kapat"
+  "Alle Tabs schließen": "Tüm sekmeleri kapat",
+  "Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von falconbrowser.de herunter.": "Bu sürüm kendini güncelleyemez. Yeni sürümü falconbrowser.de adresinden indir.",
+  "Falcon startet in {n} s neu und installiert das Update. Linux fragt dafür einmal nach deinem Passwort. Deine Tabs bleiben erhalten.": "Falcon {n} sn içinde yeniden başlar ve güncellemeyi yükler. Linux bir kez şifreni sorar. Sekmelerin korunur.",
+  "Beim Neustart installiert Falcon das Update – Linux fragt dafür einmal nach deinem Passwort. Mit „Später“ wird es beim Schließen von Falcon installiert.": "Falcon güncellemeyi yeniden başlarken yükler – Linux bir kez şifreni sorar. “Sonra” ile Falcon kapatılınca yüklenir.",
+  "Von falconbrowser.de herunterladen": "falconbrowser.de adresinden indir"
 });

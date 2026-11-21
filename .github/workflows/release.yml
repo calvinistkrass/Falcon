@@ -97,25 +97,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # latest-linux.yml: Linux-Versionen bis 2.3.5 erkennen neue Versionen nur über diese Datei
-      # (electron-builder legt sie wegen publishAutoUpdate: false nicht selbst an). Ab 2.3.6 fragt Falcon
-      # unter Linux zusätzlich direkt die GitHub-API.
-      - name: latest-linux.yml hochladen
-        shell: bash
-        run: |
-          set -e
-          VERSION=$(node -p "require('./package.json').version")
-          FILE="Falcon-${VERSION}-linux-amd64.deb"
-          SHA=$(openssl dgst -sha512 -binary "dist/${FILE}" | base64 -w0)
-          SIZE=$(stat -c %s "dist/${FILE}")
-          DATE=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
-          printf 'version: %s\nfiles:\n  - url: %s\n    sha512: %s\n    size: %s\npath: %s\nsha512: %s\nreleaseDate: '"'"'%s'"'"'\n' \
-            "$VERSION" "$FILE" "$SHA" "$SIZE" "$FILE" "$SHA" "$DATE" > dist/latest-linux.yml
-          cat dist/latest-linux.yml
-          gh release upload "v${VERSION}" dist/latest-linux.yml --clobber --repo "${{ github.repository }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   # .rpm (Fedora, openSUSE …) – auf Ubuntu 22.04: dessen rpmbuild (4.17) verträgt sich mit dem fpm von
   # electron-builder; mit rpmbuild 4.18+ (Ubuntu 24.04, Fedora 41) scheiterte der Build
   linux-rpm:
@@ -181,5 +162,35 @@ jobs:
           VERSION="$(node -p "require('./mobile/app.json').expo.version")"
           cp mobile/android/app/build/outputs/apk/release/app-release.apk "Falcon-Mobile-$VERSION.apk"
           gh release upload "$GITHUB_REF_NAME" "Falcon-Mobile-$VERSION.apk" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # latest-linux.yml mit .deb und .rpm – damit aktualisieren sich installierte Linux-Versionen selbst
+  # (seit 2.4.0 wie unter Windows; Versionen bis 2.3.9 zeigen damit zumindest den Update-Hinweis).
+  # Eigener Job nach beiden Linux-Builds, weil die beiden Jobs die Datei sonst gegenseitig überschreiben.
+  linux-update-info:
+    needs: [linux-deb, linux-rpm]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: latest-linux.yml erzeugen und hochladen
+        shell: bash
+        run: |
+          set -e
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p dl && cd dl
+          gh release download "v${VERSION}" --repo "${{ github.repository }}" -p "Falcon-${VERSION}-linux-amd64.deb" -p "Falcon-${VERSION}-linux-x86_64.rpm"
+          entry() { printf '  - url: %s\n    sha512: %s\n    size: %s\n' "$1" "$(openssl dgst -sha512 -binary "$1" | base64 -w0)" "$(stat -c %s "$1")"; }
+          DEB="Falcon-${VERSION}-linux-amd64.deb"
+          RPM="Falcon-${VERSION}-linux-x86_64.rpm"
+          {
+            printf 'version: %s\nfiles:\n' "$VERSION"
+            entry "$DEB"
+            entry "$RPM"
+            printf 'path: %s\nsha512: %s\nreleaseDate: '"'"'%s'"'"'\n' "$DEB" "$(openssl dgst -sha512 -binary "$DEB" | base64 -w0)" "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          } > latest-linux.yml
+          cat latest-linux.yml
+          gh release upload "v${VERSION}" latest-linux.yml --clobber --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
