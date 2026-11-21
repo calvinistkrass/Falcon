@@ -18,8 +18,8 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/assets/logo.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/styles.css?v=20261122d">
-<script src="/assets/main.js?v=20261122d" defer></script>
+<link rel="stylesheet" href="/assets/styles.css?v=20261122e">
+<script src="/assets/main.js?v=20261122e" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Zum Inhalt springen</a>
@@ -159,10 +159,13 @@
         <div data-platform-steps="ios" hidden>
         <h2 style="font-size:30px;margin-bottom:22px">Falcon auf iOS-Geräten</h2>
         <div class="steps">
-          <div class="step"><div><span class="st">AltStore oder SideStore einrichten</span><p>Falcon für iOS-Geräte gibt es nicht im App Store. Installiere zuerst <b>AltStore</b> oder <b>SideStore</b> – die Anleitung findest du auf altstore.io bzw. sidestore.io.</p></div></div>
-          <div class="step"><div><span class="st">.ipa herunterladen</span><p>Tippe oben auf „.ipa herunterladen“. Die Datei heißt <code>Falcon-Mobile-<span data-ios-version>…</span>.ipa</code>.</p></div></div>
-          <div class="step"><div><span class="st">In AltStore / SideStore öffnen</span><p>Öffne in AltStore bzw. SideStore „Meine Apps“, tippe auf <b>+</b> und wähle die .ipa aus. Die App wird mit deiner Apple-ID signiert und installiert.</p></div></div>
-          <div class="step"><div><span class="st">Alle 7 Tage auffrischen</span><p>Mit einer kostenlosen Apple-ID läuft die Signatur nach 7 Tagen ab. AltStore/SideStore frischt sie automatisch auf, solange es ab und zu geöffnet wird.</p></div></div>
+          <div class="step"><div><span class="st">Wichtig: nicht AltStore PAL</span><p>Falcon gibt es nicht im App Store. Die EU-Version <b>AltStore PAL</b> (nur „Quellen per URL“, kein <b>+</b>) kann keine eigenen .ipa-Dateien installieren. Du brauchst <b>SideStore</b> oder <b>AltStore Classic</b> – beide sind kostenlos und brauchen nur deine normale Apple-ID.</p></div></div>
+          <div class="step"><div><span class="st">SideStore einrichten (Windows, macOS oder Linux)</span><p>Lade am Computer <b>iloader</b> herunter (Link auf <b>sidestore.io</b>). Unter Linux zuerst <code>usbmuxd</code> installieren (Debian/Ubuntu: <code>sudo apt install usbmuxd</code>). Schließe das iPhone oder iPad per Kabel an, tippe auf dem Gerät auf „Vertrauen“, melde dich in iloader mit deiner Apple-ID an und installiere SideStore. Den Computer brauchst du danach nicht mehr.</p></div></div>
+          <div class="step"><div><span class="st">Auf dem Gerät freigeben</span><p>Schalte unter <b>Einstellungen → Datenschutz &amp; Sicherheit → Entwicklermodus</b> den Entwicklermodus ein (Neustart). Vertraue danach unter <b>Einstellungen → Allgemein → VPN &amp; Geräteverwaltung</b> deiner Apple-ID. Richte in SideStore die mitgelieferte VPN-App ein – sie wird zum Installieren und Auffrischen gebraucht.</p></div></div>
+          <div class="step"><div><span class="st">.ipa herunterladen</span><p>Öffne diese Seite auf dem Gerät und tippe oben auf „.ipa herunterladen“. Die Datei <code>Falcon-Mobile-<span data-ios-version>…</span>.ipa</code> landet in der Dateien-App unter „Downloads“.</p></div></div>
+          <div class="step"><div><span class="st">Falcon installieren</span><p>Öffne SideStore, wechsle zu <b>Meine Apps</b>, tippe oben links auf <b>+</b> und wähle die .ipa aus. Falcon wird mit deiner Apple-ID signiert und erscheint auf dem Home-Bildschirm.</p></div></div>
+          <div class="step"><div><span class="st">Alle 7 Tage auffrischen</span><p>Mit einer kostenlosen Apple-ID läuft die Signatur nach 7 Tagen ab. Öffne SideStore ab und zu und tippe auf „Aktualisieren“ – das geht ohne Computer. Neue Falcon-Versionen installierst du genauso über <b>+</b>.</p></div></div>
+          <div class="step"><div><span class="st">Lieber AltStore Classic?</span><p>Das geht auch mit Windows oder macOS: <b>AltServer</b> von altstore.io installieren, Gerät anschließen und AltStore darüber aufs Gerät bringen. Danach wie oben: <b>Meine Apps → +</b> → .ipa auswählen.</p></div></div>
         </div>
         </div>
       </div>
