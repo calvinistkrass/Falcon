@@ -25,6 +25,7 @@ const Palette = (() => {
       { label: 'Neues Inkognito-Fenster', icon: 'incognito', key: 'Strg+Umschalt+N', run: () => F.newIncognitoWindow() },
       { label: 'Tab wiederherstellen', icon: 'restore', key: 'Strg+Umschalt+T', run: () => Tabs.reopen(), when: Tabs.closedCount > 0 },
       { label: 'Tab schließen', icon: 'x', key: 'Strg+W', run: () => t && Tabs.close(t.id), when: !!t },
+      { label: 'Alle Tabs schließen', icon: 'x', words: 'close all tabs alle schließen', run: () => Tabs.closeAll() },
       { label: 'Neu laden', icon: 'reload', key: 'F5', run: () => Tabs.reload(t), when: web },
       { label: s.gameMode ? 'Game Mode ausschalten' : 'Game Mode einschalten', icon: 'gamepad', key: 'Strg+Umschalt+G', words: 'game mode gaming', run: () => Perf.setGameMode(!s.gameMode) },
       Tabs.split

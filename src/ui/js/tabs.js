@@ -312,6 +312,13 @@ const Tabs = (() => {
     emit('tabs-changed');
   }
 
+  // Alle Tabs schließen: zuerst einen neuen leeren Tab öffnen, damit das Fenster nicht leer ist
+  function closeAll() {
+    const ids = state.tabs.map((t) => t.id);
+    if (split) endSplit(false);
+    create();
+    for (const id of ids) close(id);
+  }
   function closeOthers(id) { for (const t of [...state.tabs]) if (t.id !== id) close(t.id); }
   function closeRight(id) {
     const i = state.tabs.findIndex((t) => t.id === id);
@@ -512,6 +519,7 @@ const Tabs = (() => {
       { label: $t('Schließen'), icon: 'x', shortcut: kb('Strg+W'), onClick: () => close(tab.id) },
       { label: $t('Andere Tabs schließen'), disabled: state.tabs.length < 2, onClick: () => closeOthers(tab.id) },
       { label: $t('Tabs rechts schließen'), disabled: i === state.tabs.length - 1, onClick: () => closeRight(tab.id) },
+      { label: $t('Alle Tabs schließen'), icon: 'x', danger: true, onClick: closeAll },
       '-',
       { label: $t('Geschlossenen Tab wieder öffnen'), icon: 'restore', shortcut: kb('Strg+Umschalt+T'), disabled: !closedTabs.length, onClick: reopen }
     ], { point: { x: e.clientX, y: e.clientY } });
@@ -544,7 +552,7 @@ const Tabs = (() => {
   on('settings', () => state.tabs.forEach(render));
 
   return {
-    create, activate, close, closeOthers, closeRight, duplicate, reopen, navigate, reload, toggleMute,
+    create, activate, close, closeAll, closeOthers, closeRight, duplicate, reopen, navigate, reload, toggleMute,
     byWebview: (wv) => state.tabs.find((t) => t.webview === wv),
     cycle, goTo, sleep, sleepInactive, restoreSession, displayTitle, active, byId, isShown,
     startSplit, splitWithNew, endSplit, swapSplit, setVolume, volumePopover, get split() { return split ? { ...split } : null; },

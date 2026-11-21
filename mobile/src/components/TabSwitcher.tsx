@@ -15,7 +15,7 @@ export default function TabSwitcher({ visible, onClose }: { visible: boolean; on
   const addIncognito = () => { newTab(true); onClose(); };
   const closeAll = () => Alert.alert('Alle Tabs schließen?', `${tabs.length} ${tabs.length === 1 ? 'Tab wird' : 'Tabs werden'} geschlossen.`, [
     { text: 'Abbrechen', style: 'cancel' },
-    { text: 'Alle schließen', style: 'destructive', onPress: () => { closeAllTabs(); onClose(); } }
+    { text: 'Alle Tabs schließen', style: 'destructive', onPress: () => { closeAllTabs(); onClose(); } }
   ]);
 
   return (
@@ -23,7 +23,12 @@ export default function TabSwitcher({ visible, onClose }: { visible: boolean; on
       <SafeAreaView style={s.screen}>
         <View style={s.head}>
           <Text style={s.title}>{tabs.length} {tabs.length === 1 ? 'Tab' : 'Tabs'}</Text>
-          {tabs.length > 1 ? <Pressable onPress={closeAll} hitSlop={8}><Text style={s.closeAll}>Alle schließen</Text></Pressable> : null}
+          {tabs.length > 1 || tabs.some((t) => t.url) ? (
+            <Pressable onPress={closeAll} hitSlop={8} style={({ pressed }) => [s.closeAllBtn, pressed && { opacity: 0.7 }]} accessibilityLabel="Alle Tabs schließen">
+              <Ionicons name="close-circle-outline" size={16} color={C.danger} />
+              <Text style={s.closeAll}>Alle Tabs schließen</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <ScrollView contentContainerStyle={s.grid}>
@@ -79,7 +84,8 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 },
   title: { color: C.text, fontSize: 22, fontWeight: '800' },
-  closeAll: { color: C.danger, fontSize: 15, fontWeight: '600' },
+  closeAll: { color: C.danger, fontSize: 14, fontWeight: '600' },
+  closeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(240,88,91,0.12)' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, padding: 16, paddingBottom: 32 },
   card: { width: '47.5%', borderRadius: R.lg, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.line, overflow: 'hidden' },
   cardOn: { borderColor: C.accent },

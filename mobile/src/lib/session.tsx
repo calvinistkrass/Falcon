@@ -5,6 +5,7 @@ import { AppState, Platform } from 'react-native';
 import * as FB from './firebase';
 import { decryptJson, encryptJson, fromBase64, newDataKey, randomId, toBase64, unwrapKey, wrapKey } from './crypto';
 import { load, save } from './storage';
+import { loadTabs, saveTabs } from './tabstore';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
@@ -782,6 +783,39 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (id === activeId) setActiveId(rest[Math.min(i, rest.length - 1)].id);
   }, [tabs, activeId]);
   const closeAllTabs = useCallback(() => { const t = blank(); setTabs([t]); setActiveId(t.id); }, []);
+
+  // Tabs nach dem Neustart wiederherstellen (seit 2.4.0) – Inkognito-Tabs werden nie gespeichert
+  const tabsRestored = useRef(false);
+  const tabSnapshot = useCallback(() => {
+    const keep = tabs.filter((t) => !t.incognito && /^https?:/i.test(t.url));
+    return { activeId, tabs: keep.map((t) => ({ id: t.id, url: t.url, title: t.title })) };
+  }, [tabs, activeId]);
+  useEffect(() => {
+    let cancelled = false;
+    loadTabs().then((saved) => {
+      if (cancelled) return;
+      if (saved?.tabs.length) {
+        setTabs((current) => {
+          // Schon etwas geöffnet (z. B. per Link), bevor die Datei gelesen war? Dann hinten anhängen.
+          const opened = current.filter((t) => t.src || t.url || t.incognito);
+          const restored = saved.tabs.map((t) => ({ id: t.id, src: t.url, nonce: 1, url: t.url, title: t.title }));
+          return [...restored, ...opened];
+        });
+        setActiveId((cur) => (saved.tabs.some((t) => t.id === saved.activeId) ? saved.activeId : saved.tabs[saved.tabs.length - 1].id) || cur);
+      }
+      tabsRestored.current = true;
+    }).catch(() => { tabsRestored.current = true; });
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    if (!tabsRestored.current) return;
+    const t = setTimeout(() => { saveTabs(tabSnapshot()); }, 400);
+    return () => clearTimeout(t);
+  }, [tabSnapshot]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => { if (st !== 'active' && tabsRestored.current) saveTabs(tabSnapshot(), true); });
+    return () => sub.remove();
+  }, [tabSnapshot]);
   const switchTab = useCallback((id: string) => setActiveId(id), []);
   const updateTab = useCallback((id: string, patch: Partial<Pick<Tab, 'url' | 'title'>>) => {
     setTabs((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));

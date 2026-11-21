@@ -831,5 +831,6 @@ I18N.add('es', {
   "Seite wird übersetzt …": "Traduciendo página …",
   "Unbekannt": "Desconocido",
   "Übersetzung": "Traducción",
-  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Traducir página – traduce sitios web directamente a tu idioma"
+  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Traducir página – traduce sitios web directamente a tu idioma",
+  "Alle Tabs schließen": "Cerrar todas las pestañas"
 });

@@ -831,5 +831,6 @@ I18N.add('tr', {
   "Seite wird übersetzt …": "Sayfa çevriliyor …",
   "Unbekannt": "Bilinmiyor",
   "Übersetzung": "Çeviri",
-  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Sayfayı çevir – web sitelerini doğrudan kendi dilinde çevir"
+  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Sayfayı çevir – web sitelerini doğrudan kendi dilinde çevir",
+  "Alle Tabs schließen": "Tüm sekmeleri kapat"
 });

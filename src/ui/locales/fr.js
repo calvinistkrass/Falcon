@@ -831,5 +831,6 @@ I18N.add('fr', {
   "Seite wird übersetzt …": "Traduction de la page …",
   "Unbekannt": "Inconnue",
   "Übersetzung": "Traduction",
-  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Traduire la page – traduis les sites directement dans ta langue"
+  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Traduire la page – traduis les sites directement dans ta langue",
+  "Alle Tabs schließen": "Fermer tous les onglets"
 });
