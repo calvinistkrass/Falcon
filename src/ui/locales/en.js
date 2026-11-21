@@ -836,5 +836,12 @@ I18N.add('en', {
   "Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von falconbrowser.de herunter.": "This version can’t update itself. Download the new version from falconbrowser.de.",
   "Falcon startet in {n} s neu und installiert das Update. Linux fragt dafür einmal nach deinem Passwort. Deine Tabs bleiben erhalten.": "Falcon restarts in {n} s and installs the update. Linux asks for your password once. Your tabs are kept.",
   "Beim Neustart installiert Falcon das Update – Linux fragt dafür einmal nach deinem Passwort. Mit „Später“ wird es beim Schließen von Falcon installiert.": "Falcon installs the update when it restarts – Linux asks for your password once. With “Later” it’s installed when you close Falcon.",
-  "Von falconbrowser.de herunterladen": "Download from falconbrowser.de"
+  "Von falconbrowser.de herunterladen": "Download from falconbrowser.de",
+  "Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.": "Try new features before everyone else – including Game Mode. Your access lasts 30 days from purchase. A refund is only possible within 24 hours of purchase.",
+  "Die Frist ist abgelaufen: Für den Beta-Zugriff gibt es eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.": "The deadline has passed: beta access can only be refunded within 24 hours of purchase.",
+  "Beim Beta-Zugriff geht eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.": "Beta access can only be refunded within 24 hours of purchase.",
+  "noch unter 1 Stunde": "less than 1 hour left",
+  "noch {n} Stunden": "{n} hours left",
+  "Frist abgelaufen": "Deadline passed",
+  "Für deine Käufe ist keine Rückerstattung mehr möglich: Beim Beta-Zugriff geht das nur innerhalb von 24 Stunden nach dem Kauf.": "A refund is no longer possible for your purchases: beta access can only be refunded within 24 hours of purchase."
 });

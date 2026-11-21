@@ -836,5 +836,12 @@ I18N.add('tr', {
   "Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von falconbrowser.de herunter.": "Bu sürüm kendini güncelleyemez. Yeni sürümü falconbrowser.de adresinden indir.",
   "Falcon startet in {n} s neu und installiert das Update. Linux fragt dafür einmal nach deinem Passwort. Deine Tabs bleiben erhalten.": "Falcon {n} sn içinde yeniden başlar ve güncellemeyi yükler. Linux bir kez şifreni sorar. Sekmelerin korunur.",
   "Beim Neustart installiert Falcon das Update – Linux fragt dafür einmal nach deinem Passwort. Mit „Später“ wird es beim Schließen von Falcon installiert.": "Falcon güncellemeyi yeniden başlarken yükler – Linux bir kez şifreni sorar. “Sonra” ile Falcon kapatılınca yüklenir.",
-  "Von falconbrowser.de herunterladen": "falconbrowser.de adresinden indir"
+  "Von falconbrowser.de herunterladen": "falconbrowser.de adresinden indir",
+  "Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.": "Yeni özellikleri herkesten önce dene – Game Mode dahil. Erişimin satın alımdan itibaren 30 gün geçerlidir. İade yalnızca satın alımdan sonraki 24 saat içinde mümkündür.",
+  "Die Frist ist abgelaufen: Für den Beta-Zugriff gibt es eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.": "Süre doldu: Beta erişimi yalnızca satın alımdan sonraki 24 saat içinde iade edilebilir.",
+  "Beim Beta-Zugriff geht eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.": "Beta erişimi yalnızca satın alımdan sonraki 24 saat içinde iade edilebilir.",
+  "noch unter 1 Stunde": "1 saatten az kaldı",
+  "noch {n} Stunden": "{n} saat kaldı",
+  "Frist abgelaufen": "Süre doldu",
+  "Für deine Käufe ist keine Rückerstattung mehr möglich: Beim Beta-Zugriff geht das nur innerhalb von 24 Stunden nach dem Kauf.": "Satın alımların için artık iade mümkün değil: Beta erişimi yalnızca satın alımdan sonraki 24 saat içinde iade edilebilir."
 });

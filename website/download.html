@@ -18,8 +18,8 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/assets/logo.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/styles.css?v=20261121">
-<script src="/assets/main.js?v=20261121" defer></script>
+<link rel="stylesheet" href="/assets/styles.css?v=20261121b">
+<script src="/assets/main.js?v=20261121b" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Zum Inhalt springen</a>
@@ -99,7 +99,15 @@
       <p class="dl-build" data-build-linux hidden></p>
       <p class="dl-alt">64 Bit (x86_64) · <a href="https://github.com/calvinistkrass/Falcon/releases" target="_blank" rel="noopener">Ältere Versionen</a> · <a href="https://github.com/calvinistkrass/Falcon" target="_blank" rel="noopener">Quellcode</a></p>
     </div>
-    <div class="dl-box" id="soon" data-platform-box="ios" data-soon hidden>
+    <div class="dl-box" id="ios" data-platform-box="ios" hidden>
+      <div class="dl-row">
+        <span class="os"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span>
+        <div><b>Falcon für iPhone &amp; iPad</b><span data-ios-meta>Neueste Version wird geladen …</span></div>
+      </div>
+      <a class="btn btn-primary btn-lg" href="https://github.com/calvinistkrass/Falcon/releases" data-ios="ipa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg><span>.ipa für AltStore / SideStore herunterladen</span></a>
+      <p class="dl-alt">iOS 16.4 oder neuer · Installation über <a href="https://altstore.io" target="_blank" rel="noopener">AltStore</a> oder <a href="https://sidestore.io" target="_blank" rel="noopener">SideStore</a> · Ohne Installation: <a href="/app">Falcon-Web-App</a></p>
+    </div>
+    <div class="dl-box" id="soon" data-platform-box="soon" data-soon hidden>
       <div class="dl-row">
         <span class="os"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
         <div><b data-soon-title>Bald verfügbar</b><span>In Vorbereitung</span></div>
@@ -150,9 +158,10 @@
         <div data-platform-steps="ios" hidden>
         <h2 style="font-size:30px;margin-bottom:22px">Falcon auf iPhone &amp; iPad</h2>
         <div class="steps">
-          <div class="step"><div><span class="st">Web-App öffnen</span><p>Öffne <b>falconbrowser.de/app</b> in Safari. Eine eigene App für iPhone und iPad gibt es noch nicht.</p></div></div>
-          <div class="step"><div><span class="st">Anmelden</span><p>Melde dich mit deinem Falcon-Konto an. Deine Lesezeichen und die Tabs deiner PCs werden erst auf deinem Gerät entschlüsselt.</p></div></div>
-          <div class="step"><div><span class="st">Zum Home-Bildschirm</span><p>Tippe auf <b>Teilen → Zum Home-Bildschirm</b>. Dann startet Falcon wie eine App.</p></div></div>
+          <div class="step"><div><span class="st">AltStore oder SideStore einrichten</span><p>Falcon für iPhone &amp; iPad gibt es nicht im App Store. Installiere zuerst <b>AltStore</b> oder <b>SideStore</b> – die Anleitung findest du auf altstore.io bzw. sidestore.io.</p></div></div>
+          <div class="step"><div><span class="st">.ipa herunterladen</span><p>Tippe oben auf „.ipa herunterladen“. Die Datei heißt <code>Falcon-Mobile-<span data-ios-version>…</span>.ipa</code>.</p></div></div>
+          <div class="step"><div><span class="st">In AltStore / SideStore öffnen</span><p>Öffne in AltStore bzw. SideStore „Meine Apps“, tippe auf <b>+</b> und wähle die .ipa aus. Die App wird mit deiner Apple-ID signiert und installiert.</p></div></div>
+          <div class="step"><div><span class="st">Alle 7 Tage auffrischen</span><p>Mit einer kostenlosen Apple-ID läuft die Signatur nach 7 Tagen ab. AltStore/SideStore frischt sie automatisch auf, solange es ab und zu geöffnet wird.</p></div></div>
         </div>
         </div>
       </div>

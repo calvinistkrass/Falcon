@@ -9,7 +9,7 @@ import { loadTabs, saveTabs } from './tabstore';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.4.1';
+export const APP_VERSION = '2.5.0';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -19,7 +19,10 @@ export type Tab = { id: string; src: string; nonce: number; url: string; title: 
 export type Wallet = { balance: number; pending: number; betaUntil: number; gameModeUntil: number; lastDaily: string; streak: number };
 export type Mission = { id: string; goal: number; reward: number; progress: number; done: boolean; claimed: boolean; pcOnly?: boolean };
 export type LogEntry = { type: string; amount: number; label: string; at: number };
-export type Purchase = { id: string; item: string; price: number; at: number; until: number; refund: string | null };
+export type Purchase = { id: string; item: string; price: number; at: number; until: number; refund: string | null; refundUntil: number; expired: boolean; hoursLeft: number };
+// Rückerstattung nur innerhalb dieser Frist nach dem Kauf (seit 2.5.0: Beta-Zugriff 24 Stunden, wie am PC)
+const REFUND_WINDOW_MS: Record<string, number> = { beta14: 24 * 3600_000 };
+export const refundUntil = (item: string, at: number) => (REFUND_WINDOW_MS[item] ? at + REFUND_WINDOW_MS[item] : 0);
 export type Refund = { id: string; uid: string; email: string; name: string; purchaseId: string; item: string; price: number; reason: string; created: number; status: string; note: string; decidedAt: number; seen: boolean };
 export const ITEM_NAME = (id: string) => (id === 'beta14' ? 'Beta-Zugriff' : id === 'gameMode' ? 'Game Mode' : id);
 const SHOP_FIELDS: Record<string, string> = { beta14: 'betaUntil', gameMode: 'gameModeUntil' };
@@ -43,7 +46,7 @@ export const SHOP = [
   // Game Mode gibt es seit 2.1.8 nur noch als Beta-Funktion (wirkt in Falcon auf dem PC)
   {
     id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 30, title: 'Beta-Zugriff · 30 Tage', extendLabel: 'Um 30 Tage verlängern',
-    text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang.',
+    text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.',
     perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten (in Falcon auf dem PC)', 'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist (in Falcon auf dem PC)', 'Seite übersetzen – Websites direkt in deine Sprache übersetzen', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
   }
 ] as const;
@@ -601,7 +604,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return docs.map((d) => {
       const f = d.fields || {};
       const id = d.name.split('/').pop() as string;
-      return { id, item: FB.text(f.item), price: FB.num(f.price), at: FB.num(f.at), until: FB.num(f.until), refund: refunds.find((r) => r.purchaseId === id)?.status || null };
+      const item = FB.text(f.item), at = FB.num(f.at);
+      const deadline = refundUntil(item, at);
+      return { id, item, price: FB.num(f.price), at, until: FB.num(f.until), refund: refunds.find((r) => r.purchaseId === id)?.status || null, refundUntil: deadline, expired: !!deadline && Date.now() > deadline, hoursLeft: deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 3600_000)) : 0 };
     }).sort((a, b) => b.at - a.at);
   }, [user, token]);
   const requestRefund = useCallback(async ({ purchaseId, email, reason }: { purchaseId: string; email: string; reason: string }) => {
@@ -616,6 +621,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (!p) throw new FB.ApiError('INVALID');
     const mine = (await FB.runQuery('refunds', 'uid', user.uid, t).catch(() => [] as FB.Doc[])).map(fromRefund);
     if (mine.some((r) => r.purchaseId === purchaseId)) throw new FB.ApiError('ALREADY_REQUESTED');
+    const deadline = refundUntil(FB.text(p.fields?.item), FB.num(p.fields?.at));
+    if (deadline && Date.now() > deadline) throw new FB.ApiError('REFUND_EXPIRED');
     await FB.addDoc('refunds', {
       uid: FB.str(user.uid), email: FB.str(mail), name: FB.str(user.name || ''), purchaseId: FB.str(purchaseId),
       item: FB.str(FB.text(p.fields?.item)), price: FB.int(FB.num(p.fields?.price)), reason: FB.str(text), created: FB.int(Date.now()), status: FB.str('pending')
@@ -891,6 +898,7 @@ export const ERRORS: Record<string, string> = {
   EMPTY: 'Bitte beschreib kurz, was passiert ist.',
   EMPTY_REASON: 'Bitte gib einen Grund an.',
   ALREADY_REQUESTED: 'Für diesen Kauf läuft schon eine Rückerstattung.',
+  REFUND_EXPIRED: 'Die Frist ist abgelaufen: Für den Beta-Zugriff gibt es eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.',
   ALREADY_DECIDED: 'Über diesen Antrag wurde schon entschieden.',
   CREDENTIAL_TOO_OLD_LOGIN_AGAIN: 'Bitte melde dich ab und wieder an.',
   PERMISSION_DENIED: 'Der Server hat den Zugriff verweigert.',

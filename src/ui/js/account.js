@@ -16,6 +16,7 @@ const Account = (() => {
   ];
   const ERRORS = {
     ALREADY_REQUESTED: 'Für diesen Kauf läuft schon eine Rückerstattung.',
+    REFUND_EXPIRED: 'Die Frist ist abgelaufen: Für den Beta-Zugriff gibt es eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.',
     ALREADY_DECIDED: 'Über diesen Antrag wurde schon entschieden.',
     ALREADY_OWNED: 'Bereits erworben – du kannst erst nach Ablauf erneut kaufen.',
     EMAIL_EXISTS: 'Für diese E-Mail-Adresse gibt es schon ein Konto.',
@@ -306,7 +307,7 @@ const Account = (() => {
   const SHOP = [
     {
       id: 'beta14', price: 350, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 30 Tage verlängern', title: 'Beta-Zugriff · 30 Tage',
-      text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang.',
+      text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.',
       perks: [
         'Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt',
         'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten',
@@ -479,6 +480,7 @@ const Account = (() => {
       h('div', { class: 'dialog-body' },
         h('h3', {}, $t('Rückerstattung beantragen')),
         h('p', { class: 'shop-sub' }, $t('Etwas aus Versehen gekauft? Wähle den Kauf aus und sag kurz, warum. Die Antwort bekommst du beim nächsten Start von Falcon.')),
+        h('p', { class: 'shop-sub rf-window' }, $t('Beim Beta-Zugriff geht eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.')),
         body),
       h('div', { class: 'dialog-foot' }, h('button', { class: 'btn ghost', onclick: () => close() }, $t('Abbrechen')), send));
     const close = dialogShell(box);
@@ -486,9 +488,14 @@ const Account = (() => {
     if (!r.ok) { body.replaceChildren(h('div', { class: 'rt-empty' }, errorText(r.error))); return; }
     if (!r.purchases.length) { body.replaceChildren(h('div', { class: 'rt-empty' }, $t('Du hast noch nichts im Shop gekauft.'))); return; }
     const fmt = (ms) => new Date(ms).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long', year: 'numeric' });
-    const select = h('select', { class: 'field-input' }, r.purchases.map((p) => h('option', { value: p.id, disabled: !!p.refund },
-      `${ITEM_NAME(p.item)} · ${p.price.toLocaleString(I18N.locale)} FalCoins · ${fmt(p.at)}${p.refund ? ` – ${$t(REFUND_STATE[p.refund] || p.refund)}` : ''}`)));
-    const first = r.purchases.find((p) => !p.refund);
+    const left = (p) => {
+      const h_ = Math.max(0, Math.ceil((p.refundUntil - Date.now()) / 3600_000));
+      return h_ <= 1 ? $t('noch unter 1 Stunde') : $t('noch {n} Stunden', { n: h_ });
+    };
+    const label = (p) => p.refund ? ` – ${$t(REFUND_STATE[p.refund] || p.refund)}` : p.expired ? ` – ${$t('Frist abgelaufen')}` : p.refundUntil ? ` – ${left(p)}` : '';
+    const select = h('select', { class: 'field-input' }, r.purchases.map((p) => h('option', { value: p.id, disabled: !!p.refund || p.expired },
+      `${ITEM_NAME(p.item)} · ${p.price.toLocaleString(I18N.locale)} FalCoins · ${fmt(p.at)}${label(p)}`)));
+    const first = r.purchases.find((p) => !p.refund && !p.expired);
     if (first) select.value = first.id;
     const email = h('input', { class: 'field-input', type: 'email', value: r.email || '', placeholder: $t('E-Mail-Adresse'), spellcheck: false });
     const reason = h('textarea', { class: 'field-input rf-reason', rows: 4, maxlength: 1000, placeholder: $t('Warum möchtest du den Kauf zurückgeben?') });
@@ -501,7 +508,9 @@ const Account = (() => {
       error);
     const check = () => { send.disabled = !first || !reason.value.trim() || !/^\S+@\S+\.\S+$/.test(email.value.trim()); };
     reason.addEventListener('input', check); email.addEventListener('input', check); check();
-    if (!first) error.textContent = $t('Für alle deine Käufe läuft schon eine Rückerstattung.');
+    if (!first) error.textContent = r.purchases.some((p) => p.expired && !p.refund)
+      ? $t('Für deine Käufe ist keine Rückerstattung mehr möglich: Beim Beta-Zugriff geht das nur innerhalb von 24 Stunden nach dem Kauf.')
+      : $t('Für alle deine Käufe läuft schon eine Rückerstattung.');
     send.addEventListener('click', async () => {
       send.disabled = true; error.textContent = '';
       const res = await F.account.requestRefund({ purchaseId: select.value, email: email.value, reason: reason.value });

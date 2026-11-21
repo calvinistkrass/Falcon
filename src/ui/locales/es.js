@@ -836,5 +836,12 @@ I18N.add('es', {
   "Diese Version kann sich nicht selbst aktualisieren. Lade die neue Version von falconbrowser.de herunter.": "Esta versión no puede actualizarse sola. Descarga la nueva versión desde falconbrowser.de.",
   "Falcon startet in {n} s neu und installiert das Update. Linux fragt dafür einmal nach deinem Passwort. Deine Tabs bleiben erhalten.": "Falcon se reinicia en {n} s e instala la actualización. Linux te pedirá tu contraseña una vez. Tus pestañas se conservan.",
   "Beim Neustart installiert Falcon das Update – Linux fragt dafür einmal nach deinem Passwort. Mit „Später“ wird es beim Schließen von Falcon installiert.": "Falcon instala la actualización al reiniciarse: Linux te pedirá tu contraseña una vez. Con «Más tarde» se instala al cerrar Falcon.",
-  "Von falconbrowser.de herunterladen": "Descargar desde falconbrowser.de"
+  "Von falconbrowser.de herunterladen": "Descargar desde falconbrowser.de",
+  "Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.": "Prueba las nuevas funciones antes que nadie, incluido el Game Mode. Tu acceso dura 30 días desde la compra. Solo es posible un reembolso en las 24 horas siguientes a la compra.",
+  "Die Frist ist abgelaufen: Für den Beta-Zugriff gibt es eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.": "El plazo ha vencido: el acceso beta solo se puede reembolsar en las 24 horas siguientes a la compra.",
+  "Beim Beta-Zugriff geht eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.": "El acceso beta solo se puede reembolsar en las 24 horas siguientes a la compra.",
+  "noch unter 1 Stunde": "queda menos de 1 hora",
+  "noch {n} Stunden": "quedan {n} horas",
+  "Frist abgelaufen": "Plazo vencido",
+  "Für deine Käufe ist keine Rückerstattung mehr möglich: Beim Beta-Zugriff geht das nur innerhalb von 24 Stunden nach dem Kauf.": "Ya no es posible un reembolso para tus compras: el acceso beta solo se puede reembolsar en las 24 horas siguientes a la compra."
 });

@@ -934,6 +934,10 @@ async function runQuery(collection, field, value) {
   });
   return (Array.isArray(res) ? res : []).filter((r) => r.document).map((r) => r.document);
 }
+// Rückerstattung nur innerhalb dieser Frist nach dem Kauf (seit 2.5.0: Beta-Zugriff 24 Stunden).
+// Die Firestore-Regeln prüfen dasselbe noch einmal auf dem Server.
+const REFUND_WINDOW_MS = { beta14: 24 * 3600_000 };
+const refundUntil = (item, at) => (REFUND_WINDOW_MS[item] ? at + REFUND_WINDOW_MS[item] : 0);
 /** Eigene Käufe (neueste zuerst) mit Hinweis, ob schon eine Rückerstattung läuft. */
 const listPurchases = safe(async () => {
   if (!load()) throw new AccountError('SIGNED_OUT');
@@ -946,7 +950,10 @@ const listPurchases = safe(async () => {
     const f = d.fields || {};
     const id = d.name.split('/').pop();
     const r = refunds.find((x) => x.purchaseId === id);
-    return { id, item: f.item?.stringValue || '', price: Number(f.price?.integerValue) || 0, at: Number(f.at?.integerValue) || 0, until: Number(f.until?.integerValue) || 0, refund: r ? r.status : null };
+    const item = f.item?.stringValue || '';
+    const at = Number(f.at?.integerValue) || 0;
+    const deadline = refundUntil(item, at);
+    return { id, item, price: Number(f.price?.integerValue) || 0, at, until: Number(f.until?.integerValue) || 0, refund: r ? r.status : null, refundUntil: deadline, expired: !!deadline && Date.now() > deadline };
   }).sort((a, b) => b.at - a.at);
   return { purchases, email: data.email || '' };
 });
@@ -962,6 +969,8 @@ const requestRefund = safe(async ({ purchaseId, email, reason }) => {
   const mine = (await runQuery('refunds', 'uid', data.uid).catch(() => [])).map(fromRefund);
   if (mine.some((r) => r.purchaseId === purchaseId)) throw new AccountError('ALREADY_REQUESTED');
   const f = p.fields || {};
+  const deadline = refundUntil(f.item?.stringValue || '', Number(f.at?.integerValue) || 0);
+  if (deadline && Date.now() > deadline) throw new AccountError('REFUND_EXPIRED');
   await request(`${STORE}/refunds`, {
     method: 'POST', token: await token(),
     body: { fields: {

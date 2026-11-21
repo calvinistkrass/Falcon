@@ -165,6 +165,60 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # iPhone & iPad (seit 2.5.0): unsignierte .ipa zum Installieren über AltStore / SideStore
+  # (die signieren die App beim Installieren mit der Apple-ID des Nutzers). Kein Apple-Developer-Konto nötig.
+  ios:
+    needs: windows
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Abhängigkeiten
+        working-directory: mobile
+        run: npm ci
+
+      # ios/ wird aus app.json erzeugt (Continuous Native Generation) und nicht eingecheckt
+      - name: iOS-Projekt erzeugen
+        working-directory: mobile
+        run: npx expo prebuild --platform ios --no-install --clean
+
+      - name: CocoaPods
+        working-directory: mobile/ios
+        run: pod install
+
+      # Bei einem Fehler landet das Ende der Ausgabe als Hinweis in der Übersicht (ohne Anmeldung lesbar)
+      - name: App bauen (ohne Signatur)
+        working-directory: mobile/ios
+        shell: bash
+        run: |
+          set -o pipefail
+          WS="$(ls -d *.xcworkspace | head -1)"
+          SCHEME="${WS%.xcworkspace}"
+          if ! xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+              -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)"; then
+            echo "::error title=iOS-Build fehlgeschlagen::$(grep -E 'error:' build.log | tail -c 3000 | tr '\n' ' ' | sed 's/%/%25/g')"
+            exit 1
+          fi
+
+      - name: .ipa packen und an das Release anhängen
+        shell: bash
+        run: |
+          set -e
+          VERSION="$(node -p "require('./mobile/app.json').expo.version")"
+          APP="$(ls -d mobile/ios/build/Build/Products/Release-iphoneos/*.app | head -1)"
+          rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
+          zip -qry "Falcon-Mobile-$VERSION.ipa" Payload
+          ls -la "Falcon-Mobile-$VERSION.ipa"
+          gh release upload "$GITHUB_REF_NAME" "Falcon-Mobile-$VERSION.ipa" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # latest-linux.yml mit .deb und .rpm – damit aktualisieren sich installierte Linux-Versionen selbst
   # (seit 2.4.0 wie unter Windows; Versionen bis 2.3.9 zeigen damit zumindest den Update-Hinweis).
   # Eigener Job nach beiden Linux-Builds, weil die beiden Jobs die Datei sonst gegenseitig überschreiben.

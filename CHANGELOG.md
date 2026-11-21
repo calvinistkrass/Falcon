@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.0] – 2026-11-21
+
+### Added
+- **Falcon Mobile for iPhone & iPad** – every release now includes `Falcon-Mobile-x.y.z.ipa`. It isn't in the App Store: install it with AltStore or SideStore (they sign the app with your own Apple ID). Requires iOS 16.4 or newer.
+
+### Changed
+- **Refunds for beta access only within 24 hours** – a refund for beta access can now only be requested within 24 hours of the purchase (PC and Falcon Mobile). The refund form shows how much time is left; after that the purchase can no longer be selected.
+
 ## [2.4.1] – 2026-11-21
 
 ### Added

@@ -80,7 +80,7 @@ if (shots.length) {
 // nie eine veraltete Versionsnummer.
 const REPO = 'calvinistkrass/Falcon';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
-const CACHE_KEY = 'falcon.dl3';
+const CACHE_KEY = 'falcon.dl4';
 const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } })
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 const verOf = (name) => (String(name).match(/(\d+\.\d+\.\d+)/) || [])[1] || '';
@@ -108,6 +108,7 @@ async function fetchDownloads() {
   };
   const exe = findAsset((n) => /\.exe$/i.test(n) && !/blockmap/i.test(n));
   const apk = findAsset((n) => /^Falcon-Mobile-.*\.apk$/i.test(n));
+  const ipa = findAsset((n) => /^Falcon-Mobile-.*\.ipa$/i.test(n));
   const pick = (re) => { const f = findAsset((n) => re.test(n)); return f ? { url: f.a.browser_download_url, size: f.a.size, version: verOf(f.a.name), date: f.r.published_at } : null; };
   const mac = { arm64: pick(/-mac-arm64\.dmg$/i), x64: pick(/-mac-x64\.dmg$/i) };
   const linux = { deb: pick(/-linux-[\w]+\.deb$/i), rpm: pick(/-linux-[\w]+\.rpm$/i) };
@@ -119,6 +120,7 @@ async function fetchDownloads() {
     apk: apk ? { url: apk.a.browser_download_url, size: apk.a.size, version: verOf(apk.a.name), date: apk.r.published_at } : null,
     mac: mac.arm64 || mac.x64 ? mac : null,
     linux: linux.deb || linux.rpm ? linux : null,
+    ios: ipa ? { url: ipa.a.browser_download_url, size: ipa.a.size, version: verOf(ipa.a.name), date: ipa.r.published_at } : null,
     build: null
   };
   const run = runs?.workflow_runs?.[0];
@@ -169,6 +171,9 @@ function renderDownloads(d) {
   };
   fill('data-mac', 'data-mac-meta', d.mac, ['arm64', 'x64']);
   fill('data-linux', 'data-linux-meta', d.linux, ['deb', 'rpm']);
+  // iPhone & iPad (seit 2.5.0): .ipa für AltStore / SideStore
+  fill('data-ios', 'data-ios-meta', d.ios ? { ipa: d.ios } : null, ['ipa', 'ipa']);
+  document.querySelectorAll('[data-ios-version]').forEach((el) => { if (d.ios?.version) el.textContent = d.ios.version; });
 
   // Neue Version wird gerade gebaut → Hinweis oben auf jeder Seite und pro Plattform auf der Download-Seite
   document.querySelectorAll('.build-banner').forEach((el) => el.remove());
@@ -263,9 +268,8 @@ async function detectDevice() {
 
 const PLATFORM_KEY = 'falcon.platform';
 const picker = document.querySelector('[data-platform]');
-const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Falcon auf iPhone & iPad', mac: 'Für macOS herunterladen', linux: 'Für Linux herunterladen' };
+const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Für iPhone & iPad herunterladen', mac: 'Für macOS herunterladen', linux: 'Für Linux herunterladen' };
 const SOON = {
-  ios: { title: 'Falcon für iPhone & iPad', text: 'Eine eigene App für iPhone und iPad gibt es noch nicht. Bis dahin zeigt dir die Falcon-Web-App deine Lesezeichen und die Tabs deiner PCs.', btn: 'Zur Falcon-Web-App', href: '/app' },
 
 };
 
