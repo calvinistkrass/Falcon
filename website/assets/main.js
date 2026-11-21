@@ -80,7 +80,7 @@ if (shots.length) {
 // nie eine veraltete Versionsnummer.
 const REPO = 'calvinistkrass/Falcon';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
-const CACHE_KEY = 'falcon.dl6';
+const CACHE_KEY = 'falcon.dl7';
 const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } })
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 const verOf = (name) => (String(name).match(/(\d+\.\d+\.\d+)/) || [])[1] || '';
@@ -172,7 +172,7 @@ function renderDownloads(d) {
   };
   fill('data-mac', 'data-mac-meta', d.mac, ['arm64', 'x64']);
   fill('data-linux', 'data-linux-meta', d.linux, ['deb', 'rpm']);
-  // iPhone & iPad (seit 2.5.0): .ipa für AltStore / SideStore
+  // iOS-Geräte (seit 2.5.0): .ipa für AltStore / SideStore
   fill('data-ios', 'data-ios-meta', d.ios ? { ipa: d.ios } : null, ['ipa', 'ipa']);
   document.querySelectorAll('[data-ios-version]').forEach((el) => { if (d.ios?.version) el.textContent = d.ios.version; });
 
@@ -184,7 +184,7 @@ function renderDownloads(d) {
   const main = document.querySelector('main');
   if (main) {
     // Welche Plattformen sind schon da, welche werden noch gebaut?
-    const all = [['windows', 'Windows'], ['mac', 'macOS'], ['linux', 'Linux'], ['android', 'Android'], ['ios', 'iPhone & iPad']];
+    const all = [['windows', 'Windows'], ['mac', 'macOS'], ['linux', 'Linux'], ['android', 'Android'], ['ios', 'iOS-Geräte']];
     const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} und ${xs[xs.length - 1]}`);
     const pending = all.filter(([k]) => !b[k]).map(([, n]) => n);
     const ready = all.filter(([k]) => b[k]).map(([, n]) => n);
@@ -203,7 +203,7 @@ function renderDownloads(d) {
       el.hidden = false;
     });
   }
-  for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux'], ['ios', 'data-build-ios', 'iPhone & iPad']]) {
+  for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux'], ['ios', 'data-build-ios', 'iOS-Geräte']]) {
     if (b[key]) continue;
     document.querySelectorAll(`[${attr}]`).forEach((el) => {
       el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet. Das dauert noch einige Minuten.</span>`;
@@ -269,7 +269,7 @@ async function detectDevice() {
 
 const PLATFORM_KEY = 'falcon.platform';
 const picker = document.querySelector('[data-platform]');
-const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Für iPhone & iPad herunterladen', mac: 'Für macOS herunterladen', linux: 'Für Linux herunterladen' };
+const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Für iOS-Geräte herunterladen', mac: 'Für macOS herunterladen', linux: 'Für Linux herunterladen' };
 const SOON = {
 
 };

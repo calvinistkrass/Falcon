@@ -18,8 +18,8 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/assets/logo.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/styles.css?v=20261122c">
-<script src="/assets/main.js?v=20261122c" defer></script>
+<link rel="stylesheet" href="/assets/styles.css?v=20261122d">
+<script src="/assets/main.js?v=20261122d" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Zum Inhalt springen</a>
@@ -54,11 +54,11 @@
         <ul class="dl-select-list" role="listbox" tabindex="-1" aria-label="Plattform" hidden>
           <li role="option" id="pf-windows" data-value="windows" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5 10.5 4.5v7h-7zM12 4.3l8.5-1.3v8.5H12zM3.5 12.5h7v7l-7-1zM12 12.5h8.5V21L12 19.7z"/></svg></span><span class="dl-opt-text"><b>Windows-PC</b><small>Windows 10 und 11</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
           <li role="option" id="pf-android" data-value="android" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span><span class="dl-opt-text"><b>Android</b><small>Handy und Tablet, APK</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
-          <li role="option" id="pf-ios" data-value="ios" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span><span class="dl-opt-text"><b>iPhone &amp; iPad</b><small>Web-App</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
+          <li role="option" id="pf-ios" data-value="ios" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span><span class="dl-opt-text"><b>iOS-Geräte</b><small>Web-App</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
           <li role="option" id="pf-mac" data-value="mac" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4.5" width="16" height="11" rx="1.5"/><path d="M2.5 19h19"/></svg></span><span class="dl-opt-text"><b>macOS</b><small>Apple-Chip und Intel</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
           <li role="option" id="pf-linux" data-value="linux" aria-selected="false"><span class="dl-opt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m7.5 10 2.5 2-2.5 2M12 14.5h4.5"/></svg></span><span class="dl-opt-text"><b>Linux</b><small>.deb und .rpm</small></span><span class="dl-opt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></li>
         </ul>
-        <select data-platform hidden aria-hidden="true" tabindex="-1"><option value="windows">Windows-PC</option><option value="android">Android</option><option value="ios">iPhone &amp; iPad</option><option value="mac">macOS</option><option value="linux">Linux</option></select>
+        <select data-platform hidden aria-hidden="true" tabindex="-1"><option value="windows">Windows-PC</option><option value="android">Android</option><option value="ios">iOS-Geräte</option><option value="mac">macOS</option><option value="linux">Linux</option></select>
       </div>
     </div>
     <div class="dl-box" id="windows" data-platform-box="windows">
@@ -102,7 +102,7 @@
     <div class="dl-box" id="ios" data-platform-box="ios" hidden>
       <div class="dl-row">
         <span class="os"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span>
-        <div><b>Falcon für iPhone &amp; iPad</b><span data-ios-meta>Neueste Version wird geladen …</span></div>
+        <div><b>Falcon für iOS-Geräte</b><span data-ios-meta>Neueste Version wird geladen …</span></div>
       </div>
       <a class="btn btn-primary btn-lg" href="https://github.com/calvinistkrass/Falcon/releases" data-ios="ipa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg><span>.ipa für AltStore / SideStore herunterladen</span></a>
       <p class="dl-build" data-build-ios hidden></p>
@@ -157,9 +157,9 @@
         </div>
         </div>
         <div data-platform-steps="ios" hidden>
-        <h2 style="font-size:30px;margin-bottom:22px">Falcon auf iPhone &amp; iPad</h2>
+        <h2 style="font-size:30px;margin-bottom:22px">Falcon auf iOS-Geräten</h2>
         <div class="steps">
-          <div class="step"><div><span class="st">AltStore oder SideStore einrichten</span><p>Falcon für iPhone &amp; iPad gibt es nicht im App Store. Installiere zuerst <b>AltStore</b> oder <b>SideStore</b> – die Anleitung findest du auf altstore.io bzw. sidestore.io.</p></div></div>
+          <div class="step"><div><span class="st">AltStore oder SideStore einrichten</span><p>Falcon für iOS-Geräte gibt es nicht im App Store. Installiere zuerst <b>AltStore</b> oder <b>SideStore</b> – die Anleitung findest du auf altstore.io bzw. sidestore.io.</p></div></div>
           <div class="step"><div><span class="st">.ipa herunterladen</span><p>Tippe oben auf „.ipa herunterladen“. Die Datei heißt <code>Falcon-Mobile-<span data-ios-version>…</span>.ipa</code>.</p></div></div>
           <div class="step"><div><span class="st">In AltStore / SideStore öffnen</span><p>Öffne in AltStore bzw. SideStore „Meine Apps“, tippe auf <b>+</b> und wähle die .ipa aus. Die App wird mit deiner Apple-ID signiert und installiert.</p></div></div>
           <div class="step"><div><span class="st">Alle 7 Tage auffrischen</span><p>Mit einer kostenlosen Apple-ID läuft die Signatur nach 7 Tagen ab. AltStore/SideStore frischt sie automatisch auf, solange es ab und zu geöffnet wird.</p></div></div>
@@ -177,7 +177,7 @@
           <tr><td>Arbeitsspeicher</td><td>4 GB (8 GB empfohlen)</td></tr>
           <tr><td>Speicherplatz</td><td>ca. 400 MB</td></tr>
           <tr><td>Android</td><td>Android 7.0 oder neuer</td></tr>
-          <tr><td>iPhone &amp; iPad</td><td>iOS / iPadOS 16.4 oder neuer, Installation über AltStore oder SideStore</td></tr>
+          <tr><td>iOS-Geräte</td><td>iOS / iPadOS 16.4 oder neuer, Installation über AltStore oder SideStore</td></tr>
         </table>
       </div>
     </div>
