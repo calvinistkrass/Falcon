@@ -175,7 +175,7 @@ export default function Browser() {
 }
 
 function BrowserMenu({ tab, onClose, inject, adblock, blocked, onAdblock }: { tab: Tab; onClose: () => void; inject: (js: string) => void; adblock: boolean; blocked: number; onAdblock: (on: boolean) => void }) {
-  const { user, bookmarks, addBookmark, removeBookmark, newTab, navigate, passwords } = useSession();
+  const { user, bookmarks, addBookmark, removeBookmark, newTab, navigate, passwords, betaActive } = useSession();
   const page = /^https?:/.test(tab.url) ? tab.url : '';
   const marked = !!page && hasBookmark(bookmarks, page);
   const origin = page ? originOf(page) : '';
@@ -202,6 +202,14 @@ function BrowserMenu({ tab, onClose, inject, adblock, blocked, onAdblock }: { ta
   };
   const translate = () => {
     if (original) { navigate(original); return; }
+    // Seite übersetzen ist seit 2.3.9 eine Beta-Funktion (wie am PC)
+    if (!user || !betaActive) {
+      Alert.alert('Beta-Funktion', user ? 'Seite übersetzen ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.' : 'Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.', [
+        { text: 'Abbrechen', style: 'cancel' },
+        { text: user ? 'Zum Shop' : 'Anmelden', onPress: () => router.navigate(user ? '/shop' : '/account') }
+      ]);
+      return;
+    }
     navigate(translateUrl(page));
   };
 
@@ -209,7 +217,7 @@ function BrowserMenu({ tab, onClose, inject, adblock, blocked, onAdblock }: { ta
     { icon: marked ? 'star' : 'star-outline', label: marked ? 'Lesezeichen entfernen' : 'Lesezeichen hinzufügen', hidden: !page,
       onPress: needsAccount(() => { (marked ? removeBookmark(page) : addBookmark(page, tab.title)).catch((e) => Alert.alert('Lesezeichen', errorText(e))); }) },
     { icon: 'key-outline', label: logins.length === 1 ? `Passwort ausfüllen (${logins[0].username || host})` : 'Passwort ausfüllen', hidden: !logins.length, onPress: run(fill) },
-    { icon: 'language-outline', label: original ? 'Original anzeigen' : 'Seite übersetzen', hidden: !page, onPress: run(translate) },
+    { icon: 'language-outline', label: original ? 'Original anzeigen' : 'Seite übersetzen', hidden: !page, tag: original ? undefined : 'Beta', onPress: run(translate) },
     { icon: 'share-outline', label: 'Teilen', hidden: !page, onPress: run(() => { Share.share(Platform.OS === 'ios' ? { url: page } : { message: page }).catch(() => {}); }) },
     { icon: 'link-outline', label: 'Link kopieren', hidden: !page, onPress: run(() => { Clipboard.setStringAsync(page).catch(() => {}); }) },
     { icon: adblock ? 'shield-checkmark-outline' : 'shield-outline', label: adblock ? 'Werbeblocker ausschalten' : 'Werbeblocker einschalten',

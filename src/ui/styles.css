@@ -361,6 +361,18 @@ body.resizing webview { pointer-events: none; }
 
 /* Downloads */
 .downloads { width: 360px; }
+/* Seite übersetzen (Beta) */
+.translate-pop { width: 300px; padding: 12px 12px 10px; }
+.tr-head { display: flex; align-items: center; gap: 12px; }
+.tr-ic { width: 34px; height: 34px; border-radius: var(--r); background: var(--accent-soft, var(--raised-2)); color: var(--accent); display: grid; place-items: center; flex: none; }
+.tr-ic .ic { width: 18px; height: 18px; }
+.tr-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tr-text b { font-weight: 600; font-size: 13.5px; }
+.tr-text span { color: var(--text-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+#translateBtn.busy .ic { animation: tr-pulse 1s ease-in-out infinite; }
+@keyframes tr-pulse { 50% { opacity: .35; } }
+
 .dl-list { max-height: 380px; overflow: auto; padding: 0 6px 6px; }
 .dl-empty { padding: 28px 16px 34px; text-align: center; color: var(--text-3); }
 .dl-item { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--r); }

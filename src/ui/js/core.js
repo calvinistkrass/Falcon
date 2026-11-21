@@ -102,6 +102,7 @@ const ICONS = {
   chevronsRight: '<path d="m6 7 5 5-5 5M13 7l5 5-5 5"/>',
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/>',
   usbKey: '<rect x="8" y="9" width="8" height="12.5" rx="2"/><path d="M10 9V4.5a2 2 0 0 1 4 0V9M12 13.5v3"/>',
+  translate: '<path d="M4 5.5h9M8.5 3.5v2M11 5.5c-.7 3.6-3.2 6.6-6.5 8.2M6.5 8.5c1.2 2 3 3.7 5 4.8"/><path d="M12.5 20.5l4-9 4 9M13.9 17.4h5.2"/>',
   pause: '<path d="M9 5.5v13M15 5.5v13"/>',
   play: '<path d="M8 5.5v13l10.5-6.5z"/>',
   monitor: '<rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/>'

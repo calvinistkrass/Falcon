@@ -105,6 +105,7 @@
       <button id="pwKey" class="omni-btn accent hidden" data-icon="key" title="Passwort speichern"></button>
       <button id="readerBtn" class="omni-btn hidden" data-icon="book" title="Leseansicht (F9)"></button>
       <button id="shieldBtn" class="omni-btn shield hidden" title="Werbeblocker"><img id="shieldLogo" alt="" /><span id="shieldCount" class="shield-count hidden" data-no-i18n></span></button>
+      <button id="translateBtn" class="omni-btn accent hidden" data-icon="translate" title="Seite übersetzt" aria-label="Übersetzung"></button>
       <button id="bookmarkBtn" class="omni-btn" data-icon="star" title="Lesezeichen für diese Seite (Strg+D)" aria-label="Lesezeichen"></button>
       <div id="suggest" class="suggest hidden" role="listbox"></div>
     </div>
@@ -185,6 +186,20 @@
   <div id="fsHint" class="fs-hint hidden" data-no-i18n></div>
 
   <!-- Popover: Downloads -->
+  <section id="translatePop" class="pop translate-pop hidden" role="dialog" aria-label="Übersetzung">
+    <div class="tr-head">
+      <span class="tr-ic" data-icon="translate"></span>
+      <div class="tr-text">
+        <b id="trTitle">Seite übersetzt</b>
+        <span id="trLangs" data-no-i18n></span>
+      </div>
+      <button id="trClose" class="tb-btn sm" data-icon="x" title="Schließen"></button>
+    </div>
+    <div class="tr-actions">
+      <button id="trOriginal" class="btn ghost">Original anzeigen</button>
+    </div>
+  </section>
+
   <section id="downloadsPop" class="pop downloads hidden">
     <header class="pop-head">
       <h3>Downloads</h3>

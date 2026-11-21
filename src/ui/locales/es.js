@@ -822,5 +822,14 @@ I18N.add('es', {
   "Downloads-Ordner öffnen": "Abrir carpeta de descargas",
   "Nach dem Download öffnen": "Abrir al terminar",
   "Wird nach dem Download geöffnet": "Se abrirá al terminar",
-  "Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen": "Clic: abrir al terminar · Clic derecho: más acciones"
+  "Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen": "Clic: abrir al terminar · Clic derecho: más acciones",
+  "Seite übersetzt": "Página traducida",
+  "Seite übersetzen ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.": "Traducir página es una función beta. Desbloquea el acceso beta en la tienda de FalCoins.",
+  "Auf dieser Seite gibt es nichts zu übersetzen": "No hay nada que traducir en esta página",
+  "Diese Seite ist bereits auf {lang}": "Esta página ya está en {lang}",
+  "Die Seite konnte nicht übersetzt werden. Prüfe deine Internetverbindung.": "No se pudo traducir la página. Comprueba tu conexión a Internet.",
+  "Seite wird übersetzt …": "Traduciendo página …",
+  "Unbekannt": "Desconocido",
+  "Übersetzung": "Traducción",
+  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Traducir página – traduce sitios web directamente a tu idioma"
 });

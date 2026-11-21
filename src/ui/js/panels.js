@@ -471,24 +471,284 @@ async function copyImage(src) {
 }
 
 // ---------------------------------------------------------------------------
-// Seite übersetzen (über Google Übersetzer) – für alle, seit 2.1.4 kein Beta-Feature mehr
+// Seite übersetzen (Beta, seit 2.3.9) – direkt in der Seite, ohne Umleitung auf translate.google.com.
+// Ein kleines Skript sammelt die Texte der Seite, der Hauptprozess übersetzt sie stapelweise
+// (translate:batch) und das Skript schreibt sie zurück. Später nachgeladene Texte werden mitübersetzt,
+// „Original anzeigen“ stellt die ursprünglichen Texte wieder her.
 // ---------------------------------------------------------------------------
 const Translate = (() => {
-  const isTranslated = (url) => { try { return new URL(url).hostname.endsWith('.translate.goog'); } catch { return false; } };
-  // „de-falcon--app.translate.goog“ → „de.falcon-app“
-  function original(url) {
-    const u = new URL(url);
-    const host = u.hostname.replace(/\.translate\.goog$/, '').replace(/--/g, '\u0000').replace(/-/g, '.').replace(/\u0000/g, '-');
-    for (const k of [...u.searchParams.keys()]) if (k.startsWith('_x_tr_')) u.searchParams.delete(k);
-    return `https://${host}${u.pathname}${u.search}${u.hash}`;
+  const btn = $('#translateBtn');
+  const pop = $('#translatePop');
+  const MAX_NODES = 6000;
+  const BATCH_CHARS = 4000;
+  const BATCH_ITEMS = 100;
+
+  // Läuft in der Webseite (eigene Welt der Seite, nur Textknoten werden geändert – kein HTML)
+  const PAGE_SCRIPT = `(() => {
+    if (window.__falconTr) return true;
+    const SKIP = new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','CODE','PRE','KBD','SAMP','VAR','TEMPLATE','IFRAME','CANVAS','SVG','MATH','INPUT','SELECT','OPTION']);
+    const entries = new Map(); // id → { node, orig, lead, trail }
+    const ids = new WeakMap(); // Textknoten → id
+    const ours = new WeakSet(); // von uns geschriebene Knoten (Observer ignoriert sie)
+    let seq = 0, on = false, obs = null;
+    const pending = new Set();
+    const skipEl = (el) => {
+      for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+        if (SKIP.has(e.tagName) || e.isContentEditable || e.getAttribute('translate') === 'no' || e.classList?.contains('notranslate')) return true;
+      }
+      return false;
+    };
+    // Sätze mit Formatierung (fett, Links …) bestehen aus mehreren Textknoten. Sie werden zusammen übersetzt
+    // (als HTML mit Markierungen <a i=N>), damit der Satz stimmt; jeder Knoten bekommt danach sein Stück zurück.
+    const blocks = new WeakMap();
+    const blockOf = (el) => {
+      let e = el;
+      while (e && e !== document.body) {
+        let d = blocks.get(e);
+        if (d === undefined) { d = getComputedStyle(e).display; blocks.set(e, d); }
+        if (!d.startsWith('inline') && d !== 'contents') return e;
+        e = e.parentElement;
+      }
+      return document.body;
+    };
+    const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    function group(nodes, out) {
+      let cur = [], blk = null;
+      const flush = () => {
+        if (cur.length === 1) out.push({ id: cur[0].id, text: cur[0].text });
+        else if (cur.length > 1) out.push({ ids: cur.map((c) => c.id), html: cur.map((c, k) => '<a i=' + k + '>' + esc(c.text) + '</a>').join(' ') });
+        cur = [];
+      };
+      for (const n of nodes) {
+        const b = blockOf(n.node.parentElement);
+        if (b !== blk || cur.length >= 20) { flush(); blk = b; }
+        cur.push(n);
+      }
+      flush();
+      return out;
+    }
+    function collect(root, out, limit) {
+      if (!root) return;
+      if (root.nodeType === 3) { take(root, out); return; }
+      if (root.nodeType !== 1 && root.nodeType !== 9 && root.nodeType !== 11) return;
+      if (root.nodeType === 1 && skipEl(root)) return;
+      const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: (n) => (n.parentElement && SKIP.has(n.parentElement.tagName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT)
+      });
+      for (let n = w.nextNode(); n && out.length < limit; n = w.nextNode()) take(n, out);
+    }
+    function take(n, out) {
+      if (ids.has(n) || ours.has(n)) return;
+      const v = n.nodeValue;
+      if (!v || v.length > 5000) return;
+      const t = v.trim();
+      if (!/\\p{L}/u.test(t)) return;
+      if (skipEl(n.parentElement)) return;
+      const id = ++seq;
+      ids.set(n, id);
+      entries.set(id, { node: n, orig: v, lead: v.slice(0, v.length - v.trimStart().length), trail: v.slice(v.trimEnd().length) });
+      out.push({ id, text: t, node: n });
+    }
+    window.__falconTr = {
+      start(limit) {
+        on = true;
+        const nodes = [];
+        collect(document.body, nodes, limit);
+        const out = group(nodes, []);
+        if (document.title && !ids.has(document)) { ids.set(document, 0); out.unshift({ id: 0, text: document.title }); entries.set(0, { title: true, orig: document.title }); }
+        if (!obs) {
+          obs = new MutationObserver((list) => {
+            if (!on) return;
+            for (const m of list) {
+              if (m.type === 'characterData') { if (!ours.has(m.target)) { ids.delete(m.target); pending.add(m.target); } }
+              else for (const n of m.addedNodes) pending.add(n);
+            }
+          });
+          obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+        }
+        return out;
+      },
+      pending(limit) {
+        if (!on || !pending.size) return [];
+        const nodes = [];
+        for (const n of [...pending]) { pending.delete(n); if (n.isConnected) collect(n, nodes, limit); if (nodes.length >= limit) break; }
+        return group(nodes, []);
+      },
+      apply(pairs) {
+        for (const [id, text] of pairs) {
+          const e = entries.get(id);
+          if (!e || !text) continue;
+          if (e.title) { document.title = text; continue; }
+          if (!e.node.isConnected) continue;
+          ours.add(e.node);
+          e.node.nodeValue = e.lead + text + e.trail;
+        }
+        return true;
+      },
+      restore() {
+        on = false;
+        obs?.disconnect(); obs = null;
+        pending.clear();
+        for (const e of entries.values()) {
+          if (e.title) document.title = e.orig;
+          else if (e.node.isConnected) { ours.add(e.node); e.node.nodeValue = e.orig; }
+        }
+        entries.clear();
+        delete window.__falconTr;
+        return true;
+      }
+    };
+    return true;
+  })()`;
+
+  const langName = (code) => {
+    if (!code) return $t('Unbekannt');
+    try { const n = new Intl.DisplayNames([I18N.locale || I18N.lang || 'de'], { type: 'language' }).of(code); return n ? n[0].toUpperCase() + n.slice(1) : code; } catch { return code; }
+  };
+  const isWeb = (tab) => !!tab && /^https?:/i.test(tab.url || '');
+  const isTranslated = (tab = Tabs.active()) => !!tab?.translation;
+  const hasBeta = () => { const acc = typeof Account !== 'undefined' ? Account.state : {}; return !!(acc.signedIn && acc.beta); };
+  const js = (tab, code) => tab.webview.executeJavaScript(code);
+
+  const source = (it) => it.html ?? it.text;
+  const decoder = new DOMParser();
+  const decode = (html) => decoder.parseFromString(`<!doctype html><body>${html}`, 'text/html').body.textContent; // nur Text, nichts wird ausgeführt
+
+  /** Antwort für einen Eintrag → [[Knoten-id, Text], …] */
+  function pairsFor(it, translated) {
+    if (!it.html) return [[it.id, translated]];
+    const parts = new Map();
+    for (const m of translated.matchAll(/<a i="?(\d+)"?>([\s\S]*?)<\/a>/g)) parts.set(Number(m[1]), decode(m[2]).replace(/\s+([.,;:!?»)])/g, '$1').trim());
+    return it.ids.map((id, k) => [id, parts.get(k)]).filter((p) => p[1]);
   }
-  function translate(tab = Tabs.active()) {
-    if (!tab || !/^https?:/.test(tab.url)) return;
-    if (isTranslated(tab.url)) return Tabs.navigate(original(tab.url), tab);
-    const lang = I18N.lang || 'de';
-    Tabs.navigate(`https://translate.google.com/translate?sl=auto&tl=${encodeURIComponent(lang)}&u=${encodeURIComponent(tab.url)}`, tab);
+
+  /** Texte in Stapel teilen (Zeichen- und Anzahl-Grenze des Hauptprozesses), getrennt nach Text und HTML */
+  function batches(items) {
+    return [...chunk(items.filter((i) => !i.html)), ...chunk(items.filter((i) => i.html))];
   }
-  return { translate, isTranslated };
+  function chunk(items) {
+    const out = [];
+    let cur = [], chars = 0;
+    for (const it of items) {
+      const len = Math.min(source(it).length, 5000);
+      if (cur.length && (chars + len > BATCH_CHARS || cur.length >= BATCH_ITEMS)) { out.push(cur); cur = []; chars = 0; }
+      cur.push(it); chars += len;
+    }
+    if (cur.length) out.push(cur);
+    return out;
+  }
+
+  /** Übersetzt die Einträge und schreibt sie in die Seite. Gibt die erkannten Sprachen zurück. */
+  async function run(tab, items, session) {
+    const langs = {};
+    const queue = batches(items);
+    const worker = async () => {
+      while (queue.length) {
+        if (tab.translation !== session) return; // inzwischen zurückgesetzt oder neue Seite
+        const batch = queue.shift();
+        const res = await F.translateBatch(batch.map(source), session.to, batch[0].html ? 'html' : 'text');
+        if (res?.error) throw new Error(res.error);
+        res.langs.forEach((l) => { if (l) langs[l] = (langs[l] || 0) + 1; });
+        if (tab.translation !== session) return;
+        const pairs = batch.flatMap((b, i) => pairsFor(b, res.translations[i]));
+        await js(tab, `window.__falconTr && window.__falconTr.apply(${JSON.stringify(pairs)})`);
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    return langs;
+  }
+
+  function stopPolling(tab) { clearInterval(tab.translation?.timer); }
+
+  function forget(tab) {
+    if (!tab?.translation) return;
+    stopPolling(tab);
+    tab.translation = null;
+    if (tab === Tabs.active()) { renderButton(); if (Popover.isOpen(pop)) Popover.close(); }
+  }
+
+  async function restore(tab) {
+    const session = tab.translation;
+    forget(tab);
+    if (!session) return;
+    try { await js(tab, 'window.__falconTr && window.__falconTr.restore()'); } catch { /* Seite weg */ }
+  }
+
+  function bind(tab) {
+    if (tab.__trBound) return;
+    tab.__trBound = true;
+    // Neue Seite = neue Inhalte: Übersetzung endet (Navigation innerhalb der Seite behält sie)
+    tab.webview.addEventListener('did-navigate', () => forget(tab));
+  }
+
+  async function translate(tab = Tabs.active()) {
+    if (!isWeb(tab)) return;
+    if (tab.translation) return restore(tab);
+    if (!hasBeta()) {
+      const acc = typeof Account !== 'undefined' ? Account.state : {};
+      toast(acc.signedIn ? $t('Seite übersetzen ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'translate',
+        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
+      return;
+    }
+    bind(tab);
+    const session = { to: (I18N.lang || 'de').slice(0, 2), from: '', busy: true, timer: null };
+    tab.translation = session;
+    if (tab === Tabs.active()) renderButton();
+    try {
+      await js(tab, PAGE_SCRIPT);
+      const items = await js(tab, `window.__falconTr.start(${MAX_NODES})`);
+      if (!items?.length) { await restore(tab); toast($t('Auf dieser Seite gibt es nichts zu übersetzen'), 'translate'); return; }
+      const langs = await run(tab, items, session);
+      if (tab.translation !== session) return;
+      const from = Object.entries(langs).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+      if (from && from.split('-')[0] === session.to) {
+        await restore(tab);
+        toast($t('Diese Seite ist bereits auf {lang}', { lang: langName(session.to) }), 'translate');
+        return;
+      }
+      session.from = from;
+      session.busy = false;
+      // Später nachgeladene Texte (Kommentare, Feeds, Single-Page-Apps) mitübersetzen
+      session.timer = setInterval(async () => {
+        if (tab.translation !== session || session.polling) return;
+        session.polling = true;
+        try {
+          const more = await js(tab, `window.__falconTr ? window.__falconTr.pending(${BATCH_ITEMS * 3}) : null`);
+          if (more === null) { forget(tab); return; }
+          if (more.length) await run(tab, more, session);
+        } catch { /* Seite lädt gerade neu */ } finally { session.polling = false; }
+      }, 1500);
+      if (tab === Tabs.active()) { renderButton(); openPopup(); }
+    } catch (err) {
+      const reason = String(err?.message || err);
+      await restore(tab);
+      if (reason !== 'beta') toast($t('Die Seite konnte nicht übersetzt werden. Prüfe deine Internetverbindung.'), 'warning');
+    }
+  }
+
+  function renderButton() {
+    const tab = Tabs.active();
+    const tr = tab?.translation;
+    btn.classList.toggle('hidden', !tr);
+    btn.classList.toggle('busy', !!tr?.busy);
+    btn.title = tr?.busy ? $t('Seite wird übersetzt …') : $t('Seite übersetzt');
+  }
+
+  function openPopup() {
+    const tr = Tabs.active()?.translation;
+    if (!tr || tr.busy) return;
+    $('#trTitle').textContent = $t('Seite übersetzt');
+    $('#trLangs').textContent = `${langName(tr.from)} → ${langName(tr.to)}`;
+    Popover.open(pop, { anchor: btn });
+  }
+
+  btn.addEventListener('click', () => (Popover.isOpen(pop) ? Popover.close() : openPopup()));
+  $('#trClose').addEventListener('click', () => Popover.close());
+  $('#trOriginal').addEventListener('click', () => { Popover.close(); const t = Tabs.active(); if (t) restore(t); });
+  on('nav-state', renderButton);
+  on('tab-activated', renderButton);
+
+  return { translate, isTranslated, label: (tab) => (isTranslated(tab) ? $t('Original anzeigen') : $t('Seite übersetzen')) };
 })();
 
 function openPageMenu(p) {
@@ -546,8 +806,8 @@ function openPageMenu(p) {
       { label: $t('Neu laden'), icon: 'reload', shortcut: kb('Strg+R'), onClick: () => wv.reload() },
       '-',
       {
-        label: Translate.isTranslated(p.pageURL) ? $t('Original anzeigen') : $t('Seite übersetzen'), icon: 'globe',
-        disabled: !/^https?:/.test(p.pageURL), onClick: () => Translate.translate()
+        label: Translate.label(Tabs.byWebview(wv)), icon: 'translate',
+        disabled: !/^https?:/.test(p.pageURL), onClick: () => Translate.translate(Tabs.byWebview(wv))
       },
       { label: $t('Screenshot …'), icon: 'scissors', shortcut: kb('Strg+Umschalt+S'), onClick: () => Screenshot.menu({ point }) },
       '-',

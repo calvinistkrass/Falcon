@@ -822,5 +822,14 @@ I18N.add('tr', {
   "Downloads-Ordner öffnen": "İndirilenler klasörünü aç",
   "Nach dem Download öffnen": "Bitince aç",
   "Wird nach dem Download geöffnet": "Bitince açılacak",
-  "Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen": "Tıkla: bitince aç · Sağ tık: diğer işlemler"
+  "Klicken: nach dem Download öffnen · Rechtsklick: weitere Aktionen": "Tıkla: bitince aç · Sağ tık: diğer işlemler",
+  "Seite übersetzt": "Sayfa çevrildi",
+  "Seite übersetzen ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.": "Sayfayı çevir bir beta özelliğidir. Beta erişimini FalCoin mağazasından aç.",
+  "Auf dieser Seite gibt es nichts zu übersetzen": "Bu sayfada çevrilecek bir şey yok",
+  "Diese Seite ist bereits auf {lang}": "Bu sayfa zaten {lang} dilinde",
+  "Die Seite konnte nicht übersetzt werden. Prüfe deine Internetverbindung.": "Sayfa çevrilemedi. İnternet bağlantını kontrol et.",
+  "Seite wird übersetzt …": "Sayfa çevriliyor …",
+  "Unbekannt": "Bilinmiyor",
+  "Übersetzung": "Çeviri",
+  "Seite übersetzen – Websites direkt in deine Sprache übersetzen": "Sayfayı çevir – web sitelerini doğrudan kendi dilinde çevir"
 });

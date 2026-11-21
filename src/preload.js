@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('falcon', {
   showInFolder: (p) => ipcRenderer.invoke('show-in-folder', p),
   cancelDownload: (id) => ipcRenderer.invoke('download:cancel', id),
   downloadControl: (id, action, value) => ipcRenderer.invoke('download:control', id, action, value),
+  translateBatch: (texts, target, format) => ipcRenderer.invoke('translate:batch', texts, target, format),
   downloads: {
     dir: () => ipcRenderer.invoke('downloads:dir'),
     chooseDir: () => ipcRenderer.invoke('downloads:choose-dir'),

@@ -311,6 +311,7 @@ const Account = (() => {
         'Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt',
         'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten',
         'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist',
+        'Seite übersetzen – Websites direkt in deine Sprache übersetzen',
         'Alle weiteren Beta-Funktionen, sobald sie erscheinen'
       ]
     }

@@ -2,6 +2,12 @@
 
 All notable changes to Falcon are documented here.
 
+## [Unreleased]
+
+### Changed
+- **Translate page is now built into Falcon** – pages are translated right where you are instead of being opened on translate.google.com. Formatting, links and code blocks stay intact, text that loads later (comments, feeds) is translated too, and "Show original" restores the page instantly. A small translate icon appears in the address bar; its popup shows the languages, e.g. "English → German".
+- **Translate page is now a beta feature** (PC and Falcon Mobile) – included with beta access from the FalCoin shop.
+
 ## [2.3.8] – 2026-11-20
 
 ### Fixed

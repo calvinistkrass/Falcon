@@ -803,6 +803,35 @@ async function wishlistTick() {
   }
 }
 ipcMain.handle('wishlist:check', () => (account.state().betaUntil > Date.now() ? checkWishlist().catch(() => []) : []));
+
+// ---------------------------------------------------------------------------
+// Seite übersetzen (Beta, seit 2.3.9): Die Oberfläche sammelt die Texte der Seite, hier werden sie
+// stapelweise übersetzt und wieder in die Seite geschrieben – ohne Umleitung auf translate.google.com.
+// ---------------------------------------------------------------------------
+const TRANSLATE_LANG = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
+ipcMain.handle('translate:batch', async (_e, texts, target, format) => {
+  if (!(account.state().betaUntil > Date.now())) return { error: 'beta' };
+  if (!Array.isArray(texts) || !texts.length || texts.length > 150 || !TRANSLATE_LANG.test(String(target))) return { error: 'invalid' };
+  const list = texts.map((t) => String(t ?? '').slice(0, 5000));
+  if (list.reduce((n, t) => n + t.length, 0) > 12000) return { error: 'invalid' };
+  const body = new URLSearchParams();
+  for (const t of list) body.append('q', t);
+  try {
+    const res = await net.fetch(`https://translate.googleapis.com/translate_a/t?client=gtx&sl=auto&tl=${encodeURIComponent(target)}${format === 'html' ? '&format=html' : ''}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString()
+    });
+    if (!res.ok) return { error: `http ${res.status}` };
+    const data = await res.json();
+    // Antwort: [[Übersetzung, erkannte Sprache], …] – bei nur einem Text manchmal auch nur „Übersetzung“
+    const rows = (Array.isArray(data) ? data : [data]).map((r) => (Array.isArray(r) ? r : [r, '']));
+    if (rows.length !== list.length) return { error: 'mismatch' };
+    return { translations: rows.map((r) => String(r[0] ?? '')), langs: rows.map((r) => String(r[1] || '')) };
+  } catch (err) {
+    return { error: String(err?.message || err).slice(0, 200) };
+  }
+});
 setTimeout(() => { wishlistTick(); setInterval(wishlistTick, 3 * 60 * 60_000); }, 45_000);
 
 // ---------------------------------------------------------------------------

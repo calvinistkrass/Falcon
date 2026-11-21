@@ -43,7 +43,7 @@ export const SHOP = [
   {
     id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 30, title: 'Beta-Zugriff · 30 Tage', extendLabel: 'Um 30 Tage verlängern',
     text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang.',
-    perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten (in Falcon auf dem PC)', 'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist (in Falcon auf dem PC)', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
+    perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten (in Falcon auf dem PC)', 'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist (in Falcon auf dem PC)', 'Seite übersetzen – Websites direkt in deine Sprache übersetzen', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
   }
 ] as const;
 export type ShopItem = (typeof SHOP)[number];

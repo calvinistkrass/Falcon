@@ -44,7 +44,7 @@ const Palette = (() => {
       typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'FalCoin-Shop', icon: 'shop', words: 'shop falcoins beta', run: () => Account.shopDialog() } : null,
       { label: 'Screenshot: Bereich auswählen', icon: 'scissors', key: 'Strg+Umschalt+S', words: 'screenshot capture', run: () => Screenshot.capture('area'), when: web },
       { label: 'Screenshot: Ganze Seite', icon: 'file', words: 'screenshot full page', run: () => Screenshot.capture('full'), when: web },
-      { label: 'Seite übersetzen', icon: 'globe', words: 'translate übersetzen google', run: () => Translate.translate(), when: web },
+      { label: Translate.isTranslated(t) ? 'Original anzeigen' : 'Seite übersetzen', icon: 'translate', words: 'translate übersetzen beta', run: () => Translate.translate(t), when: web },
       typeof Account !== 'undefined' && Account.state.signedIn ? { label: 'Tägliche Belohnung & Missionen', icon: 'coin', words: 'daily reward missions falcoins', run: () => Account.rewardsDialog() } : null,
       { label: 'Angebots-Wunschliste', icon: 'gamepad', words: 'wishlist wunschliste angebote deals sale beta', run: () => document.getElementById('wishEdit')?.click() },
       { label: state.settings.rgbMode ? 'RGB-Modus ausschalten' : 'RGB-Modus einschalten', icon: 'palette', words: 'rgb regenbogen neon beta farbe', run: () => { const c = document.getElementById('sRgb'); c.checked = !state.settings.rgbMode; c.dispatchEvent(new Event('change')); } },

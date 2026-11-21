@@ -545,6 +545,7 @@ const Tabs = (() => {
 
   return {
     create, activate, close, closeOthers, closeRight, duplicate, reopen, navigate, reload, toggleMute,
+    byWebview: (wv) => state.tabs.find((t) => t.webview === wv),
     cycle, goTo, sleep, sleepInactive, restoreSession, displayTitle, active, byId, isShown,
     startSplit, splitWithNew, endSplit, swapSplit, setVolume, volumePopover, get split() { return split ? { ...split } : null; },
     get closedCount() { return closedTabs.length; }
