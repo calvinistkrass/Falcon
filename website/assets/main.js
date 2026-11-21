@@ -80,7 +80,7 @@ if (shots.length) {
 // nie eine veraltete Versionsnummer.
 const REPO = 'calvinistkrass/Falcon';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
-const CACHE_KEY = 'falcon.dl4';
+const CACHE_KEY = 'falcon.dl5';
 const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } })
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 const verOf = (name) => (String(name).match(/(\d+\.\d+\.\d+)/) || [])[1] || '';
@@ -132,7 +132,8 @@ async function fetchDownloads() {
     const macDone = has((n) => /-mac-.*\.dmg$/i.test(n));
     // Linux ist erst fertig, wenn .deb und .rpm da sind (zwei getrennte Jobs)
     const linuxDone = has((n) => /\.deb$/i.test(n)) && has((n) => /\.rpm$/i.test(n));
-    if (!windows || !android || !macDone || !linuxDone) data.build = { version: run.head_branch.slice(1), windows, android, mac: macDone, linux: linuxDone };
+    const ios = has((n) => /\.ipa$/i.test(n));
+    if (!windows || !android || !macDone || !linuxDone || !ios) data.build = { version: run.head_branch.slice(1), windows, android, mac: macDone, linux: linuxDone, ios };
   }
   try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data })); } catch { /* egal */ }
   return data;
@@ -177,13 +178,13 @@ function renderDownloads(d) {
 
   // Neue Version wird gerade gebaut → Hinweis oben auf jeder Seite und pro Plattform auf der Download-Seite
   document.querySelectorAll('.build-banner').forEach((el) => el.remove());
-  document.querySelectorAll('[data-build-win], [data-build-apk], [data-build-mac], [data-build-linux]').forEach((el) => { el.hidden = true; });
+  document.querySelectorAll('[data-build-win], [data-build-apk], [data-build-mac], [data-build-linux], [data-build-ios]').forEach((el) => { el.hidden = true; });
   const b = d.build;
   if (!b) return;
   const main = document.querySelector('main');
   if (main) {
     // Welche Plattformen sind schon da, welche werden noch gebaut?
-    const all = [['windows', 'Windows'], ['mac', 'macOS'], ['linux', 'Linux'], ['android', 'Android']];
+    const all = [['windows', 'Windows'], ['mac', 'macOS'], ['linux', 'Linux'], ['android', 'Android'], ['ios', 'iPhone & iPad']];
     const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} und ${xs[xs.length - 1]}`);
     const pending = all.filter(([k]) => !b[k]).map(([, n]) => n);
     const ready = all.filter(([k]) => b[k]).map(([, n]) => n);
@@ -202,7 +203,7 @@ function renderDownloads(d) {
       el.hidden = false;
     });
   }
-  for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux']]) {
+  for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux'], ['ios', 'data-build-ios', 'iPhone & iPad']]) {
     if (b[key]) continue;
     document.querySelectorAll(`[${attr}]`).forEach((el) => {
       el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet. Das dauert noch einige Minuten bis Stunden.</span>`;
