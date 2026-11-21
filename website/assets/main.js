@@ -80,7 +80,7 @@ if (shots.length) {
 // nie eine veraltete Versionsnummer.
 const REPO = 'calvinistkrass/Falcon';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
-const CACHE_KEY = 'falcon.dl5';
+const CACHE_KEY = 'falcon.dl6';
 const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } })
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 const verOf = (name) => (String(name).match(/(\d+\.\d+\.\d+)/) || [])[1] || '';
@@ -189,8 +189,8 @@ function renderDownloads(d) {
     const pending = all.filter(([k]) => !b[k]).map(([, n]) => n);
     const ready = all.filter(([k]) => b[k]).map(([, n]) => n);
     const text = !b.windows
-      ? `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} für ${list(pending)} ist in den nächsten Minuten bis Stunden verfügbar.`
-      : `<b>Falcon ${b.version} für ${list(pending)} wird für den Download vorbereitet.</b> Das dauert noch einige Minuten bis Stunden – ${list(ready)} ${ready.length > 1 ? 'sind' : 'ist'} schon da.`;
+      ? `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} für ${list(pending)} ist in den nächsten Minuten verfügbar.`
+      : `<b>Falcon ${b.version} für ${list(pending)} wird für den Download vorbereitet.</b> Das dauert noch einige Minuten – ${list(ready)} ${ready.length > 1 ? 'sind' : 'ist'} schon da.`;
     const bar = document.createElement('div');
     bar.className = 'build-banner';
     bar.setAttribute('role', 'status');
@@ -206,7 +206,7 @@ function renderDownloads(d) {
   for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux'], ['ios', 'data-build-ios', 'iPhone & iPad']]) {
     if (b[key]) continue;
     document.querySelectorAll(`[${attr}]`).forEach((el) => {
-      el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet. Das dauert noch einige Minuten bis Stunden.</span>`;
+      el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet. Das dauert noch einige Minuten.</span>`;
       el.hidden = false;
     });
   }
