@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.2] – 2026-11-22
+
+### Fixed
+- **Falcon Mobile (iPhone & iPad): start page search** – tapping the search bar on the start page no longer loses the focus right away, so you can type again. Other text fields (sign-in, history and password search) benefit too.
+
 ## [2.5.1] – 2026-11-22
 
 ### Added
