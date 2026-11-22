@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.3] – 2026-11-22
+
+### Added
+- **Warning when closing during a download**: if a download is still running (or paused) and you close Falcon, a small window asks whether you want to wait or close anyway. Closing one of several windows doesn't ask, because downloads keep running.
+
+### Changed
+- **iOS installation**: the download page now explains installing the .ipa with **iloader** on Windows, macOS or Linux (instead of AltStore or SideStore). The platform menu shows ".ipa" for iOS devices instead of "Web app".
+
 ## [2.5.2] – 2026-11-22
 
 ### Fixed

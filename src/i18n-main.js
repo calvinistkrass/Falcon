@@ -5,6 +5,12 @@ const { app } = require('electron');
 
 const STRINGS = {
   en: {
+    "Warten": "Wait",
+    "Trotzdem schließen": "Close anyway",
+    "Download läuft noch": "Download in progress",
+    "Ein Download läuft noch.": "A download is still running.",
+    "{n} Downloads laufen noch.": "{n} downloads are still running.",
+    "Wenn du Falcon jetzt schließt, wird der Download abgebrochen. Möchtest du warten, bis er fertig ist?": "If you close Falcon now, the download will be cancelled. Do you want to wait until it has finished?",
     "Spiel von deiner Wunschliste im Angebot": "Game from your wishlist on sale",
     "{title} ist gerade kostenlos ({store}).": "{title} is free right now ({store}).",
     "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} costs ${price} instead of ${normal} (−{savings}%) at {store}.",
@@ -46,6 +52,12 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon wants to show a saved password.'
   },
   fr: {
+    "Warten": "Attendre",
+    "Trotzdem schließen": "Fermer quand même",
+    "Download läuft noch": "Téléchargement en cours",
+    "Ein Download läuft noch.": "Un téléchargement est encore en cours.",
+    "{n} Downloads laufen noch.": "{n} téléchargements sont encore en cours.",
+    "Wenn du Falcon jetzt schließt, wird der Download abgebrochen. Möchtest du warten, bis er fertig ist?": "Si tu fermes Falcon maintenant, le téléchargement sera annulé. Veux-tu attendre qu’il soit terminé ?",
     "Spiel von deiner Wunschliste im Angebot": "Jeu de ta liste de souhaits en promo",
     "{title} ist gerade kostenlos ({store}).": "{title} est gratuit en ce moment ({store}).",
     "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} coûte {price} $ au lieu de {normal} $ (−{savings} %) chez {store}.",
@@ -86,6 +98,12 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon souhaite afficher un mot de passe enregistré.'
   },
   es: {
+    "Warten": "Esperar",
+    "Trotzdem schließen": "Cerrar de todos modos",
+    "Download läuft noch": "Descarga en curso",
+    "Ein Download läuft noch.": "Todavía hay una descarga en curso.",
+    "{n} Downloads laufen noch.": "Todavía hay {n} descargas en curso.",
+    "Wenn du Falcon jetzt schließt, wird der Download abgebrochen. Möchtest du warten, bis er fertig ist?": "Si cierras Falcon ahora, la descarga se cancelará. ¿Quieres esperar a que termine?",
     "Spiel von deiner Wunschliste im Angebot": "Juego de tu lista de deseos en oferta",
     "{title} ist gerade kostenlos ({store}).": "{title} está gratis ahora mismo ({store}).",
     "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} cuesta {price} $ en lugar de {normal} $ (−{savings} %) en {store}.",
@@ -126,6 +144,12 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon quiere mostrar una contraseña guardada.'
   },
   tr: {
+    "Warten": "Bekle",
+    "Trotzdem schließen": "Yine de kapat",
+    "Download läuft noch": "İndirme sürüyor",
+    "Ein Download läuft noch.": "Bir indirme hâlâ sürüyor.",
+    "{n} Downloads laufen noch.": "{n} indirme hâlâ sürüyor.",
+    "Wenn du Falcon jetzt schließt, wird der Download abgebrochen. Möchtest du warten, bis er fertig ist?": "Falcon’u şimdi kapatırsan indirme iptal edilir. Bitene kadar beklemek ister misin?",
     "Spiel von deiner Wunschliste im Angebot": "İstek listendeki oyun indirimde",
     "{title} ist gerade kostenlos ({store}).": "{title} şu anda ücretsiz ({store}).",
     "{title} kostet gerade {price} $ statt {normal} $ (−{savings} %) bei {store}.": "{title} şu anda {store} mağazasında {normal} $ yerine {price} $ (−%{savings}).",

@@ -172,7 +172,7 @@ function renderDownloads(d) {
   };
   fill('data-mac', 'data-mac-meta', d.mac, ['arm64', 'x64']);
   fill('data-linux', 'data-linux-meta', d.linux, ['deb', 'rpm']);
-  // iOS-Geräte (seit 2.5.0): .ipa für AltStore / SideStore
+  // iOS-Geräte (seit 2.5.0): .ipa, Installation mit iloader
   fill('data-ios', 'data-ios-meta', d.ios ? { ipa: d.ios } : null, ['ipa', 'ipa']);
   document.querySelectorAll('[data-ios-version]').forEach((el) => { if (d.ios?.version) el.textContent = d.ios.version; });
 

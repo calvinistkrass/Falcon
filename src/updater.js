@@ -193,7 +193,8 @@ function download() {
 
 function install() {
   // Installer unsichtbar ausführen (/S) und Falcon danach automatisch wieder öffnen
-  if (status.state === 'downloaded') setImmediate(() => autoUpdater.quitAndInstall(true, true));
+  // Beim Update nicht nach laufenden Downloads fragen (main.js prüft das Flag)
+  if (status.state === 'downloaded') setImmediate(() => { global.falconQuitForUpdate = true; autoUpdater.quitAndInstall(true, true); });
 }
 
 module.exports = { init, check, checkIfStale, download, install, getStatus: () => status, releaseUrl };

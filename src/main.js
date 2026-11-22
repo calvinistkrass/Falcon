@@ -248,7 +248,9 @@ function createWindow({ incognito = false } = {}) {
     if (cmd === 'browser-forward') sendHere('shortcut', { key: 'mouse-forward' });
   });
 
-  w.on('close', () => {
+  w.on('close', (e) => {
+    // Laufende Downloads: nur warnen, wenn dieses Fenster das letzte ist (sonst laufen die Downloads weiter)
+    if (!w.falconCloseOk && confirmQuitWithDownloads(w, () => { w.falconCloseOk = true; w.close(); })) { e.preventDefault(); return; }
     if (incognito) return;
     const b = w.getNormalBounds();
     settings.window = { ...b, maximized: w.isMaximized() };
@@ -351,6 +353,30 @@ ipcMain.handle('adblock:update', async () => { await adblock.update(); return ad
 // Downloads
 // ---------------------------------------------------------------------------
 const downloadItems = new Map();
+const activeDownloads = () => [...downloadItems.values()].filter((it) => it.getState() === 'progressing');
+/**
+ * Falcon würde jetzt beendet, aber Downloads laufen noch → Rückfrage „Warten“ / „Trotzdem schließen“.
+ * Gibt true zurück, wenn das Schließen erst einmal aufgehalten werden soll; onClose wird nach „Trotzdem schließen“ aufgerufen.
+ */
+let quitAsking = false;
+function confirmQuitWithDownloads(w, onClose) {
+  if (global.falconQuitForUpdate || quitAsking) return quitAsking;
+  const n = activeDownloads().length;
+  const lastWindow = [...uiWindows].filter((x) => alive(x) && x !== w).length === 0;
+  if (!n || (w && !lastWindow)) return false;
+  quitAsking = true;
+  const opts = {
+    type: 'warning', buttons: [tr('Warten'), tr('Trotzdem schließen')], defaultId: 0, cancelId: 0, noLink: true,
+    title: tr('Download läuft noch'),
+    message: n === 1 ? tr('Ein Download läuft noch.') : tr('{n} Downloads laufen noch.').replace('{n}', n),
+    detail: tr('Wenn du Falcon jetzt schließt, wird der Download abgebrochen. Möchtest du warten, bis er fertig ist?')
+  };
+  (alive(w) ? dialog.showMessageBox(w, opts) : dialog.showMessageBox(opts)).then(({ response }) => {
+    quitAsking = false;
+    if (response === 1) onClose();
+  }).catch(() => { quitAsking = false; });
+  return true;
+}
 // Fertige Downloads aus dieser Sitzung (für „Erneut herunterladen“ im Download-Fenster, auch in Inkognito)
 const finishedDownloads = new Map();
 const downloadDir = () => {
@@ -1473,7 +1499,12 @@ if (!gotLock) {
     app.on('browser-window-focus', () => updater.checkIfStale());
   });
 
-  app.on('before-quit', () => writeSettingsNow());
+  // macOS (Cmd+Q): Fenster schließen dort nicht die App – darum auch beim Beenden nach laufenden Downloads fragen
+  let quitOk = false;
+  app.on('before-quit', (e) => {
+    if (IS_MAC && !quitOk && confirmQuitWithDownloads(null, () => { quitOk = true; app.quit(); })) { e.preventDefault(); return; }
+    writeSettingsNow();
+  });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
   app.on('activate', () => { if (uiWindows.size === 0) createWindow(); });
 }
