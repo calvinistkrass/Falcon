@@ -6,10 +6,11 @@ import * as FB from './firebase';
 import { decryptJson, encryptJson, fromBase64, newDataKey, randomId, toBase64, unwrapKey, wrapKey } from './crypto';
 import { load, save } from './storage';
 import { loadTabs, saveTabs } from './tabstore';
+import { onIncoming, takeIncoming } from './incoming';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.5.0';
+export const APP_VERSION = '2.5.1';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -827,6 +828,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const sub = AppState.addEventListener('change', (st) => { if (st !== 'active' && tabsRestored.current) saveTabs(tabSnapshot(), true); });
     return () => sub.remove();
   }, [tabSnapshot]);
+
+  // Links aus anderen Apps (Falcon als Standardbrowser, seit 2.5.1) – erst öffnen, wenn die Tabs geladen sind
+  const [incoming, setIncoming] = useState(0);
+  useEffect(() => onIncoming(() => setIncoming((n) => n + 1)), []);
+  useEffect(() => {
+    if (!tabsReady) return;
+    const url = takeIncoming();
+    if (url) openUrl(url);
+  }, [tabsReady, incoming, openUrl]);
   const switchTab = useCallback((id: string) => setActiveId(id), []);
   const updateTab = useCallback((id: string, patch: Partial<Pick<Tab, 'url' | 'title'>>) => {
     setTabs((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));

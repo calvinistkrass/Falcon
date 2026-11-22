@@ -59,14 +59,15 @@ export function Button({ title, onPress, icon, variant = 'primary', loading, dis
 }
 
 // Eingabefeld: beim Tippen leuchtender Akzentrand und farbiges Symbol
-export function Field(props: TextInputProps & { icon?: IconName }) {
-  const { icon, style, onFocus, onBlur, ...rest } = props;
+export function Field(props: TextInputProps & { icon?: IconName; right?: React.ReactNode }) {
+  const { icon, style, onFocus, onBlur, right, ...rest } = props;
   const [focused, setFocused] = useState(false);
   return (
     <View style={[s.field, focused && s.fieldFocus]}>
       {icon ? <Ionicons name={icon} size={18} color={focused ? C.accent : C.text3} /> : null}
       <TextInput placeholderTextColor={C.text3} selectionColor={C.accent} style={[s.input, style]}
         onFocus={(e) => { setFocused(true); onFocus?.(e); }} onBlur={(e) => { setFocused(false); onBlur?.(e); }} {...rest} />
+      {right}
     </View>
   );
 }

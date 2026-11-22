@@ -2,7 +2,7 @@
   "expo": {
     "name": "Falcon",
     "slug": "falcon-mobile",
-    "version": "2.5.0",
+    "version": "2.5.1",
     "scheme": "falcon",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,6 +23,23 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.REQUEST_INSTALL_PACKAGES"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "http"
+            },
+            {
+              "scheme": "https"
+            }
+          ]
+        }
       ]
     },
     "web": {

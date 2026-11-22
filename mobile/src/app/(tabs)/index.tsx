@@ -1,6 +1,6 @@
 // Startseite: Suche, Verknüpfungen, tägliche Belohnung und Gratis-Spiele
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -10,6 +10,8 @@ import { errorText, useSession } from '@/lib/session';
 import { fetchJson } from '@/lib/firebase';
 import { C, R, toUrl } from '@/lib/theme';
 import { useAppUpdate } from '@/lib/update';
+import { useSuggestions } from '@/lib/suggest';
+import Suggestions from '@/components/Suggestions';
 
 const SHORTCUTS = [
   ['YouTube', 'https://m.youtube.com'], ['Twitch', 'https://m.twitch.tv'], ['Steam', 'https://store.steampowered.com'],
@@ -19,8 +21,10 @@ const SHORTCUTS = [
 type Game = { title: string; image: string; url: string; platform: string; worth: string };
 
 export default function Start() {
-  const { user, wallet, daily, claimDaily, openUrl } = useSession();
+  const { user, wallet, daily, claimDaily, openUrl, history, bookmarks, searchEngine } = useSession();
   const [q, setQ] = useState('');
+  const [searching, setSearching] = useState(false);
+  const suggestions = useSuggestions(q, { history, bookmarks, engine: searchEngine, enabled: searching });
   const [games, setGames] = useState<Game[]>([]);
   const [claiming, setClaiming] = useState(false);
   const { update, download, dismiss, progress, error: updateError, openWebsite } = useAppUpdate();
@@ -38,7 +42,8 @@ export default function Start() {
   }, []);
 
   const go = (url: string) => { openUrl(url); router.navigate('/browser'); };
-  const submit = () => { const url = toUrl(q); if (url) { go(url); setQ(''); } };
+  const search = (text: string) => { const url = toUrl(text, searchEngine); if (url) { Keyboard.dismiss(); setSearching(false); go(url); setQ(''); } };
+  const submit = () => search(q);
   const claim = async () => {
     setClaiming(true);
     try {
@@ -93,7 +98,19 @@ export default function Start() {
         ) : null}
 
         <Field icon="search" placeholder="Suchen oder Adresse eingeben" value={q} onChangeText={setQ} onSubmitEditing={submit}
-          returnKeyType="go" autoCapitalize="none" autoCorrect={false} keyboardType="web-search" />
+          onFocus={() => setSearching(true)} onBlur={() => setSearching(false)} submitBehavior="blurAndSubmit"
+          returnKeyType="search" autoCapitalize="none" autoCorrect={false} keyboardType={Platform.OS === 'ios' ? 'web-search' : 'default'}
+          right={q ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Pressable hitSlop={10} onPress={() => setQ('')} accessibilityLabel="Eingabe löschen"><Ionicons name="close-circle" size={18} color={C.text2} /></Pressable>
+              <Pressable hitSlop={10} onPress={submit} accessibilityLabel="Suchen" style={s.searchGo}><Ionicons name="arrow-forward" size={17} color="#fff" /></Pressable>
+            </View>
+          ) : null} />
+        {searching && suggestions.length > 1 ? (
+          <View style={{ marginTop: 8 }}>
+            <Suggestions items={suggestions} onPick={(it) => search(it.url || it.text)} onFill={(text) => setQ(text)} />
+          </View>
+        ) : null}
 
         <View style={s.grid}>
           {SHORTCUTS.map(([title, url]) => (
@@ -158,6 +175,7 @@ const s = StyleSheet.create({
   tileIc: { width: 54, height: 54, borderRadius: 27, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, alignItems: 'center', justifyContent: 'center' },
   tileText: { color: C.text2, fontSize: 12.5, maxWidth: 76 },
   daily: { marginTop: 18, padding: 16, gap: 14 },
+  searchGo: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
   update: { marginBottom: 18, padding: 16, gap: 14, borderColor: 'rgba(124,108,255,0.45)' },
   updateBar: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
   updateBarFill: { height: '100%', borderRadius: 2, backgroundColor: C.accent },

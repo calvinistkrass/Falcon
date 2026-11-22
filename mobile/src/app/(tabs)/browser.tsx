@@ -1,7 +1,7 @@
 // Browser mit mehreren Tabs: Adressleiste, Zurück/Vor/Neu laden, Tab-Übersicht und Menü
 // (Lesezeichen, Inkognito, Passwörter ausfüllen und speichern, Seite übersetzen, teilen, melden)
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, type TextInputInstance } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,9 @@ import { router } from 'expo-router';
 import type { WebView as WebViewType, WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 import { Empty, IconName } from '@/components/ui';
 import TabSwitcher from '@/components/TabSwitcher';
+import Suggestions from '@/components/Suggestions';
+import { useSuggestions } from '@/lib/suggest';
+import { setDefaultBrowser } from '@/lib/default-browser';
 import { CAPTURE_SCRIPT, fillScript, translateUrl, untranslate } from '@/lib/inject';
 import { ADBLOCK_SCRIPT, isAdHost, useAdblock } from '@/lib/adblock';
 import { Tab, errorText, hasBookmark, originOf, useSession } from '@/lib/session';
@@ -23,13 +26,16 @@ const NO_NAV: Nav = { back: false, forward: false, loading: false, progress: 0 }
 
 export default function Browser() {
   const session = useSession();
-  const { tabs, activeId, navigate, newTab, updateTab, visited, user, searchEngine, passwords, pwNever, savePassword, neverSave } = session;
+  const { tabs, activeId, navigate, newTab, updateTab, visited, user, searchEngine, passwords, pwNever, savePassword, neverSave, history, bookmarks } = session;
   const refs = useRef<Record<string, WebViewType | null>>({});
   const seen = useRef<Record<string, { src: string; nonce: number }>>({});
   const lastOffer = useRef('');
   const [navs, setNavs] = useState<Record<string, Nav>>({});
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState(false);
+  // Beim Antippen die ganze Adresse markieren (wie in Chrome) – solange, bis man tippt oder den Cursor setzt
+  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
+  const inputRef = useRef<TextInputInstance>(null);
   const [switcher, setSwitcher] = useState(false);
   const [menu, setMenu] = useState(false);
   const [adblock, setAdblock] = useAdblock();
@@ -50,7 +56,9 @@ export default function Browser() {
     for (const id of Object.keys(seen.current)) if (!tabs.some((t) => t.id === id)) { delete seen.current[id]; delete refs.current[id]; }
   }, [tabs]);
 
-  const submit = () => { const u = toUrl(input, searchEngine); if (u) navigate(u); setEditing(false); };
+  const suggestions = useSuggestions(editing && input !== active.url ? input : '', { history, bookmarks, engine: searchEngine, enabled: editing });
+  const go = (text: string) => { const u = toUrl(text, searchEngine); if (u) navigate(u); setEditing(false); setSelection(undefined); inputRef.current?.blur(); };
+  const submit = () => go(input);
   const onNav = (tab: Tab) => (e: WebViewNavigation) => {
     setNavs((n) => ({ ...n, [tab.id]: { ...(n[tab.id] || NO_NAV), back: e.canGoBack, forward: e.canGoForward, loading: e.loading } }));
     const title = e.title && !/^https?:\/\//.test(e.title) ? e.title : tab.title;
@@ -90,22 +98,34 @@ export default function Browser() {
           <Ionicons name={active.incognito && !editing ? 'eye-off' : editing ? 'search' : secure ? 'lock-closed' : 'globe-outline'} size={15}
             color={active.incognito && !editing ? '#c2baff' : secure && !editing ? C.green : C.text3} />
           <TextInput
+            ref={inputRef}
             style={s.input}
             value={editing ? input : hostOf(active.url) || active.url}
-            onChangeText={setInput}
-            onFocus={() => { setInput(active.url); setEditing(true); }}
-            onBlur={() => setEditing(false)}
+            onChangeText={(t) => { setInput(t); setSelection(undefined); }}
+            selection={editing ? selection : undefined}
+            onSelectionChange={(e) => {
+              const r = e.nativeEvent.selection;
+              if (selection && (r.start !== selection.start || r.end !== selection.end)) setSelection(undefined);
+            }}
+            onFocus={() => { const u = active.url; setInput(u); setEditing(true); setSelection({ start: 0, end: u.length }); }}
+            onBlur={() => { setEditing(false); setSelection(undefined); }}
             onSubmitEditing={submit}
             placeholder={active.incognito ? 'Inkognito – suchen oder Adresse' : 'Suchen oder Adresse eingeben'}
             placeholderTextColor={C.text3}
             selectionColor={C.accent}
             autoCapitalize="none"
             autoCorrect={false}
-            keyboardType="web-search"
+            keyboardType={Platform.OS === 'ios' ? 'web-search' : 'default'}
             returnKeyType="go"
-            selectTextOnFocus
           />
-          {active.src ? (
+          {editing ? (
+            input ? (
+              // Eingabe löschen – das Feld bleibt aktiv, damit man gleich weitertippen kann
+              <Pressable hitSlop={10} onPress={() => { setInput(''); setSelection(undefined); inputRef.current?.focus(); }} accessibilityLabel="Eingabe löschen">
+                <Ionicons name="close-circle" size={18} color={C.text2} />
+              </Pressable>
+            ) : null
+          ) : active.src ? (
             <Pressable hitSlop={10} onPress={() => (nav.loading ? ref?.stopLoading() : ref?.reload())} accessibilityLabel={nav.loading ? 'Laden abbrechen' : 'Neu laden'}>
               <Ionicons name={nav.loading ? 'close' : 'refresh'} size={18} color={C.text2} />
             </Pressable>
@@ -115,6 +135,12 @@ export default function Browser() {
       {nav.loading ? <View style={[s.progress, { width: `${Math.max(8, nav.progress * 100)}%` }]} /> : <View style={s.progressSpace} />}
 
       <View style={{ flex: 1, backgroundColor: C.bg }}>
+        {editing && suggestions.length ? (
+          <ScrollView style={[StyleSheet.absoluteFill, s.suggest]} contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled">
+            <Suggestions items={suggestions} onPick={(it) => go(it.url || it.text)}
+              onFill={(text) => { setInput(text); setSelection(undefined); inputRef.current?.focus(); }} />
+          </ScrollView>
+        ) : null}
         {tabs.map((t) => {
           const shown = t.id === active.id;
           if (!t.src) {
@@ -226,6 +252,7 @@ function BrowserMenu({ tab, onClose, inject, adblock, blocked, onAdblock }: { ta
     { icon: 'bookmarks-outline', label: 'Lesezeichen', onPress: run(() => router.navigate('/bookmarks')) },
     { icon: 'time-outline', label: 'Verlauf', onPress: run(() => router.push('/history')) },
     { icon: 'key-outline', label: 'Passwörter', hidden: !!logins.length, onPress: run(() => router.push('/passwords')) },
+    { icon: 'globe-outline', label: 'Als Standardbrowser festlegen', onPress: run(setDefaultBrowser) },
     { icon: 'bug-outline', label: page ? 'Problem mit dieser Seite melden' : 'Fehler melden', onPress: run(() => router.push(page ? { pathname: '/report', params: { url: page } } : '/report')) }
   ];
 
@@ -259,6 +286,8 @@ function Tool({ icon, label, onPress, disabled }: { icon: IconName; label: strin
 const s = StyleSheet.create({
   bar: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8 },
   address: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, paddingHorizontal: 13, borderRadius: 21, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line },
+  // liegt über den WebViews (zIndex für iOS, elevation für Android)
+  suggest: { backgroundColor: C.bg, zIndex: 10, elevation: 10 },
   addressIncognito: { backgroundColor: '#251d33', borderColor: 'rgba(124,108,255,0.35)' },
   input: { flex: 1, color: C.text, fontSize: 15, height: '100%' },
   progress: { height: 2, backgroundColor: C.accent },

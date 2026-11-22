@@ -2,6 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.1] – 2026-11-22
+
+### Added
+- **Falcon Mobile: suggestions while typing** – the search bar on the start page and the address bar now suggest pages from your history and bookmarks plus search suggestions from your search engine, like in Chrome or Brave. The arrow next to a suggestion copies it into the field.
+- **Falcon Mobile (Android): set as default browser** – Falcon can now be chosen as the default browser (browser menu → "Set as default browser"). Links from other apps then open in a Falcon tab. On iOS devices, Apple only allows this for App Store browsers.
+
+### Fixed
+- **Falcon Mobile: address bar** – tapping the address bar now selects the whole address so you can type right away, and the ✕ clears the field.
+- **Falcon Mobile: start page search** – the search bar now has a visible search button and a clear button and closes the keyboard reliably after searching.
+
 ## [2.5.0] – 2026-11-21
 
 ### Added
