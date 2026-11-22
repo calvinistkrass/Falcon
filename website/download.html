@@ -18,8 +18,8 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/assets/logo.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/styles.css?v=20261122e">
-<script src="/assets/main.js?v=20261122e" defer></script>
+<link rel="stylesheet" href="/assets/styles.css?v=20261122f">
+<script src="/assets/main.js?v=20261122f" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Zum Inhalt springen</a>
@@ -166,6 +166,18 @@
           <div class="step"><div><span class="st">Falcon installieren</span><p>Öffne SideStore, wechsle zu <b>Meine Apps</b>, tippe oben links auf <b>+</b> und wähle die .ipa aus. Falcon wird mit deiner Apple-ID signiert und erscheint auf dem Home-Bildschirm.</p></div></div>
           <div class="step"><div><span class="st">Alle 7 Tage auffrischen</span><p>Mit einer kostenlosen Apple-ID läuft die Signatur nach 7 Tagen ab. Öffne SideStore ab und zu und tippe auf „Aktualisieren“ – das geht ohne Computer. Neue Falcon-Versionen installierst du genauso über <b>+</b>.</p></div></div>
           <div class="step"><div><span class="st">Lieber AltStore Classic?</span><p>Das geht auch mit Windows oder macOS: <b>AltServer</b> von altstore.io installieren, Gerät anschließen und AltStore darüber aufs Gerät bringen. Danach wie oben: <b>Meine Apps → +</b> → .ipa auswählen.</p></div></div>
+        </div>
+        <h3 style="font-size:22px;margin:40px 0 16px">Unter Linux: direkt mit Plume Impactor</h3>
+        <p style="margin:0 0 16px;color:var(--text-2)">Ohne SideStore und ohne VPN-App – Falcon wird vom Computer aus per Kabel installiert.</p>
+        <div class="steps">
+          <div class="step"><div><span class="st">Plume Impactor herunterladen</span><p>Lade auf <b>github.com/claration/impactor</b> unter „Releases“ die Datei <code>Impactor-linux-x86_64.appimage</code> herunter und mache sie ausführbar: <code>chmod +x Impactor-linux-x86_64.appimage</code>. Startet sie nicht, fehlt <code>libfuse2</code> (Debian 13 / Ubuntu 24.04: <code>sudo apt install libfuse2t64</code>) – oder entpacke sie mit <code>./Impactor-linux-x86_64.appimage --appimage-extract</code> und starte <code>squashfs-root/AppRun</code>.</p></div></div>
+          <div class="step"><div><span class="st">usbmuxd installieren</span><p>Damit der Computer iPhone und iPad erkennt: <code>sudo apt install usbmuxd</code> (bei den meisten Distributionen schon dabei).</p></div></div>
+          <div class="step"><div><span class="st">.ipa auf den Computer laden</span><p>Lade oben die Datei <code>Falcon-Mobile-<span data-ios-version>…</span>.ipa</code> auf den Computer herunter.</p></div></div>
+          <div class="step"><div><span class="st">Gerät zuerst anschließen</span><p>Schließe iPhone oder iPad per <b>Datenkabel</b> an, entsperre es und tippe auf „Vertrauen“. Öffne <b>erst danach</b> Plume Impactor – sonst wird das Gerät unter Linux manchmal nicht erkannt (dann Impactor neu starten). Kommt keine „Vertrauen“-Frage und das Gerät lädt nur, probiere ein anderes Kabel oder einen anderen USB-Anschluss.</p></div></div>
+          <div class="step"><div><span class="st">Mit der Apple-ID anmelden</span><p>Melde dich in Plume Impactor mit der E-Mail-Adresse deiner Apple-ID an (eine kostenlose reicht). Schlägt die Anmeldung fehl, setze in den Einstellungen den Anisette-Zustand zurück bzw. wähle einen anderen Anisette-Server und starte Impactor neu.</p></div></div>
+          <div class="step"><div><span class="st">Falcon installieren</span><p>Wähle die Falcon-.ipa aus (oder ziehe sie ins Fenster), wähle dein Gerät und installiere.</p></div></div>
+          <div class="step"><div><span class="st">Auf dem Gerät freigeben</span><p>Schalte unter <b>Einstellungen → Datenschutz &amp; Sicherheit → Entwicklermodus</b> den Entwicklermodus ein (der Punkt erscheint erst nach der Installation) und vertraue unter <b>Einstellungen → Allgemein → VPN &amp; Geräteverwaltung</b> deiner Apple-ID. Danach startet Falcon.</p></div></div>
+          <div class="step"><div><span class="st">Nach 7 Tagen neu installieren</span><p>Mit einer kostenlosen Apple-ID läuft die Signatur nach 7 Tagen ab. Schließe das Gerät dann wieder an und installiere Falcon erneut über Plume Impactor – deine Daten bleiben erhalten.</p></div></div>
         </div>
         </div>
       </div>
