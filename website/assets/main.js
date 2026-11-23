@@ -3,6 +3,10 @@
 
 document.documentElement.classList.remove('no-js');
 
+// Übersetzung (i18n.js läuft vorher): T('deutscher Text', { platzhalter })
+const T = (s, v) => (window.FalconI18n ? window.FalconI18n.t(s, v) : (v ? Object.entries(v).reduce((r, [k, x]) => r.split(`{${k}}`).join(x), s) : s));
+const LOCALE = { en: 'en-US', de: 'de-DE', fr: 'fr-FR', es: 'es-ES', tr: 'tr-TR' }[window.FalconI18n?.lang || 'de'] || 'en-US';
+
 // ---------- Menü ----------
 const header = document.querySelector('.header');
 const nav = document.querySelector('.nav');
@@ -36,10 +40,10 @@ if (shots.length) {
   box.setAttribute('role', 'dialog');
   box.setAttribute('aria-modal', 'true');
   box.innerHTML = `
-    <button class="lb-close" aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    <button class="lb-nav lb-prev" aria-label="Vorheriges Bild"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg></button>
+    <button class="lb-close" aria-label="${T('Schließen')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <button class="lb-nav lb-prev" aria-label="${T('Vorheriges Bild')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg></button>
     <figure style="margin:0"><img alt="" /><p></p></figure>
-    <button class="lb-nav lb-next" aria-label="Nächstes Bild"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg></button>`;
+    <button class="lb-nav lb-next" aria-label="${T('Nächstes Bild')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg></button>`;
   document.body.append(box);
   const img = box.querySelector('img');
   const cap = box.querySelector('p');
@@ -84,8 +88,8 @@ const CACHE_KEY = 'falcon.dl7';
 const gh = (url) => fetch(url, { headers: { accept: 'application/vnd.github+json' } })
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 const verOf = (name) => (String(name).match(/(\d+\.\d+\.\d+)/) || [])[1] || '';
-const mb = (n) => `${(n / 1024 / 1024).toLocaleString('de-DE', { maximumFractionDigits: 0 })} MB`;
-const dateDe = (d) => new Date(d).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
+const mb = (n) => `${(n / 1024 / 1024).toLocaleString(LOCALE, { maximumFractionDigits: 0 })} MB`;
+const dateDe = (d) => new Date(d).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' });
 const SPIN = '<span class="spin" aria-hidden="true"></span>';
 
 function cachedDownloads() {
@@ -142,28 +146,28 @@ async function fetchDownloads() {
 function renderDownloads(d) {
   document.querySelectorAll('[data-version-badge]').forEach((el) => {
     el.classList.remove('is-loading');
-    el.querySelector('[data-badge-text]').textContent = d.version ? `Version ${d.version}${el.dataset.badgeSuffix || ''}` : 'Neueste Version';
+    el.querySelector('[data-badge-text]').textContent = d.version ? T('Version {v}', { v: d.version }) + (el.dataset.badgeSuffix || '') : T('Neueste Version');
   });
   if (d.version) document.querySelectorAll('[data-version]').forEach((el) => { el.textContent = d.version; });
   document.querySelectorAll('[data-download]').forEach((a) => { a.href = d.url; });
   document.querySelectorAll('[data-win-meta]').forEach((el) => {
-    el.textContent = d.version ? [`Version ${d.version}`, d.size && mb(d.size), d.date && dateDe(d.date)].filter(Boolean).join(' · ') : 'Neueste Version auf GitHub';
+    el.textContent = d.version ? [T('Version {v}', { v: d.version }), d.size && mb(d.size), d.date && dateDe(d.date)].filter(Boolean).join(' · ') : T('Neueste Version auf GitHub');
   });
   if (d.apk) {
     document.querySelectorAll('[data-apk]').forEach((a) => { a.href = d.apk.url; });
     document.querySelectorAll('[data-apk-version]').forEach((el) => { if (d.apk.version) el.textContent = d.apk.version; });
     document.querySelectorAll('[data-apk-meta]').forEach((el) => {
-      el.textContent = [d.apk.version && `Version ${d.apk.version}`, d.apk.size && mb(d.apk.size), d.apk.date && dateDe(d.apk.date)].filter(Boolean).join(' · ');
+      el.textContent = [d.apk.version && T('Version {v}', { v: d.apk.version }), d.apk.size && mb(d.apk.size), d.apk.date && dateDe(d.apk.date)].filter(Boolean).join(' · ');
     });
   } else {
-    document.querySelectorAll('[data-apk-meta]').forEach((el) => { el.textContent = 'Noch keine Version veröffentlicht'; });
-    document.querySelectorAll('[data-apk-label]').forEach((el) => { el.textContent = 'Bald verfügbar'; });
+    document.querySelectorAll('[data-apk-meta]').forEach((el) => { el.textContent = T('Noch keine Version veröffentlicht'); });
+    document.querySelectorAll('[data-apk-label]').forEach((el) => { el.textContent = T('Bald verfügbar'); });
   }
 
   // macOS und Linux: je zwei Downloads (Apple-Chip/Intel, .deb/.rpm)
-  const meta = (x) => (x ? [x.version && `Version ${x.version}`, x.size && mb(x.size), x.date && dateDe(x.date)].filter(Boolean).join(' · ') : '');
+  const meta = (x) => (x ? [x.version && T('Version {v}', { v: x.version }), x.size && mb(x.size), x.date && dateDe(x.date)].filter(Boolean).join(' · ') : '');
   const fill = (attr, metaAttr, group, keys) => {
-    document.querySelectorAll(`[${metaAttr}]`).forEach((el) => { el.textContent = group ? meta(group[keys[0]] || group[keys[1]]) : 'Erscheint mit dem nächsten Release'; });
+    document.querySelectorAll(`[${metaAttr}]`).forEach((el) => { el.textContent = group ? meta(group[keys[0]] || group[keys[1]]) : T('Erscheint mit dem nächsten Release'); });
     document.querySelectorAll(`[${attr}]`).forEach((a) => {
       const x = group?.[a.getAttribute(attr)];
       if (x) { a.href = x.url; a.classList.remove('is-off'); a.removeAttribute('aria-disabled'); }
@@ -184,35 +188,35 @@ function renderDownloads(d) {
   const main = document.querySelector('main');
   if (main) {
     // Welche Plattformen sind schon da, welche werden noch gebaut?
-    const all = [['windows', 'Windows'], ['mac', 'macOS'], ['linux', 'Linux'], ['android', 'Android'], ['ios', 'iOS-Geräte']];
-    const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} und ${xs[xs.length - 1]}`);
+    const all = [['windows', 'Windows'], ['mac', 'macOS'], ['linux', 'Linux'], ['android', 'Android'], ['ios', T('iOS-Geräte')]];
+    const list = (xs) => (xs.length < 2 ? xs.join('') : T('{a} und {b}', { a: xs.slice(0, -1).join(', '), b: xs[xs.length - 1] }));
     const pending = all.filter(([k]) => !b[k]).map(([, n]) => n);
     const ready = all.filter(([k]) => b[k]).map(([, n]) => n);
     const text = !b.windows
-      ? `<b>Die neue Version wird für den Download vorbereitet.</b> Falcon ${b.version} für ${list(pending)} ist in den nächsten Minuten verfügbar.`
-      : `<b>Falcon ${b.version} für ${list(pending)} wird für den Download vorbereitet.</b> Das dauert noch einige Minuten – ${list(ready)} ${ready.length > 1 ? 'sind' : 'ist'} schon da.`;
+      ? T('<b>Die neue Version wird für den Download vorbereitet.</b> Falcon {v} für {p} ist in den nächsten Minuten verfügbar.', { v: b.version, p: list(pending) })
+      : T(ready.length > 1 ? '<b>Falcon {v} für {p} wird für den Download vorbereitet.</b> Das dauert noch einige Minuten – {r} sind schon da.' : '<b>Falcon {v} für {p} wird für den Download vorbereitet.</b> Das dauert noch einige Minuten – {r} ist schon da.', { v: b.version, p: list(pending), r: list(ready) });
     const bar = document.createElement('div');
     bar.className = 'build-banner';
     bar.setAttribute('role', 'status');
-    bar.innerHTML = `<div class="container">${SPIN}<span>${text}</span>${location.pathname.startsWith('/download') ? '' : '<a href="/download">Zum Download</a>'}</div>`;
+    bar.innerHTML = `<div class="container">${SPIN}<span>${text}</span>${location.pathname.startsWith('/download') ? '' : `<a href="/download">${T('Zum Download')}</a>`}</div>`;
     main.prepend(bar);
   }
   if (!b.windows) {
     document.querySelectorAll('[data-build-win]').forEach((el) => {
-      el.innerHTML = `${SPIN}<span>Version ${b.version} wird gerade für den Download vorbereitet. Bis dahin bekommst du ${d.version ? `Version ${d.version}` : 'die bisherige Version'} – sie aktualisiert sich danach automatisch.</span>`;
+      el.innerHTML = `${SPIN}<span>${d.version ? T('Version {v} wird gerade für den Download vorbereitet. Bis dahin bekommst du Version {o} – sie aktualisiert sich danach automatisch.', { v: b.version, o: d.version }) : T('Version {v} wird gerade für den Download vorbereitet. Bis dahin bekommst du die bisherige Version – sie aktualisiert sich danach automatisch.', { v: b.version })}</span>`;
       el.hidden = false;
     });
   }
-  for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux'], ['ios', 'data-build-ios', 'iOS-Geräte']]) {
+  for (const [key, attr, name] of [['mac', 'data-build-mac', 'macOS'], ['linux', 'data-build-linux', 'Linux'], ['ios', 'data-build-ios', T('iOS-Geräte')]]) {
     if (b[key]) continue;
     document.querySelectorAll(`[${attr}]`).forEach((el) => {
-      el.innerHTML = `${SPIN}<span>Version ${b.version} für ${name} wird gerade für den Download vorbereitet. Das dauert noch einige Minuten.</span>`;
+      el.innerHTML = `${SPIN}<span>${T('Version {v} für {p} wird gerade für den Download vorbereitet. Das dauert noch einige Minuten.', { v: b.version, p: name })}</span>`;
       el.hidden = false;
     });
   }
   if (!b.android) {
     document.querySelectorAll('[data-build-apk]').forEach((el) => {
-      el.innerHTML = `${SPIN}<span>Die neue Android-Version wird gerade für den Download vorbereitet. Bis dahin bekommst du ${d.apk?.version ? `Version ${d.apk.version}` : 'die bisherige'}.</span>`;
+      el.innerHTML = `${SPIN}<span>${d.apk?.version ? T('Die neue Android-Version wird gerade für den Download vorbereitet. Bis dahin bekommst du Version {o}.', { o: d.apk.version }) : T('Die neue Android-Version wird gerade für den Download vorbereitet. Bis dahin bekommst du die bisherige.')}</span>`;
       el.hidden = false;
     });
   }
@@ -223,8 +227,8 @@ if (cached) renderDownloads(cached);
 else {
   fetchDownloads().then(renderDownloads).catch(() => {
     // GitHub nicht erreichbar (oder Limit erreicht): Links führen zur Release-Seite
-    document.querySelectorAll('[data-version-badge]').forEach((el) => { el.classList.remove('is-loading'); el.querySelector('[data-badge-text]').textContent = 'Neueste Version'; });
-    document.querySelectorAll('[data-win-meta], [data-apk-meta]').forEach((el) => { el.textContent = 'Neueste Version auf GitHub'; });
+    document.querySelectorAll('[data-version-badge]').forEach((el) => { el.classList.remove('is-loading'); el.querySelector('[data-badge-text]').textContent = T('Neueste Version'); });
+    document.querySelectorAll('[data-win-meta], [data-apk-meta]').forEach((el) => { el.textContent = T('Neueste Version auf GitHub'); });
   });
 }
 
@@ -237,7 +241,7 @@ async function detectDevice() {
     platform = 'android';
     version = (ua.match(/Android ([\d.]+)/) || [])[1] || '';
     model = (ua.match(/Android [\d.]+;\s*([^;)]+?)(?:\s+Build\/|\))/) || [])[1] || '';
-    name = /Mobile/i.test(ua) ? 'Android-Handy' : 'Android-Tablet';
+    name = /Mobile/i.test(ua) ? T('Android-Handy') : T('Android-Tablet');
   } else if (/iPhone|iPod/i.test(ua)) {
     platform = 'ios'; name = 'iPhone'; version = (ua.match(/OS (\d+)_(\d+)/) || []).slice(1, 3).join('.');
   } else if (/iPad/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) {
@@ -245,11 +249,11 @@ async function detectDevice() {
   } else if (/CrOS/i.test(ua)) {
     platform = 'android'; name = 'Chromebook';
   } else if (/Windows NT/i.test(ua)) {
-    platform = 'windows'; name = 'Windows-PC';
+    platform = 'windows'; name = T('Windows-PC');
   } else if (/Macintosh|Mac OS X/i.test(ua)) {
     platform = 'mac'; name = 'Mac';
   } else if (/Linux/i.test(ua)) {
-    platform = 'linux'; name = 'Linux-PC';
+    platform = 'linux'; name = T('Linux-PC');
   }
   // Chromium nennt das echte Modell und die Windows-Version nur auf Nachfrage
   if (uad?.getHighEntropyValues) {
@@ -264,12 +268,12 @@ async function detectDevice() {
   if (model === 'K' || /^Linux/i.test(model)) model = ''; // gekürzte Kennung neuer Chrome-Versionen
   const os = { windows: 'Windows', android: 'Android', ios: name === 'iPad' ? 'iPadOS' : 'iOS', mac: 'macOS', linux: 'Linux' }[platform];
   const device = model || name;
-  return { platform, arch, label: [device, arch === 'arm64' ? 'Apple-Chip' : arch === 'x64' && platform === 'mac' ? 'Intel' : '', version ? `${os} ${version}` : (model ? os : '')].filter(Boolean).join(' · ') };
+  return { platform, arch, label: [device, arch === 'arm64' ? T('Apple-Chip') : arch === 'x64' && platform === 'mac' ? 'Intel' : '', version ? `${os} ${version}` : (model ? os : '')].filter(Boolean).join(' · ') };
 }
 
 const PLATFORM_KEY = 'falcon.platform';
 const picker = document.querySelector('[data-platform]');
-const HOME_CTA = { windows: 'Kostenlos herunterladen', android: 'App für Android herunterladen', ios: 'Für iOS-Geräte herunterladen', mac: 'Für macOS herunterladen', linux: 'Für Linux herunterladen' };
+const HOME_CTA = { windows: T('Kostenlos herunterladen'), android: T('App für Android herunterladen'), ios: T('Für iOS-Geräte herunterladen'), mac: T('Für macOS herunterladen'), linux: T('Für Linux herunterladen') };
 const SOON = {
 
 };
@@ -375,7 +379,7 @@ detectDevice().then((dev) => {
   try { localStorage.removeItem(PLATFORM_KEY); } catch { /* egal */ }
   const fromHash = { '#android': 'android', '#windows': 'windows', '#ios': 'ios', '#mac': 'mac', '#linux': 'linux' }[location.hash] || '';
   const info = document.querySelector('[data-detected]');
-  if (info) info.textContent = dev.label ? `Erkannt: ${dev.label}` : 'Wähle deine Plattform';
+  if (info) info.textContent = dev.label ? T('Erkannt: {d}', { d: dev.label }) : T('Wähle deine Plattform');
   document.querySelector('.dl-picker')?.removeAttribute('hidden');
   // Intel-Mac erkannt → Intel-Knopf als Hauptknopf
   if (dev.platform === 'mac' && dev.arch === 'x64') {
@@ -402,11 +406,11 @@ if (notesEl) {
       const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
       const when = date && !Number.isNaN(Date.parse(date)) ? ` · ${dateDe(date)}` : '';
-      notesEl.innerHTML = `<h3>Version ${esc(ver || '')}<span class="muted" style="font-weight:400;font-size:14px">${esc(when)}</span> <span class="tag">Neu</span></h3><ul>${items.map((i) => `<li>${fmt(i)}</li>`).join('')}</ul>` +
-        `<p class="muted" style="margin:14px 0 0;font-size:13px">Aus dem <a href="https://github.com/${REPO}/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="color:inherit">Changelog</a> (englisch).</p>`;
+      notesEl.innerHTML = `<h3>Version ${esc(ver || '')}<span class="muted" style="font-weight:400;font-size:14px">${esc(when)}</span> <span class="tag">${T('Neu')}</span></h3><ul>${items.map((i) => `<li>${fmt(i)}</li>`).join('')}</ul>` +
+        `<p class="muted" style="margin:14px 0 0;font-size:13px">${T('Aus dem <a>Changelog</a> (englisch).').replace('<a>', `<a href="https://github.com/${REPO}/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="color:inherit">`)}</p>`;
     })
     .catch(() => {
-      notesEl.innerHTML = `<h3>Neuerungen</h3><p class="muted" style="margin:10px 0 0">Alle Änderungen findest du im <a href="https://github.com/${REPO}/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog auf GitHub</a>.</p>`;
+      notesEl.innerHTML = `<h3>${T('Neuerungen')}</h3><p class="muted" style="margin:10px 0 0">${T('Alle Änderungen findest du im <a>Changelog auf GitHub</a>.').replace('<a>', `<a href="https://github.com/${REPO}/blob/main/CHANGELOG.md" target="_blank" rel="noopener">`)}</p>`;
     });
 }
 
