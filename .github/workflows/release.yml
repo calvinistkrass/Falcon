@@ -154,7 +154,16 @@ jobs:
 
       - name: APK bauen
         working-directory: mobile/android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86,x86_64
+        shell: bash
+        # Bei Fehlern einmal wiederholen (Downloads von Gradle/Maven brechen gelegentlich ab) und das Ende der Ausgabe als lesbare Annotation zeigen
+        run: |
+          set -o pipefail
+          for i in 1 2; do
+            if ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86,x86_64 2>&1 | tee build.log; then exit 0; fi
+            echo "Versuch $i fehlgeschlagen"
+          done
+          echo "::error title=Android-Build fehlgeschlagen::$(grep -E 'FAILURE|What went wrong|error:|Error:|> ' build.log | tail -c 3500 | tr '\n' ' ' | sed 's/%/%25/g')"
+          exit 1
 
       - name: An das Release anhängen
         shell: bash

@@ -11,6 +11,8 @@ const CHANNELS = ['extensions-changed', 'account-changed', 'history-replace', 'o
 
 contextBridge.exposeInMainWorld('falcon', {
   incognito: new URLSearchParams(location.search).has('incognito'),
+  detached: new URLSearchParams(location.search).has('detached'),
+  initialUrl: (() => { const u = new URLSearchParams(location.search).get('open') || ''; return /^https?:\/\//i.test(u) ? u : ''; })(),
   platform: process.platform,
   version: pkg.version,
   versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
@@ -23,6 +25,7 @@ contextBridge.exposeInMainWorld('falcon', {
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   overlayDim: (dim) => ipcRenderer.send('overlay-dim', !!dim),
   newIncognitoWindow: (url) => ipcRenderer.send('win:new-incognito', url),
+  detachTab: (url, x, y) => ipcRenderer.send('win:detach-tab', { url, x, y }),
   openOverlay: (url) => ipcRenderer.send('overlay:open', url),
   setTabFrozen: (webContentsId, frozen) => ipcRenderer.invoke('tab:set-frozen', webContentsId, frozen),
   prioritizeTab: (webContentsId) => ipcRenderer.invoke('tab:prioritize', webContentsId),

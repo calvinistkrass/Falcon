@@ -86,7 +86,17 @@ const Tabs = (() => {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/uri-list', tab.url);
     });
-    el.addEventListener('dragend', () => { el.classList.remove('dragging'); dragged = null; saveSession(); });
+    el.addEventListener('dragend', (e) => {
+      el.classList.remove('dragging'); dragged = null;
+      // Außerhalb des Fensters losgelassen → Tab in neues Fenster (nur wenn es noch andere Tabs gibt)
+      const outside = e.screenX < window.screenX || e.screenX > window.screenX + window.outerWidth || e.screenY < window.screenY || e.screenY > window.screenY + window.outerHeight;
+      if (outside && e.dataTransfer.dropEffect === 'none' && state.tabs.length > 1 && state.tabs.includes(tab)) {
+        F.detachTab(isNewTab(tab.url) || isInternal(tab.url) ? '' : tab.url, e.screenX, e.screenY);
+        close(tab.id);
+        return;
+      }
+      saveSession();
+    });
     el.addEventListener('dragover', (e) => {
       if (!dragged || dragged === tab) return;
       e.preventDefault();
@@ -529,7 +539,7 @@ const Tabs = (() => {
   // Sitzung
   // -------------------------------------------------------------------------
   const saveSessionNow = () => {
-    if (INCOGNITO) return;
+    if (INCOGNITO || F.detached) return; // herausgezogene Fenster überschreiben die Sitzung des Hauptfensters nicht
     const saved = state.tabs.filter((t) => !isInternal(t.url));
     store.set(SESSION_KEY, {
       tabs: saved.map((t) => ({ url: t.url, title: t.title })),
@@ -541,7 +551,7 @@ const Tabs = (() => {
   window.addEventListener('beforeunload', saveSessionNow);
 
   function restoreSession() {
-    if (INCOGNITO) return false;
+    if (INCOGNITO || F.detached) return false;
     const s = store.get(SESSION_KEY, null);
     if (!s || !Array.isArray(s.tabs) || !s.tabs.length) return false;
     const created = s.tabs.map((t) => create(t.url, { title: t.title, lazy: true, activate: false }));

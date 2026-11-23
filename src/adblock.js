@@ -84,10 +84,23 @@ function pageUrlFor(id) {
   try { const wc = webContents.fromId(id); return wc ? wc.getURL() : ''; } catch { return ''; }
 }
 
+// Seiten, auf denen Filterlisten die Anwendung selbst kaputt machen (z. B. ChatGPT: „Bei ChatGPT ist ein Problem aufgetreten“)
+const BUILTIN_SITES = ['chatgpt.com', 'chat.openai.com', 'openai.com', 'sora.com'];
+// Zahlungs- und Anmeldedienste: deren Skripte (Betrugsprüfung, 3-D Secure, Login) nie blockieren – auch eingebettet in Shops
+const BUILTIN_HOSTS = [
+  'paypal.com', 'paypalobjects.com', 'paypal-experience.com', 'braintreegateway.com', 'braintree-api.com',
+  'stripe.com', 'stripe.network', 'stripecdn.com', 'klarna.com', 'klarnaservices.com', 'klarnacdn.net',
+  'adyen.com', 'adyenpayments.com', 'mollie.com', 'checkout.com', 'pay.google.com', 'payments.google.com',
+  'apple.com', 'cdn-apple.com', 'sofort.com', 'giropay.de', 'paydirekt.de', 'amazonpay.com', 'payments-amazon.com',
+  'mastercard.com', 'visa.com', 'cardinalcommerce.com', 'arcot.com', '3dsecure.io', 'secure3d.net', 'wirecard.com', 'computop.com',
+  'accounts.google.com', 'appleid.apple.com', 'login.microsoftonline.com', 'login.live.com'
+];
+const matches = (host, list) => !!host && list.some((h) => host === h || host.endsWith('.' + h));
 function isAllowedSite(url) {
   const host = hostOf(url);
-  return !!host && options.allow.some((h) => host === h || host.endsWith('.' + h));
+  return matches(host, options.allow) || matches(host, BUILTIN_SITES);
 }
+const isTrustedRequest = (url) => matches(hostOf(url), BUILTIN_HOSTS) || matches(hostOf(url), BUILTIN_SITES);
 
 function record(details) {
   const id = details.webContentsId;
@@ -131,7 +144,7 @@ function setup(ses, { settings, notify }) {
 function attach(ses) {
   ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
     if (!options.enabled || details.resourceType === 'mainFrame') return callback({});
-    if (isAllowedSite(pageUrlFor(details.webContentsId))) return callback({});
+    if (isAllowedSite(pageUrlFor(details.webContentsId)) || isTrustedRequest(details.url)) return callback({});
     if (engine) {
       engine.onBeforeRequest(details, (result) => {
         if (result.cancel || result.redirectURL) record(details);
@@ -144,7 +157,7 @@ function attach(ses) {
   });
 
   ses.webRequest.onHeadersReceived({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
-    if (!engine || !options.enabled || isAllowedSite(details.url)) return callback({});
+    if (!engine || !options.enabled || isAllowedSite(details.url) || isTrustedRequest(details.url)) return callback({});
     engine.onHeadersReceived(details, callback);
   });
 

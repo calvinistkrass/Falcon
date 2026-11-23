@@ -202,11 +202,21 @@ function restoredBounds() {
   return visible ? { x: w.x, y: w.y, width: w.width, height: w.height } : { width: Math.min(w.width, area.width), height: Math.min(w.height, area.height) };
 }
 
-function createWindow({ incognito = false } = {}) {
+function createWindow({ incognito = false, detached = false, at = null, open = '' } = {}) {
   const bounds = restoredBounds();
   if (incognito && alive(win)) {
     const b = win.getBounds();
     Object.assign(bounds, { x: b.x + 40, y: b.y + 40, width: Math.min(b.width, 1280), height: Math.min(b.height, 820) });
+  }
+  if (at) {
+    // Herausgezogener Tab: neues Fenster dort, wo der Tab losgelassen wurde (auf dem Bildschirm gehalten)
+    const area = screen.getDisplayNearestPoint({ x: Math.round(at.x), y: Math.round(at.y) }).workArea;
+    const width = Math.min(bounds.width || 1280, 1280, area.width), height = Math.min(bounds.height || 820, 820, area.height);
+    Object.assign(bounds, {
+      width, height,
+      x: Math.max(area.x, Math.min(Math.round(at.x) - 120, area.x + area.width - width)),
+      y: Math.max(area.y, Math.min(Math.round(at.y) - 20, area.y + area.height - height))
+    });
   }
   const w = new BrowserWindow({
     ...bounds,
@@ -235,7 +245,8 @@ function createWindow({ incognito = false } = {}) {
   if (!incognito && !alive(win)) win = w;
 
   if (!incognito && settings.window && settings.window.maximized) w.maximize();
-  w.loadFile(path.join(__dirname, 'ui', 'index.html'), incognito ? { query: { incognito: '1' } } : undefined);
+  const query = { ...(incognito ? { incognito: '1' } : {}), ...(detached ? { detached: '1' } : {}), ...(open ? { open } : {}) };
+  w.loadFile(path.join(__dirname, 'ui', 'index.html'), Object.keys(query).length ? { query } : undefined);
   w.once('ready-to-show', () => w.show());
 
   const sendHere = (channel, data) => { if (alive(w)) w.webContents.send(channel, data); };
@@ -264,6 +275,16 @@ function createWindow({ incognito = false } = {}) {
   });
   return w;
 }
+// Tab aus dem Fenster gezogen → neues Browser-Fenster mit diesem Tab (Inkognito bleibt Inkognito)
+ipcMain.on('win:detach-tab', (e, d) => {
+  const from = BrowserWindow.fromWebContents(e.sender);
+  if (!uiWindows.has(from) || !d) return;
+  createWindow({
+    incognito: !!from.falconIncognito, detached: true,
+    at: Number.isFinite(d.x) && Number.isFinite(d.y) ? { x: d.x, y: d.y } : null,
+    open: typeof d.url === 'string' && /^https?:/i.test(d.url) ? d.url : ''
+  });
+});
 ipcMain.on('win:new-incognito', (_e, url) => {
   const w = createWindow({ incognito: true });
   if (typeof url === 'string' && /^https?:/i.test(url)) w.webContents.once('did-finish-load', () => w.webContents.send('open-tab', { url }));
@@ -1044,9 +1065,34 @@ app.on('web-contents-created', (_e, contents) => {
   });
   contents.once('destroyed', () => adblock.resetTab(contents.id, ''));
 
-  contents.setWindowOpenHandler(({ url, disposition }) => {
+  contents.setWindowOpenHandler(({ url, disposition, features }) => {
+    // Echte Popups (window.open mit Größe, z. B. PayPal, 3-D Secure, „Mit Google anmelden“) brauchen window.opener,
+    // um „bezahlt“/„angemeldet“ an die Seite zurückzumelden → eigenes kleines Fenster in derselben Sitzung.
+    // Normale Links mit target=_blank / Mittelklick → Tab wie bisher.
+    if (disposition === 'new-window' && /^https?:|^about:blank/i.test(url)) {
+      const sized = /(?:^|,)\s*width\s*=/i.test(features || '');
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          ...(sized ? {} : { width: 520, height: 680 }), minWidth: 320, minHeight: 360,
+          autoHideMenuBar: true, backgroundColor: '#ffffff', icon: nativeImage.createFromPath(ICON), title: 'Falcon',
+          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+        }
+      };
+    }
     toHost(contents, 'open-tab', { url, background: disposition === 'background-tab' });
     return { action: 'deny' };
+  });
+  contents.on('did-create-window', (popup) => {
+    popup.setMenu(null);
+    // Popups aus Popups (z. B. Bank-Freigabe im Zahlungsfenster): wieder als Popup, sonst als Tab im Hauptfenster
+    popup.webContents.setWindowOpenHandler(({ url, disposition }) => {
+      if (disposition === 'new-window' && /^https?:|^about:blank/i.test(url)) {
+        return { action: 'allow', overrideBrowserWindowOptions: { width: 520, height: 680, autoHideMenuBar: true, backgroundColor: '#ffffff', icon: nativeImage.createFromPath(ICON), webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } } };
+      }
+      if (/^https?:/i.test(url)) toHost(contents, 'open-tab', { url, background: false });
+      return { action: 'deny' };
+    });
   });
 
   // Kontextmenü wird in der Falcon-Oberfläche gezeichnet, damit es zum Design passt

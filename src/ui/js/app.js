@@ -209,7 +209,8 @@ F.on('win-state', (s) => {
   state.settings = await F.getSettings();
   emit('settings', state.settings);
   if (INCOGNITO) { document.body.classList.add('incognito'); document.title = 'Falcon Inkognito'; }
-  if (!(state.settings.restoreSession && Tabs.restoreSession())) Tabs.create();
+  if (F.initialUrl) Tabs.create(F.initialUrl); // herausgezogener Tab
+  else if (!(state.settings.restoreSession && Tabs.restoreSession())) Tabs.create();
   // Ladebildschirm: mindestens kurz zeigen (sonst flackert er), dann sanft ausblenden
   const boot = document.getElementById('bootLoader');
   if (boot) {

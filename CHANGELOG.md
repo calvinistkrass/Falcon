@@ -2,6 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.5] – 2026-11-23
+
+### Added
+- **Drag a tab out of the window** to open it in a new browser window right where you drop it (incognito tabs open in a new incognito window).
+
+### Fixed
+- **Payment and sign-in windows** (PayPal, credit card checks/3-D Secure, "Sign in with Google/Apple/Microsoft") now open as real pop-up windows that stay connected to the page, so payments and logins complete. Normal "open in new tab" links still open as tabs.
+- **ChatGPT** no longer shows "Something went wrong": the ad blocker now leaves ChatGPT alone, and never blocks scripts of payment and sign-in services.
+- **Falcon Mobile**: the Android build is retried once if it fails (2.5.4 had no APK).
+
 ## [2.5.4] – 2026-11-23
 
 ### Added
