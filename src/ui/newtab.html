@@ -247,7 +247,10 @@ function render() {
     const more = el('button', { className: 'more', title: T('Verknüpfung bearbeiten'), type: 'button' });
     more.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18.5" r="1.6"/></svg>';
     more.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openMenu(i, more); });
-    grid.append(el('a', { className: 'tile', href: t.url, title: t.title }, tileIcon(t), el('span', { className: 'label' }, t.title), more));
+    const tile = el('a', { className: 'tile', href: t.url, title: t.title }, tileIcon(t), el('span', { className: 'label' }, t.title), more);
+    // Rechtsklick: Bearbeiten / Entfernen direkt an der Maus (statt des Seiten-Kontextmenüs)
+    tile.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); openMenu(i, more, { x: e.clientX, y: e.clientY }); });
+    grid.append(tile);
   });
   if (tiles.length < MAX_TILES) {
     const add = el('button', { className: 'tile add', type: 'button' });
@@ -260,7 +263,7 @@ function render() {
 
 let menu = null;
 function closeMenu() { menu?.remove(); menu = null; }
-function openMenu(i, anchor) {
+function openMenu(i, anchor, point) {
   closeMenu();
   const edit = el('button', { type: 'button' }, T('Bearbeiten'));
   const del = el('button', { type: 'button', className: 'danger' }, T('Entfernen'));
@@ -269,8 +272,10 @@ function openMenu(i, anchor) {
   menu = el('div', { className: 'menu' }, edit, del);
   document.body.append(menu);
   const r = anchor.getBoundingClientRect();
-  menu.style.left = `${Math.min(r.left, innerWidth - menu.offsetWidth - 8)}px`;
-  menu.style.top = `${r.bottom + 4}px`;
+  const x = point ? point.x : r.left, y = point ? point.y : r.bottom + 4;
+  menu.style.left = `${Math.max(8, Math.min(x, innerWidth - menu.offsetWidth - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(y, innerHeight - menu.offsetHeight - 8))}px`;
+  edit.focus();
 }
 document.addEventListener('mousedown', (e) => { if (menu && !menu.contains(e.target)) closeMenu(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });

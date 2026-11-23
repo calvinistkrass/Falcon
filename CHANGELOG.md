@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.4] – 2026-11-23
+
+### Added
+- **Edit shortcuts with a right-click**: right-click a shortcut on the start page to edit or remove it right away.
+
 ## [2.5.3] – 2026-11-22
 
 ### Added
