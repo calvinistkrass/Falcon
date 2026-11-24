@@ -1166,3 +1166,6 @@ body.rgb .switch input:checked + span { box-shadow: 0 0 10px color-mix(in srgb, 
 /* Erweiterungen im Knopf der Symbolleiste verwalten */
 .ext-pop .ext-row { padding: 8px 10px; }
 .ext-pop .ext-row .list-main { cursor: pointer; }
+
+.start-url { width: 280px; flex: none; }
+.start-url.bad { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }

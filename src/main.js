@@ -66,6 +66,8 @@ const DEFAULTS = {
   showBookmarksBar: true,
   showSidebar: true,
   restoreSession: true,
+  startPage: 'falcon',   // nach dem Start (ohne letzte Sitzung): 'falcon' | 'custom'
+  startUrl: '',          // eigene Startseite (http/https)
   mouseButtons: 'history',
   ramLimit: 0,
   netLimit: 0,           // Mbit/s, 0 = aus
@@ -677,7 +679,7 @@ ipcMain.handle('downloads:choose-dir', async (e) => {
 // Falcon-Konto & Sync
 // ---------------------------------------------------------------------------
 const SYNC_SETTINGS = ['accent', 'language', 'searchEngine', 'adblock', 'adblockAnnoyances', 'adblockAllow', 'showBookmarksBar', 'showSidebar',
-  'showHud', 'sleepMinutes', 'ramLimit', 'mouseButtons', 'sidebarApps', 'pwNever', 'restoreSession', 'newtab', 'profileColor', 'wishlist'];
+  'showHud', 'sleepMinutes', 'ramLimit', 'mouseButtons', 'sidebarApps', 'pwNever', 'restoreSession', 'startPage', 'startUrl', 'newtab', 'profileColor', 'wishlist'];
 function applySyncedSettings(patch) {
   settings = { ...settings, ...patch };
   adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
@@ -1173,6 +1175,7 @@ ipcMain.handle('settings:set', async (e, patch) => {
   }
   // Akzentfarbe nur mit Beta-Zugriff und nur als gültige Farbe
   if ('accent' in safe && (!betaActive() || !/^#[0-9a-f]{6}$/i.test(safe.accent))) delete safe.accent;
+  if ('startUrl' in safe && !/^https?:\/\/[^\s]+$/i.test(safe.startUrl)) safe.startUrl = '';
   settings = { ...settings, ...safe };
   if ('netLimit' in safe || 'netLimitGameOnly' in safe || 'gameMode' in safe) applyNetLimit();
   if ('bookmarks' in safe) account.markDirty('bookmarks');

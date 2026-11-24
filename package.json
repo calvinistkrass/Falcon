@@ -1,7 +1,7 @@
 {
   "name": "falcon-browser",
   "productName": "Falcon",
-  "version": "2.5.6",
+  "version": "2.5.7",
   "description": "A fast, focused Chromium browser built for gamers.",
   "main": "src/main.js",
   "author": "Calvin Bandle",
@@ -136,7 +136,7 @@
       }
     ],
     "dmg": {
-      "title": "Falcon ${version}",
+      "title": "Falcon ${version}${arch}",
       "artifactName": "Falcon-${version}-mac-${arch}.${ext}"
     },
     "deb": {

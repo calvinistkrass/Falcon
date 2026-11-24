@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.7] – 2026-11-24
+
+### Added
+- **Custom start page**: under Settings → General → On startup, choose whether Falcon opens your last session, the Falcon start page or a page of your own. New tabs still show the Falcon start page.
+
+### Fixed
+- **macOS downloads**: building the Intel and Apple chip disk images at the same time could fail (2.5.6 has no .dmg for Intel Macs).
+
 ## [2.5.6] – 2026-11-24
 
 ### Added

@@ -355,8 +355,13 @@
               <div class="s-label"><b>Beim Start</b><span>Was Falcon nach dem Öffnen anzeigt.</span></div>
               <div class="segmented" id="sStartup">
                 <button data-value="restore">Letzte Sitzung</button>
-                <button data-value="newtab">Neuer Tab</button>
+                <button data-value="falcon">Falcon</button>
+                <button data-value="custom">Eigene Seite</button>
               </div>
+            </div>
+            <div class="s-row hidden" id="startUrlRow">
+              <div class="s-label"><b>Eigene Startseite</b><span>Öffnet sich nach dem Start von Falcon. Neue Tabs zeigen weiterhin die Falcon-Startseite.</span></div>
+              <input id="sStartUrl" class="field-input start-url" type="text" inputmode="url" placeholder="https://example.com" spellcheck="false" autocomplete="off" aria-label="Eigene Startseite" />
             </div>
             <div class="s-row">
               <div class="s-label"><b>Maus-Seitentasten</b><span>Was die beiden Daumentasten an der Maus tun.</span></div>

@@ -210,7 +210,12 @@ F.on('win-state', (s) => {
   emit('settings', state.settings);
   if (INCOGNITO) { document.body.classList.add('incognito'); document.title = 'Falcon Inkognito'; }
   if (F.initialUrl) Tabs.create(F.initialUrl); // herausgezogener Tab
-  else if (!(state.settings.restoreSession && Tabs.restoreSession())) Tabs.create();
+  else if (!(state.settings.restoreSession && Tabs.restoreSession())) {
+    // Eigene Startseite nur beim Start eines normalen Fensters – neue Tabs, Inkognito und herausgezogene Fenster zeigen Falcon
+    const s = state.settings;
+    const custom = !INCOGNITO && !F.detached && !s.restoreSession && s.startPage === 'custom' && /^https?:\/\//i.test(s.startUrl || '');
+    Tabs.create(custom ? s.startUrl : undefined);
+  }
   // Ladebildschirm: mindestens kurz zeigen (sonst flackert er), dann sanft ausblenden
   const boot = document.getElementById('bootLoader');
   if (boot) {

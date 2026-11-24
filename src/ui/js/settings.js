@@ -74,9 +74,26 @@ const Settings = (() => {
   engineSel.addEventListener('change', () => updateSettings({ searchEngine: engineSel.value }));
 
   const startup = $('#sStartup');
+  // Eigene Startseite: Adresse prüfen und ergänzen (example.com → https://example.com)
+  const startUrl = $('#sStartUrl');
+  async function saveStartUrl() {
+    const raw = startUrl.value.trim();
+    if (raw === (state.settings.startUrl || '')) { startUrl.classList.remove('bad'); return; }
+    const url = !raw ? '' : /^https?:\/\//i.test(raw) ? raw : /^[a-z][a-z\d+.-]*:(?!\d)/i.test(raw) || !looksLikeUrl(raw) ? null : toUrl(raw);
+    let ok = url === '';
+    if (url) { try { ok = /^https?:$/.test(new URL(url).protocol); } catch { ok = false; } }
+    startUrl.classList.toggle('bad', !ok);
+    if (!ok) { toast($t('Das sieht nicht nach einer gültigen Adresse aus.'), 'warning'); return; }
+    await updateSettings({ startUrl: url });
+    if (url) toast($t('Startseite gespeichert'), 'check');
+  }
+  startUrl.addEventListener('change', saveStartUrl);
+  startUrl.addEventListener('keydown', (e) => { if (e.key === 'Enter') startUrl.blur(); });
   startup.addEventListener('click', (e) => {
     const b = e.target.closest('button');
-    if (b) updateSettings({ restoreSession: b.dataset.value === 'restore' });
+    if (!b) return;
+    const v = b.dataset.value;
+    updateSettings(v === 'restore' ? { restoreSession: true } : { restoreSession: false, startPage: v }).then(() => { if (v === 'custom') startUrl.focus(); });
   });
 
   const mouse = $('#sMouse');
@@ -181,7 +198,9 @@ const Settings = (() => {
     langSel.value = s.language || 'auto';
     langSel.options[0].textContent = $t('Systemsprache');
     engineSel.value = s.searchEngine;
-    $$('button', startup).forEach((b) => b.classList.toggle('sel', (b.dataset.value === 'restore') === !!s.restoreSession));
+    $$('button', startup).forEach((b) => b.classList.toggle('sel', b.dataset.value === (s.restoreSession ? 'restore' : s.startPage === 'custom' ? 'custom' : 'falcon')));
+    $('#startUrlRow').classList.toggle('hidden', !!s.restoreSession || s.startPage !== 'custom');
+    if (document.activeElement !== startUrl) { startUrl.value = s.startUrl || ''; startUrl.classList.remove('bad'); }
     $$('button', mouse).forEach((b) => b.classList.toggle('sel', b.dataset.value === (s.mouseButtons || 'history')));
     const accent = String(s.accent).toLowerCase();
     const own = !ACCENTS.some((a) => a.value === accent);
