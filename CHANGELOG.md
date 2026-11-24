@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.8] – 2026-11-24
+
+### Added
+- **Address in payment and sign-in windows**: the title bar now always starts with the real address of the page (with "Not secure" for unencrypted pages), so you can tell whether you're really on the right site.
+
+### Fixed
+- **macOS and iOS**: 2.5.7 was released without files for these platforms.
+
 ## [2.5.7] – 2026-11-24
 
 ### Added

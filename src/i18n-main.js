@@ -5,6 +5,7 @@ const { app } = require('electron');
 
 const STRINGS = {
   en: {
+    "Nicht sicher": "Not secure",
     "Warten": "Wait",
     "Trotzdem schließen": "Close anyway",
     "Download läuft noch": "Download in progress",
@@ -52,6 +53,7 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon wants to show a saved password.'
   },
   fr: {
+    "Nicht sicher": "Non sécurisé",
     "Warten": "Attendre",
     "Trotzdem schließen": "Fermer quand même",
     "Download läuft noch": "Téléchargement en cours",
@@ -98,6 +100,7 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon souhaite afficher un mot de passe enregistré.'
   },
   es: {
+    "Nicht sicher": "No seguro",
     "Warten": "Esperar",
     "Trotzdem schließen": "Cerrar de todos modos",
     "Download läuft noch": "Descarga en curso",
@@ -144,6 +147,7 @@ const STRINGS = {
     'Falcon möchte ein gespeichertes Passwort anzeigen.': 'Falcon quiere mostrar una contraseña guardada.'
   },
   tr: {
+    "Nicht sicher": "Güvenli değil",
     "Warten": "Bekle",
     "Trotzdem schließen": "Yine de kapat",
     "Download läuft noch": "İndirme sürüyor",

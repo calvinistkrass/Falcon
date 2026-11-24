@@ -1058,6 +1058,44 @@ ipcMain.handle('downloads:open-dir', () => shell.openPath(downloadDir()));
 // ---------------------------------------------------------------------------
 const SHORTCUT_KEYS_CTRL = ['k', 't', 'w', 'l', 'r', 'd', 'h', 'j', 'tab', '+', '=', '-', '0', 'f', 'p', ',', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
+// ---------------------------------------------------------------------------
+// Popup-Fenster (Zahlung, Anmeldung): die echte Adresse steht immer vorn in der Titelzeile
+// ---------------------------------------------------------------------------
+const isPopup = (url, disposition) => disposition === 'new-window' && /^https?:|^about:blank/i.test(url);
+const popupOptions = (features = '') => ({
+  ...(/(?:^|,)\s*width\s*=/i.test(features) ? {} : { width: 520, height: 680 }), minWidth: 360, minHeight: 360,
+  // Die Adresse in der Titelzeile darf nicht verschwinden: immer mit Rahmen, kein Vollbild
+  frame: true, titleBarStyle: 'default', fullscreen: false, fullscreenable: false, kiosk: false, transparent: false,
+  autoHideMenuBar: true, backgroundColor: '#ffffff', icon: nativeImage.createFromPath(ICON), title: 'Falcon',
+  webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+});
+/** Titel eines Popups: Adresse zuerst (bei Überlänge bleibt das Ende sichtbar – dort steht die eigentliche Domain), dann der Seitentitel */
+function popupTitle(url, openerUrl, pageTitle) {
+  let u = null;
+  for (const x of [url, openerUrl]) { try { const p = new URL(x); if (/^https?:$/.test(p.protocol)) { u = p; break; } } catch { /* about:blank → Seite, die das Fenster geöffnet hat */ } }
+  if (!u) return 'Falcon';
+  const host = u.host.length > 42 ? `…${u.host.slice(-41)}` : u.host;
+  const text = String(pageTitle || '').replace(/[ -​-‏‪-‮⁦-⁩]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  return `${u.protocol === 'https:' ? '' : `${tr('Nicht sicher')}: `}${host}${text && text !== u.host ? `  –  ${text}` : ''}`;
+}
+/** contents = öffnende Seite, tab = Tab im Hauptfenster (für Links, die als Tab aufgehen) */
+function setupPopup(popup, contents, tab) {
+  popup.setMenu(null);
+  const wc = popup.webContents;
+  const opener = contents.isDestroyed() ? '' : contents.getURL();
+  const update = () => { if (!popup.isDestroyed()) popup.setTitle(popupTitle(wc.getURL(), opener, wc.getTitle())); };
+  popup.on('page-title-updated', (e) => { e.preventDefault(); update(); });
+  for (const ev of ['did-navigate', 'did-navigate-in-page', 'did-finish-load']) wc.on(ev, update);
+  update();
+  // Popups aus Popups (z. B. Bank-Freigabe im Zahlungsfenster): wieder als Popup, sonst als Tab im Hauptfenster
+  wc.setWindowOpenHandler(({ url, disposition, features }) => {
+    if (isPopup(url, disposition)) return { action: 'allow', overrideBrowserWindowOptions: popupOptions(features) };
+    if (/^https?:/i.test(url) && !tab.isDestroyed()) toHost(tab, 'open-tab', { url, background: false });
+    return { action: 'deny' };
+  });
+  wc.on('did-create-window', (child) => setupPopup(child, wc, tab));
+}
+
 app.on('web-contents-created', (_e, contents) => {
   // Neue Tabs sofort in den Netzwerk-Limiter aufnehmen
   if (netLimitBytes) setImmediate(() => throttleWebview(contents, netLimitBytes));
@@ -1086,31 +1124,11 @@ app.on('web-contents-created', (_e, contents) => {
     // Echte Popups (window.open mit Größe, z. B. PayPal, 3-D Secure, „Mit Google anmelden“) brauchen window.opener,
     // um „bezahlt“/„angemeldet“ an die Seite zurückzumelden → eigenes kleines Fenster in derselben Sitzung.
     // Normale Links mit target=_blank / Mittelklick → Tab wie bisher.
-    if (disposition === 'new-window' && /^https?:|^about:blank/i.test(url)) {
-      const sized = /(?:^|,)\s*width\s*=/i.test(features || '');
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          ...(sized ? {} : { width: 520, height: 680 }), minWidth: 320, minHeight: 360,
-          autoHideMenuBar: true, backgroundColor: '#ffffff', icon: nativeImage.createFromPath(ICON), title: 'Falcon',
-          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
-        }
-      };
-    }
+    if (isPopup(url, disposition)) return { action: 'allow', overrideBrowserWindowOptions: popupOptions(features) };
     toHost(contents, 'open-tab', { url, background: disposition === 'background-tab' });
     return { action: 'deny' };
   });
-  contents.on('did-create-window', (popup) => {
-    popup.setMenu(null);
-    // Popups aus Popups (z. B. Bank-Freigabe im Zahlungsfenster): wieder als Popup, sonst als Tab im Hauptfenster
-    popup.webContents.setWindowOpenHandler(({ url, disposition }) => {
-      if (disposition === 'new-window' && /^https?:|^about:blank/i.test(url)) {
-        return { action: 'allow', overrideBrowserWindowOptions: { width: 520, height: 680, autoHideMenuBar: true, backgroundColor: '#ffffff', icon: nativeImage.createFromPath(ICON), webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } } };
-      }
-      if (/^https?:/i.test(url)) toHost(contents, 'open-tab', { url, background: false });
-      return { action: 'deny' };
-    });
-  });
+  contents.on('did-create-window', (popup) => setupPopup(popup, contents, contents));
 
   // Kontextmenü wird in der Falcon-Oberfläche gezeichnet, damit es zum Design passt
   contents.on('context-menu', (_ev, p) => {
