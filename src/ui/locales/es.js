@@ -68,6 +68,8 @@ I18N.add('es', {
   "Drucken …": "Imprimir…",
   "Duplizieren": "Duplicar",
   "Einfügen": "Pegar",
+  "Geändert": "Cambiado",
+  "Behoben": "Corregido",
   "Eigene Seite": "Página propia",
   "Eigene Startseite": "Página de inicio propia",
   "Öffnet sich nach dem Start von Falcon. Neue Tabs zeigen weiterhin die Falcon-Startseite.": "Se abre al iniciar Falcon. Las pestañas nuevas siguen mostrando la página de inicio de Falcon.",

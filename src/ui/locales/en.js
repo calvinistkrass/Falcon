@@ -68,6 +68,8 @@ I18N.add('en', {
   "Drucken …": "Print…",
   "Duplizieren": "Duplicate",
   "Einfügen": "Paste",
+  "Geändert": "Changed",
+  "Behoben": "Fixed",
   "Eigene Seite": "Custom page",
   "Eigene Startseite": "Custom start page",
   "Öffnet sich nach dem Start von Falcon. Neue Tabs zeigen weiterhin die Falcon-Startseite.": "Opens when Falcon starts. New tabs still show the Falcon start page.",

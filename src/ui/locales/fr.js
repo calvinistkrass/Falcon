@@ -68,6 +68,8 @@ I18N.add('fr', {
   "Drucken …": "Imprimer…",
   "Duplizieren": "Dupliquer",
   "Einfügen": "Coller",
+  "Geändert": "Modifié",
+  "Behoben": "Corrigé",
   "Eigene Seite": "Page personnalisée",
   "Eigene Startseite": "Page de démarrage personnalisée",
   "Öffnet sich nach dem Start von Falcon. Neue Tabs zeigen weiterhin die Falcon-Startseite.": "S’ouvre au démarrage de Falcon. Les nouveaux onglets affichent toujours la page d’accueil de Falcon.",

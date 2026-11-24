@@ -12,6 +12,7 @@ const { app, net } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
+const releaseNotes = require('./release-notes');
 const pkg = require('../package.json');
 
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
@@ -24,13 +25,7 @@ let configured = false;
 let lastCheck = 0;
 let remember = () => {};
 
-/** „1.10.0“ > „1.9.2“ – reicht für Falcons Versionsnummern */
-function newer(a, b) {
-  const pa = String(a).split('.').map(Number);
-  const pb = String(b).split('.').map(Number);
-  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
-  return false;
-}
+const { newer } = releaseNotes;
 
 function repository() {
   const raw = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url || '';
@@ -85,13 +80,11 @@ async function checkViaApi() {
     const pattern = assetPattern();
     const latest = (Array.isArray(releases) ? releases : [])
       .filter((rel) => !rel.draft && !rel.prerelease && (rel.assets || []).some((a) => pattern.test(a.name)))
-      .map((rel) => ({ version: String(rel.tag_name || '').replace(/^v/i, ''), notes: rel.body || '' }))
+      .map((rel) => ({ version: String(rel.tag_name || '').replace(/^v/i, '') }))
       .filter((rel) => /^\d+\.\d+\.\d+/.test(rel.version))
       .sort((a, b) => (newer(a.version, b.version) ? -1 : newer(b.version, a.version) ? 1 : 0))[0];
     if (latest && newer(latest.version, pkg.version)) {
-      const notes = plainNotes(latest.notes);
-      remember({ version: latest.version, notes });
-      setStatus({ state: 'available', available: latest.version, notes, portable: true, url: releaseUrl(), checkedAt: Date.now() });
+      announce(latest.version, { portable: true, url: releaseUrl() });
     } else {
       remember(null);
       setStatus({ state: 'latest', checkedAt: Date.now() });
@@ -113,10 +106,19 @@ function setStatus(patch) {
   send('update-status', status);
 }
 
-function plainNotes(notes) {
-  const text = Array.isArray(notes) ? notes.map((n) => n.note || '').join('\n') : String(notes || '');
-  return text.replace(/<\/(p|li|h\d)>/gi, '\n').replace(/<li>/gi, '• ').replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\n{3,}/g, '\n\n').trim().slice(0, 1200);
+/** Neue Version melden; der Text „Was ist neu?“ kommt aus der CHANGELOG.md nach */
+function announce(version, extra) {
+  const known = status.available === version && Array.isArray(status.notes) ? status.notes : null;
+  remember({ version, notes: known });
+  setStatus({ state: 'available', available: version, notes: known, checkedAt: Date.now(), ...extra });
+  if (!known) loadNotes(version);
+}
+
+async function loadNotes(version) {
+  const notes = await releaseNotes.load((url, opts) => net.fetch(url, opts), repository(), pkg.version, version);
+  if (!notes || status.available !== version) return; // inzwischen noch neuere Version gefunden
+  remember({ version, notes });
+  setStatus({ notes });
 }
 
 /**
@@ -129,7 +131,8 @@ function init(sender, cache) {
   remember = (v) => cache?.set(v);
   const known = cache?.get();
   if (known && newer(known.version, pkg.version)) {
-    status = { ...status, state: 'available', available: known.version, notes: known.notes || '', portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto() };
+    // Bis 2.5.8 stand in notes ein Text (Commit-Nachricht von GitHub) – der wird verworfen und neu geladen
+    status = { ...status, state: 'available', available: known.version, notes: Array.isArray(known.notes) ? known.notes : null, portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto() };
   } else if (known) {
     remember(null); // inzwischen installiert
   }
@@ -152,9 +155,7 @@ function init(sender, cache) {
   autoUpdater.on('checking-for-update', () => setStatus({ state: 'checking' }));
   autoUpdater.on('update-not-available', () => { remember(null); setStatus({ state: 'latest', checkedAt: Date.now() }); });
   autoUpdater.on('update-available', (info) => {
-    const notes = plainNotes(info.releaseNotes);
-    remember({ version: info.version, notes });
-    setStatus({ state: 'available', available: info.version, notes, portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto(), checkedAt: Date.now() });
+    announce(info.version, { portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto() });
   });
   autoUpdater.on('download-progress', (p) => setStatus({ state: 'downloading', percent: Math.round(p.percent) }));
   autoUpdater.on('update-downloaded', (info) => setStatus({ state: 'downloaded', available: info.version }));

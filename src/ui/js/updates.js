@@ -24,13 +24,45 @@ const Updates = (() => {
     }
   }
 
+  // „Was ist neu?“ – Daten aus release-notes.js; nur Textknoten, **fett** und `Code`
+  const KIND = { added: 'Neu', changed: 'Geändert', fixed: 'Behoben' };
+  function inline(text) {
+    return String(text).split(/(\*\*[^*]+\*\*|`[^`]+`)/).filter(Boolean).map((part) => (
+      /^\*\*[^*]+\*\*$/.test(part) ? h('b', {}, part.slice(2, -2))
+        : /^`[^`]+`$/.test(part) ? h('code', {}, part.slice(1, -1))
+          : part.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')));
+  }
+  function dateText(iso) {
+    const d = new Date(`${iso}T12:00:00`);
+    return iso && !isNaN(d) ? d.toLocaleDateString(I18N.locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  }
+  let shownNotes = '';
+  function renderNotes(notes) {
+    const box = $('#upNotes');
+    const list = Array.isArray(notes) ? notes : [];
+    const key = list.length ? JSON.stringify([I18N.locale, list]) : '';
+    box.classList.toggle('hidden', !key);
+    if (key === shownNotes) return; // beim Download-Fortschritt nicht neu aufbauen (Scrollposition bleibt)
+    shownNotes = key;
+    box.replaceChildren(...list.map((n) => h('section', { class: 'up-ver' },
+      list.length > 1 && h('h4', {}, n.version, h('span', {}, dateText(n.date))),
+      n.groups.map((g) => h('div', { class: `up-group ${g.kind}` },
+        KIND[g.kind] && h('h5', {}, $t(KIND[g.kind])),
+        h('ul', {}, g.items.map((i) => h('li', { class: i.sub ? 'sub' : null }, inline(i.text)))))))));
+    box.scrollTop = 0;
+  }
+  // Der Text kann nachladen, während das Fenster schon offen ist – nicht unter den Rand rutschen
+  function keepInside() {
+    if (!Popover.isOpen(pop)) return;
+    const r = pop.getBoundingClientRect();
+    if (r.bottom > innerHeight - 8) pop.style.top = `${Math.round(Math.max(8, innerHeight - r.height - 8))}px`;
+  }
+
   function renderPop() {
     const s = status;
     $('#upTitle').textContent = s.state === 'downloaded' ? $t('Update bereit') : $t('Falcon {v} ist verfügbar', { v: s.available || '' });
     $('#upCurrent').textContent = $t('Installiert: {v}', { v: F.version });
-    const notes = $('#upNotes');
-    notes.textContent = s.notes || '';
-    notes.classList.toggle('hidden', !s.notes);
+    renderNotes(s.notes);
     const prog = $('#upProgress');
     prog.classList.toggle('hidden', s.state !== 'downloading');
     prog.firstElementChild.style.width = `${s.percent || 0}%`;
@@ -53,6 +85,7 @@ const Updates = (() => {
       : s.portable ? $t('Von falconbrowser.de herunterladen')
       : s.state === 'downloading' ? $t('Wird heruntergeladen …')
       : $t('Herunterladen');
+    keepInside();
   }
 
   function stopCountdown() {
@@ -96,6 +129,7 @@ const Updates = (() => {
   function open() {
     renderPop();
     Popover.open(pop, { anchor: btn.classList.contains('hidden') ? $('#menuBtn') : btn, align: 'end' });
+    $('#upNotes').scrollTop = 0;
   }
 
   btn.addEventListener('click', () => (Popover.isOpen(pop) ? Popover.close() : open()));

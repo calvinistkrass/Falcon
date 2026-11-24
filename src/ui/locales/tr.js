@@ -68,6 +68,8 @@ I18N.add('tr', {
   "Drucken …": "Yazdır…",
   "Duplizieren": "Çoğalt",
   "Einfügen": "Yapıştır",
+  "Geändert": "Değişti",
+  "Behoben": "Düzeltildi",
   "Eigene Seite": "Özel sayfa",
   "Eigene Startseite": "Özel başlangıç sayfası",
   "Öffnet sich nach dem Start von Falcon. Neue Tabs zeigen weiterhin die Falcon-Startseite.": "Falcon başladığında açılır. Yeni sekmeler Falcon başlangıç sayfasını göstermeye devam eder.",
