@@ -2,6 +2,14 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.9] – 2026-11-24
+
+### Changed
+- **"What's new" in the update window**: shows the real changelog of all versions you don't have yet, neatly grouped and easy to read.
+
+### Fixed
+- **Update window**: the text was cut off in the middle of a word (and empty on macOS).
+
 ## [2.5.8] – 2026-11-24
 
 ### Added
