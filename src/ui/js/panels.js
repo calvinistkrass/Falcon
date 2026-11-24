@@ -174,8 +174,8 @@ const Downloads = (() => {
 // ---------------------------------------------------------------------------
 const Perf = (() => {
   const btn = $('#perfBtn');
-  const text = $('#perfText');
   const dot = btn.querySelector('.perf-dot');
+  btn.prepend(icon('speed')); // nur ein Symbol – alle Werte stehen im Fenster dahinter
   const pop = $('#perfPop');
   const gameBtn = $('#gameBtn');
   const SAMPLES = 60;
@@ -273,7 +273,6 @@ const Perf = (() => {
     try { last = await F.metrics(); } catch { return; }
     cpu.push(last.cpu); mem.push(last.memMB);
     if (cpu.length > SAMPLES) { cpu.shift(); mem.shift(); }
-    text.textContent = `${String(Math.round(last.cpu)).padStart(2, ' ')} % · ${fmtMem(last.memMB)}`;
     dot.className = `perf-dot${last.cpu > 85 ? ' crit' : last.cpu > 50 ? ' warn' : ''}`;
     enforceRamLimit();
     if (open) renderPop();

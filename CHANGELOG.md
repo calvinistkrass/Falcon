@@ -2,6 +2,22 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.5.6] – 2026-11-24
+
+### Added
+- **Custom accent colours**: pick any colour you like in the appearance settings.
+- **"Visit" button** next to the address of the Falcon web app in the account settings.
+
+### Changed
+- **Accent colour is now a beta feature.** Without beta access Falcon uses the default colour; the colour you picked is kept and comes back with beta access.
+- **Falcon web app** now lives at falconbrowser.de/app (the old address forwards there).
+- **Performance display** in the toolbar is now just an icon; click it to see all values.
+- **Extensions** no longer have their own settings page: turn off, configure or remove them with the puzzle button in the toolbar. Loading unpacked extensions was removed.
+- **Bigger scrollbars** for free games and deals on the start page.
+
+### Fixed
+- **Website**: no more brief flash of German text while a page loads.
+
 ## [2.5.5] – 2026-11-23
 
 ### Added

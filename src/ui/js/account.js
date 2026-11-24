@@ -6,7 +6,7 @@ const Account = (() => {
   let acc = { signedIn: false };
   let pop = null;
 
-  const MOBILE_URL = 'https://calvinistkrass.github.io/Falcon/app/';
+  const MOBILE_URL = 'https://falconbrowser.de/app';
   const KINDS = [
     ['bookmarks', 'Lesezeichen', 'bookmark'],
     ['passwords', 'Passwörter', 'key'],
@@ -310,6 +310,7 @@ const Account = (() => {
       text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.',
       perks: [
         'Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt',
+        'Akzentfarbe – Falcon in deiner Farbe, auch mit eigenen Farben',
         'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten',
         'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist',
         'Seite übersetzen – Websites direkt in deine Sprache übersetzen',
@@ -852,7 +853,8 @@ const Account = (() => {
         row($t('Lesezeichen auf dem Handy'), $t('Öffne die Falcon-Web-App auf deinem Smartphone und melde dich an. Deine Lesezeichen und die Tabs deiner PCs werden erst auf dem Handy entschlüsselt.'),
           h('div', { class: 'acc-coin-row' },
             h('code', { class: 'mobile-url', 'data-no-i18n': '' }, MOBILE_URL.replace('https://', '')),
-            h('button', { class: 'btn ghost', onclick: () => { F.copy(MOBILE_URL); toast($t('Link kopiert'), 'copy'); } }, icon('copy'), $t('Kopieren'))))),
+            h('button', { class: 'btn ghost', onclick: () => { F.copy(MOBILE_URL); toast($t('Link kopiert'), 'copy'); } }, icon('copy'), $t('Kopieren')),
+            h('button', { class: 'btn', onclick: () => { Settings.close(); openUrl(MOBILE_URL); } }, icon('external'), $t('Besuchen'))))),
 
       h('h3', { class: 's-sub' }, $t('Sicherheit')),
       h('div', { class: 's-card' },

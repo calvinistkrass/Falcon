@@ -56,7 +56,6 @@ const Settings = (() => {
   function select(name) {
     if (name === 'general') renderDefaultBrowser();
     if (name === 'account' && typeof Account !== 'undefined') Account.renderSettings();
-    if (name === 'extensions' && typeof Extensions !== 'undefined') Extensions.renderSettings();
     section = name;
     $$('.s-tab', overlay).forEach((t) => t.classList.toggle('sel', t.dataset.section === name));
     $$('.s-section', overlay).forEach((s) => s.classList.toggle('sel', s.dataset.section === name));
@@ -89,10 +88,26 @@ const Settings = (() => {
   const swatches = $('#sAccents');
   swatches.append(...ACCENTS.map((a) => h('button', {
     class: 'swatch', dataset: { value: a.value, name: a.name },
-    onclick: () => updateSettings({ accent: a.value })
+    onclick: () => { if (accentAllowed()) updateSettings({ accent: a.value }); }
   })));
   // Eigene CSS-Variablen gehen nur über setProperty
   $$('.swatch', swatches).forEach((s) => s.style.setProperty('--c', s.dataset.value));
+
+  // Akzentfarbe nur mit Beta-Zugriff (der Hauptprozess prüft das ebenfalls)
+  function accentAllowed() {
+    const acc = typeof Account !== 'undefined' ? Account.state : {};
+    if (acc.signedIn && acc.beta) return true;
+    toast(acc.signedIn ? $t('Die Akzentfarbe ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'palette',
+      { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
+    return false;
+  }
+  // Eigene Farbe: Farbwähler des Systems, Vorschau beim Ziehen, gespeichert wird beim Schließen
+  const ownColor = h('input', { type: 'color', id: 'sAccentOwn' });
+  const ownSwatch = h('label', { class: 'swatch own' }, ownColor);
+  swatches.append(ownSwatch);
+  ownColor.addEventListener('click', (e) => { if (!accentAllowed()) e.preventDefault(); });
+  ownColor.addEventListener('input', () => { if (!state.settings.rgbMode) applyAccent(ownColor.value); ownSwatch.style.setProperty('--c', ownColor.value); });
+  ownColor.addEventListener('change', () => updateSettings({ accent: ownColor.value }));
 
   // RGB-Modus nur mit Beta-Zugriff
   $('#sRgb').addEventListener('change', (e) => {
@@ -168,10 +183,18 @@ const Settings = (() => {
     engineSel.value = s.searchEngine;
     $$('button', startup).forEach((b) => b.classList.toggle('sel', (b.dataset.value === 'restore') === !!s.restoreSession));
     $$('button', mouse).forEach((b) => b.classList.toggle('sel', b.dataset.value === (s.mouseButtons || 'history')));
-    $$('.swatch', swatches).forEach((b) => {
-      b.classList.toggle('sel', b.dataset.value.toLowerCase() === String(s.accent).toLowerCase());
+    const accent = String(s.accent).toLowerCase();
+    const own = !ACCENTS.some((a) => a.value === accent);
+    $$('.swatch[data-value]', swatches).forEach((b) => {
+      b.classList.toggle('sel', b.dataset.value.toLowerCase() === accent);
       b.title = $t(b.dataset.name);
     });
+    ownSwatch.classList.toggle('sel', own);
+    ownSwatch.classList.toggle('set', own);
+    ownSwatch.title = $t('Eigene Farbe');
+    ownColor.setAttribute('aria-label', $t('Eigene Farbe'));
+    ownSwatch.style.setProperty('--c', accent);
+    if (/^#[0-9a-f]{6}$/.test(accent)) ownColor.value = accent;
     for (const [id, key] of Object.entries(toggles)) $(`#${id}`).checked = !!s[key];
     $('#sSleep').value = String(s.sleepMinutes);
     $('#sRamLimit').value = String(s.ramLimit || 0);

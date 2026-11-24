@@ -10,7 +10,7 @@ import { onIncoming, takeIncoming } from './incoming';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.5.5';
+export const APP_VERSION = '2.5.6';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -48,7 +48,7 @@ export const SHOP = [
   {
     id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 30, title: 'Beta-Zugriff · 30 Tage', extendLabel: 'Um 30 Tage verlängern',
     text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.',
-    perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten (in Falcon auf dem PC)', 'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist (in Falcon auf dem PC)', 'Seite übersetzen – Websites direkt in deine Sprache übersetzen', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
+    perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'Akzentfarbe – Falcon in deiner Farbe, auch mit eigenen Farben (in Falcon auf dem PC)', 'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten (in Falcon auf dem PC)', 'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist (in Falcon auf dem PC)', 'Seite übersetzen – Websites direkt in deine Sprache übersetzen', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
   }
 ] as const;
 export type ShopItem = (typeof SHOP)[number];

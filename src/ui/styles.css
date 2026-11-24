@@ -220,13 +220,9 @@ img { -webkit-user-drag: none; }
 .sg-row.sel .sg-tag { color: var(--text-2); }
 
 /* Leistungsanzeige */
-.perf-btn {
-  height: 28px; flex: none; display: flex; align-items: center; gap: 7px; padding: 0 9px; margin: 0 2px;
-  border-radius: var(--r-sm); color: var(--text-2);
-  font: 500 11.5px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em;
-}
-.perf-btn:hover, .perf-btn.pressed { background: var(--hover); color: var(--text); }
-.perf-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex: none; }
+.perf-btn { position: relative; }
+.perf-btn .perf-dot { position: absolute; top: 6px; right: 5px; }
+.perf-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex: none; box-shadow: 0 0 0 2px var(--surface); }
 .perf-dot.warn { background: var(--warning); }
 .perf-dot.crit { background: var(--danger); }
 .perf-btn.game .perf-dot { background: var(--accent); }
@@ -1161,3 +1157,12 @@ body.rgb .switch input:checked + span { box-shadow: 0 0 10px color-mix(in srgb, 
 .tp-note { font-size: 11px; color: var(--accent); }
 .tp-note:empty { display: none; }
 .tp-host:empty { display: none; }
+
+/* Eigene Akzentfarbe: bunter Kreis, mit gewählter Farbe einfarbig */
+.swatch.own { display: block; cursor: pointer; overflow: visible; background: conic-gradient(from 0deg, #f2555a, #ff8b3e, #f5d344, #3dd68c, #2ec4b6, #3b9eff, #7c6cff, #f2559b, #f2555a); }
+.swatch.own.set { background: var(--c); }
+.swatch.own input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.swatch.own:focus-within { outline: 2px solid var(--text-2); outline-offset: 3px; }
+/* Erweiterungen im Knopf der Symbolleiste verwalten */
+.ext-pop .ext-row { padding: 8px 10px; }
+.ext-pop .ext-row .list-main { cursor: pointer; }

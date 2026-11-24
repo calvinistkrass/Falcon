@@ -39,7 +39,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 ### 🧭 A browser that stays out of your way
 - **Tabs that behave like Chrome's**: drag to reorder, middle-click to close, duplicate, mute, put to sleep, reopen closed tabs. Your session is restored on startup.
 - **Split view**: two tabs side by side with a resizable divider.
-- **Chrome extensions** from the Chrome Web Store or an unpacked folder (Electron supports only part of the extension APIs).
+- **Chrome extensions** from the Chrome Web Store (Electron supports only part of the extension APIs).
 - **Command palette** (Ctrl+K): jump to any open tab, bookmark, history entry, setting or command from the keyboard.
 - **Smart address bar**: suggestions from history, bookmarks and open tabs, inline autocomplete and domain highlighting.
 - **Bookmark folders** and a searchable **history** (Ctrl+H).
@@ -60,7 +60,7 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **End-to-end encrypted**: data is encrypted on your PC (AES-256-GCM) with a key protected by your password before it's uploaded. The server only ever sees ciphertext.
 - **Tabs from other PCs**: open what you were reading on your other computer.
 - **FalCoins**: earn one coin per website visit, a daily reward and daily missions while signed in, see every transaction in the history and spend them in the FalCoin shop on Game Mode (2 months) or beta access (14 days).
-- **Bookmarks on your phone**: the [Falcon web app](https://calvinistkrass.github.io/Falcon/app/) shows your bookmarks and your PCs' tabs, decrypted only on the phone.
+- **Bookmarks on your phone**: the [Falcon web app](https://falconbrowser.de/app) shows your bookmarks and your PCs' tabs, decrypted only on the phone.
 - **Profile** with name and color, device names, password reset by email and account deletion.
 
 ### 🔐 Passwords & security

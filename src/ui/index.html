@@ -110,9 +110,7 @@
       <div id="suggest" class="suggest hidden" role="listbox"></div>
     </div>
 
-    <button id="perfBtn" class="perf-btn" title="Leistung">
-      <span class="perf-dot"></span><span id="perfText">—</span>
-    </button>
+    <button id="perfBtn" class="tb-btn perf-btn" title="Leistung" aria-label="Leistung"><span class="perf-dot"></span></button>
     <button id="gameBtn" class="tb-btn" data-icon="gamepad" title="Game Mode (Strg+Umschalt+G)" aria-label="Game Mode"></button>
     <button id="pipBtn" class="tb-btn" data-icon="pip" title="Bild-in-Bild" aria-label="Bild-in-Bild"></button>
     <button id="downloadsBtn" class="tb-btn" data-icon="download" title="Downloads (Strg+J)" aria-label="Downloads">
@@ -322,7 +320,6 @@
         <button class="s-tab" data-section="privacy" data-icon="shield">Datenschutz</button>
         <button class="s-tab" data-section="passwords" data-icon="key">Passwörter</button>
         <button class="s-tab" data-section="bookmarks" data-icon="bookmark">Lesezeichen</button>
-        <button class="s-tab" data-section="extensions" data-icon="puzzle">Erweiterungen</button>
         <button class="s-tab" data-section="shortcuts" data-icon="keyboard">Tastenkürzel</button>
         <button class="s-tab" data-section="about" data-icon="info">Über Falcon</button>
       </aside>
@@ -335,21 +332,6 @@
           <div id="accountSettings"></div>
         </section>
 
-        <section class="s-section" data-section="extensions">
-          <h2>Erweiterungen</h2>
-          <div class="s-card">
-            <div class="s-row">
-              <div class="s-label"><b>Aus dem Chrome Web Store</b><span>Füge den Link einer Erweiterung aus dem Chrome Web Store ein, z. B. Bitwarden oder Dark Reader.</span></div>
-              <button id="extStore" class="btn primary">Installieren …</button>
-            </div>
-            <div class="s-row">
-              <div class="s-label"><b>Entpackte Erweiterung</b><span>Einen Ordner mit einer manifest.json laden – für eigene oder heruntergeladene Erweiterungen.</span></div>
-              <button id="extFolder" class="btn">Ordner wählen …</button>
-            </div>
-          </div>
-          <p class="notice">Falcon basiert auf Electron und unterstützt nur einen Teil der Chrome-Erweiterungs-APIs. Viele Erweiterungen funktionieren, manche nur teilweise oder gar nicht. Für Werbung nutzt du am besten den eingebauten Werbeblocker.</p>
-          <div id="extList" class="s-card"></div>
-        </section>
 
         <section class="s-section" data-section="general">
           <h2>Allgemein</h2>
@@ -390,7 +372,7 @@
           <h2>Darstellung</h2>
           <div class="s-card">
             <div class="s-row">
-              <div class="s-label"><b>Akzentfarbe</b><span>Für Hervorhebungen, Schalter und den aktiven Tab.</span></div>
+              <div class="s-label"><b>Akzentfarbe <small class="beta-badge">Beta</small></b><span>Für Hervorhebungen, Schalter und den aktiven Tab. Mit dem letzten Feld wählst du eine eigene Farbe.</span></div>
               <div id="sAccents" class="swatches"></div>
             </div>
             <div class="s-row">

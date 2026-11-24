@@ -156,6 +156,20 @@ function loadSettings() {
   catch { settings = { ...DEFAULTS }; }
   if (LEGACY_ACCENTS[settings.accent]) settings.accent = LEGACY_ACCENTS[settings.accent];
 }
+// Akzentfarbe ist eine Beta-Funktion: ohne Zugriff zeigt Falcon die Standardfarbe. Die gewählte Farbe bleibt gespeichert
+// und gilt wieder, sobald der Beta-Zugriff aktiv ist.
+const betaActive = () => { try { return (account.state().betaUntil || 0) > Date.now(); } catch { return false; } };
+const accentNow = () => (betaActive() && /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : DEFAULT_ACCENT);
+/** Einstellungen für die Oberfläche (mit der tatsächlich geltenden Akzentfarbe) */
+const uiSettings = () => ({ ...settings, accent: accentNow() });
+let lastAccent = '';
+function refreshAccent() {
+  const a = accentNow();
+  if (a === lastAccent) return;
+  const first = !lastAccent;
+  lastAccent = a;
+  if (!first) broadcast('settings-changed', uiSettings());
+}
 let saveTimer;
 function saveSettings() {
   clearTimeout(saveTimer);
@@ -533,7 +547,7 @@ ipcMain.handle('dlpage', async (e, action, id) => {
   const d = typeof id === 'string' ? dlEntries().find((x) => x.id === id) : null;
   const item = typeof id === 'string' ? downloadItems.get(id) : null;
   switch (action) {
-    case 'info': return { lang: pageLanguage(), accent: settings.accent };
+    case 'info': return { lang: pageLanguage(), accent: accentNow() };
     case 'list': return dlEntries().map(dlView);
     case 'open': if (d?.path && fs.existsSync(d.path)) shell.openPath(d.path); return true;
     case 'show': if (d?.path) shell.showItemInFolder(d.path); return true;
@@ -668,7 +682,8 @@ function applySyncedSettings(patch) {
   settings = { ...settings, ...patch };
   adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
   saveSettings();
-  broadcast('settings-changed', settings);
+  lastAccent = accentNow();
+  broadcast('settings-changed', uiSettings());
 }
 const syncProviders = {
   bookmarks: {
@@ -1023,7 +1038,7 @@ ipcMain.handle('report:screenshot', async (e, id) => {
 ipcMain.handle('reports', async (e, action, arg) => {
   if (!fromFalconPage(e, 'reports')) return null;
   const admin = !!account.state().admin;
-  if (action === 'info') return { lang: pageLanguage(), accent: settings.accent, signedIn: account.state().signedIn, admin };
+  if (action === 'info') return { lang: pageLanguage(), accent: accentNow(), signedIn: account.state().signedIn, admin };
   // Alle sehen die öffentliche Liste (ohne E-Mail, Adresse, Screenshot) – der Admin die vollständige
   if (action === 'list') return admin ? account.listReports() : account.listPublicReports();
   if (action === 'status') return admin ? account.updateReport(arg || {}) : { ok: false, error: 'FORBIDDEN' };
@@ -1150,12 +1165,14 @@ ipcMain.on('overlay-dim', (e, dim) => {
   try { w.setTitleBarOverlay({ color: dim ? '#08090a' : base, symbolColor: dim ? '#55555c' : '#9a9aa3' }); } catch {}
 });
 
-ipcMain.handle('settings:get', () => settings);
+ipcMain.handle('settings:get', () => { lastAccent = accentNow(); return uiSettings(); });
 ipcMain.handle('settings:set', async (e, patch) => {
   const { window: _ignored, ...safe } = patch || {};
   if (safe.pwRequireAuth === false && settings.pwRequireAuth && !(await confirmUser('Falcon möchte den Passwortschutz ausschalten.'))) {
     delete safe.pwRequireAuth;
   }
+  // Akzentfarbe nur mit Beta-Zugriff und nur als gültige Farbe
+  if ('accent' in safe && (!betaActive() || !/^#[0-9a-f]{6}$/i.test(safe.accent))) delete safe.accent;
   settings = { ...settings, ...safe };
   if ('netLimit' in safe || 'netLimitGameOnly' in safe || 'gameMode' in safe) applyNetLimit();
   if ('bookmarks' in safe) account.markDirty('bookmarks');
@@ -1165,8 +1182,9 @@ ipcMain.handle('settings:set', async (e, patch) => {
     adblock.configure({ enabled: settings.adblock !== false, annoyances: !!settings.adblockAnnoyances, allow: settings.adblockAllow || [] });
   }
   saveSettings();
-  for (const w of uiWindows) if (alive(w) && w.webContents !== e.sender) w.webContents.send('settings-changed', settings);
-  return settings;
+  for (const w of uiWindows) if (alive(w) && w.webContents !== e.sender) w.webContents.send('settings-changed', uiSettings());
+  lastAccent = accentNow();
+  return uiSettings();
 });
 
 ipcMain.handle('metrics', () => {
@@ -1398,13 +1416,13 @@ ipcMain.handle('newtab:choose-image', async (e) => {
   fs.copyFileSync(filePaths[0], dest);
   settings.newtab = { ...(settings.newtab || {}), image: dest };
   saveSettings();
-  return settings;
+  return uiSettings();
 });
 ipcMain.handle('newtab:clear-image', () => {
   if (settings.newtab?.image) fs.rmSync(settings.newtab.image, { force: true });
   settings.newtab = { ...(settings.newtab || {}), image: '' };
   saveSettings();
-  return settings;
+  return uiSettings();
 });
 ipcMain.handle('update:status', () => updater.getStatus());
 ipcMain.handle('update:check', () => updater.check());
@@ -1538,7 +1556,8 @@ if (!gotLock) {
       if (startUrl) setTimeout(() => { if (alive(first)) first.webContents.send('open-tab', startUrl); }, 300);
     });
     defaultBrowser.refreshRegistration();
-    account.init({ notify: (state) => broadcast('account-changed', state, { incognito: false }), providers: syncProviders, locale: pageLanguage });
+    setInterval(refreshAccent, 60_000); // Beta-Zugriff läuft ab, während Falcon offen ist
+    account.init({ notify: (state) => { broadcast('account-changed', state, { incognito: false }); refreshAccent(); }, providers: syncProviders, locale: pageLanguage });
     app.on('browser-window-focus', () => account.syncIfStale());
     // Mission „Game Mode nutzen“: jede Minute mit aktivem Game Mode zählt
     setInterval(() => { if (settings.gameMode) account.trackGameModeMinute(); }, 60_000);
