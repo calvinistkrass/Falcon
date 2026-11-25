@@ -2,6 +2,21 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.6.0] – 2026-11-25
+
+### Added
+- **Restore your last tabs**: if Falcon didn't shut down correctly, or if it doesn't open your last session by itself, a small pop-up at the top left offers to bring your last tabs back.
+- **Copy email address**: right-click an email link to copy the address.
+- **Required updates**: if Falcon is two or more versions out of date, your Falcon account and features such as Game Mode, accent colour and page translation are locked until you update. After the update you're signed in again automatically.
+
+### Changed
+- **All beta features are now free for everyone**, even without an account: Game Mode, accent colours, RGB mode, deal wishlist and page translation. Beta access can no longer be bought.
+
+### Fixed
+- **Linux updates**: Falcon now closes completely before installing an update, instead of showing "Falcon is not responding".
+- **Default browser** now works on Linux, and macOS and Linux no longer ask you to open the Windows settings.
+- **Linux**: HTML files opened from the file manager now open in Falcon.
+
 ## [2.5.9] – 2026-11-24
 
 ### Changed

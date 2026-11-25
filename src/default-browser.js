@@ -2,10 +2,15 @@
 // Falcon als Standardbrowser.
 // Windows: Registrierung unter HKCU; Windows lässt Programme den Standardbrowser nicht selbst setzen –
 // Falcon registriert sich und öffnet dann die passende Seite der Windows-Einstellungen.
-// macOS/Linux: über Electron (Launch Services bzw. xdg-settings) – macOS fragt dabei selbst nach.
+// macOS: über Electron (Launch Services) – macOS fragt dabei selbst nach.
+// Linux: über xdg-mime/xdg-settings mit der Desktop-Datei aus dem Paket. Electrons eigene Funktion taugt hier nicht:
+// Sie sucht „Falcon.desktop“, das Paket legt aber „falcon.desktop“ an.
 
 const { app, shell } = require('electron');
 const { execFile } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const APP_NAME = 'Falcon';
 const PROG_URL = 'FalconURL';
@@ -14,6 +19,8 @@ const CLIENT_KEY = `HKCU\\Software\\Clients\\StartMenuInternet\\${APP_NAME}`;
 const FILE_TYPES = ['.htm', '.html', '.shtml', '.xht', '.xhtml', '.svg', '.webp', '.pdf'];
 
 const IS_WIN = process.platform === 'win32';
+const IS_LINUX = process.platform === 'linux';
+const DESKTOP_FILE = 'falcon.desktop';
 const supported = () => IS_WIN || process.platform === 'darwin' || (process.platform === 'linux' && app.isPackaged);
 
 function reg(args) {
@@ -56,22 +63,64 @@ async function register() {
   return true;
 }
 
-/** true, wenn Windows https-Links an Falcon gibt. */
+/** Programm starten und Ausgabe lesen; null bei Fehler */
+function run(cmd, args) {
+  // Chromium ändert XDG_CURRENT_DESKTOP teilweise – die xdg-Programme brauchen den echten Wert
+  const env = { ...process.env };
+  if (env.ORIGINAL_XDG_CURRENT_DESKTOP) env.XDG_CURRENT_DESKTOP = env.ORIGINAL_XDG_CURRENT_DESKTOP;
+  // xdg-settings weigert sich, solange $BROWSER gesetzt ist
+  delete env.BROWSER;
+  return new Promise((resolve) => {
+    execFile(cmd, args, { env, timeout: 8000 }, (err, stdout) => resolve(err ? null : String(stdout).trim()));
+  });
+}
+
+// ---------- Linux ----------
+async function linuxIsDefault() {
+  const mime = await run('xdg-mime', ['query', 'default', 'x-scheme-handler/https']);
+  if (mime) return mime === DESKTOP_FILE;
+  return (await run('xdg-settings', ['get', 'default-web-browser'])) === DESKTOP_FILE;
+}
+
+function linuxDesktopFileExists() {
+  const dirs = [process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local/share'), ...(process.env.XDG_DATA_DIRS || '/usr/local/share:/usr/share').split(':')];
+  return dirs.some((d) => d && fs.existsSync(path.join(d, 'applications', DESKTOP_FILE)));
+}
+
+async function linuxMakeDefault() {
+  if (linuxDesktopFileExists()) {
+    await run('xdg-mime', ['default', DESKTOP_FILE, 'x-scheme-handler/http', 'x-scheme-handler/https', 'text/html', 'application/xhtml+xml']);
+    // KDE, Xfce und Co. merken sich den Browser zusätzlich woanders
+    await run('xdg-settings', ['set', 'default-web-browser', DESKTOP_FILE]);
+    if (await linuxIsDefault()) return true;
+    for (const type of ['x-scheme-handler/http', 'x-scheme-handler/https', 'text/html']) await run('gio', ['mime', type, DESKTOP_FILE]);
+    if (await linuxIsDefault()) return true;
+  }
+  // Klappt es nicht von selbst: passende Seite der Systemeinstellungen öffnen
+  const desktop = `${process.env.ORIGINAL_XDG_CURRENT_DESKTOP || ''}:${process.env.XDG_CURRENT_DESKTOP || ''}`;
+  if (/kde/i.test(desktop)) execFile('kcmshell6', ['kcm_componentchooser'], (err) => { if (err && err.code === 'ENOENT') execFile('kcmshell5', ['componentchooser'], () => {}); });
+  else if (/gnome|unity/i.test(desktop)) execFile('gnome-control-center', ['default-apps'], () => {});
+  return false;
+}
+
+/** true, wenn das System https-Links an Falcon gibt. */
 async function isDefault() {
   if (!supported()) return false;
+  if (IS_LINUX) return linuxIsDefault();
   if (!IS_WIN) return app.isDefaultProtocolClient('https');
   const out = await reg(['query', 'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\UserChoice', '/v', 'ProgId']);
   return !!out && new RegExp(`ProgId\\s+REG_SZ\\s+${PROG_URL}\\b`, 'i').test(out);
 }
 
-/** Registrieren und die Windows-Einstellungen direkt bei Falcon öffnen. */
+/** Falcon zum Standardbrowser machen bzw. (Windows, macOS) die Auswahl des Systems öffnen. Gibt true zurück, wenn Falcon es danach schon ist. */
 async function makeDefault() {
   if (!supported()) return false;
+  if (IS_LINUX) return linuxMakeDefault();
   if (!IS_WIN) {
-    const ok = app.setAsDefaultProtocolClient('http') && app.setAsDefaultProtocolClient('https');
-    // Linux: Desktop-Datei aus dem .deb-Paket (falcon.desktop) als Standardbrowser setzen
-    if (process.platform === 'linux') execFile('xdg-settings', ['set', 'default-web-browser', 'falcon.desktop'], () => {});
-    return ok;
+    // macOS zeigt dafür ein eigenes Fenster; die Antwort kommt erst danach
+    app.setAsDefaultProtocolClient('http');
+    app.setAsDefaultProtocolClient('https');
+    return isDefault();
   }
   await register();
   try {
@@ -79,7 +128,7 @@ async function makeDefault() {
   } catch {
     await shell.openExternal('ms-settings:defaultapps').catch(() => {});
   }
-  return true;
+  return isDefault();
 }
 
 /** Beim Start der installierten Version: Pfad aktuell halten, falls Falcon schon registriert ist. */
@@ -100,6 +149,8 @@ function urlFromArgv(argv) {
   const args = argv.slice(app.isPackaged ? 1 : 2).filter((a) => a && !a.startsWith('--'));
   for (const a of args) {
     if (/^https?:\/\//i.test(a)) return a;
+    // Linux übergibt Dateien als file://-Adresse (Exec=… %U)
+    if (/^file:\/\/\//i.test(a) && FILE_TYPES.some((ext) => a.split(/[?#]/)[0].toLowerCase().endsWith(ext))) return a;
     if ((/^[a-z]:[\\/]/i.test(a) || a.startsWith('/')) && FILE_TYPES.some((ext) => a.toLowerCase().endsWith(ext))) {
       return require('url').pathToFileURL(a).href;
     }

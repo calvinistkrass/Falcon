@@ -279,14 +279,9 @@ const Perf = (() => {
   }
 
   async function setGameMode(enabled) {
-    const acc = typeof Account !== 'undefined' ? Account.state : {};
-    if (enabled && !(acc.signedIn && acc.gameModeOwned)) {
+    if (enabled && Updates.blocked()) {
       emit('settings', state.settings); // Schalter zurücksetzen
       if (Popover.isOpen(pop)) renderPop();
-      toast(acc.signedIn
-        ? $t('Game Mode ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei (350 FalCoins für 30 Tage).')
-        : $t('Melde dich an und schalte den Beta-Zugriff mit Game Mode im FalCoin-Shop frei.'), 'gamepad',
-        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
       return;
     }
     await updateSettings({ gameMode: enabled });
@@ -470,7 +465,7 @@ async function copyImage(src) {
 }
 
 // ---------------------------------------------------------------------------
-// Seite übersetzen (Beta, seit 2.3.9) – direkt in der Seite, ohne Umleitung auf translate.google.com.
+// Seite übersetzen (seit 2.3.9) – direkt in der Seite, ohne Umleitung auf translate.google.com.
 // Ein kleines Skript sammelt die Texte der Seite, der Hauptprozess übersetzt sie stapelweise
 // (translate:batch) und das Skript schreibt sie zurück. Später nachgeladene Texte werden mitübersetzt,
 // „Original anzeigen“ stellt die ursprünglichen Texte wieder her.
@@ -606,7 +601,6 @@ const Translate = (() => {
   };
   const isWeb = (tab) => !!tab && /^https?:/i.test(tab.url || '');
   const isTranslated = (tab = Tabs.active()) => !!tab?.translation;
-  const hasBeta = () => { const acc = typeof Account !== 'undefined' ? Account.state : {}; return !!(acc.signedIn && acc.beta); };
   const js = (tab, code) => tab.webview.executeJavaScript(code);
 
   const source = (it) => it.html ?? it.text;
@@ -683,12 +677,7 @@ const Translate = (() => {
   async function translate(tab = Tabs.active()) {
     if (!isWeb(tab)) return;
     if (tab.translation) return restore(tab);
-    if (!hasBeta()) {
-      const acc = typeof Account !== 'undefined' ? Account.state : {};
-      toast(acc.signedIn ? $t('Seite übersetzen ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'translate',
-        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
-      return;
-    }
+    if (Updates.blocked()) return;
     bind(tab);
     const session = { to: (I18N.lang || 'de').slice(0, 2), from: '', busy: true, timer: null };
     tab.translation = session;
@@ -719,9 +708,9 @@ const Translate = (() => {
       }, 1500);
       if (tab === Tabs.active()) { renderButton(); openPopup(); }
     } catch (err) {
-      const reason = String(err?.message || err);
+      console.warn('Übersetzen:', err?.message || err);
       await restore(tab);
-      if (reason !== 'beta') toast($t('Die Seite konnte nicht übersetzt werden. Prüfe deine Internetverbindung.'), 'warning');
+      toast($t('Die Seite konnte nicht übersetzt werden. Prüfe deine Internetverbindung.'), 'warning');
     }
   }
 
@@ -750,6 +739,13 @@ const Translate = (() => {
   return { translate, isTranslated, label: (tab) => (isTranslated(tab) ? $t('Original anzeigen') : $t('Seite übersetzen')) };
 })();
 
+/** „mailto:a%40b.de?subject=…“ → „a@b.de“; sonst leer */
+function mailAddress(link) {
+  if (!/^mailto:/i.test(link || '')) return '';
+  const raw = link.slice(7).split('?')[0];
+  try { return decodeURIComponent(raw).trim(); } catch { return raw.trim(); }
+}
+
 function openPageMenu(p) {
   const wv = webviewByContentsId(p.webContentsId);
   if (!wv) return;
@@ -764,7 +760,10 @@ function openPageMenu(p) {
     if (!p.dictionarySuggestions?.length) items.push({ label: $t('Keine Vorschläge'), disabled: true });
     items.push({ label: $t('Zum Wörterbuch hinzufügen'), icon: 'plus', onClick: () => F.addToDictionary(p.misspelledWord) }, '-');
   }
-  if (p.linkURL) {
+  const mail = mailAddress(p.linkURL);
+  if (mail) {
+    items.push({ label: $t('E-Mail-Adresse kopieren'), icon: 'copy', onClick: () => F.copy(mail) }, '-');
+  } else if (p.linkURL) {
     items.push(
       { label: $t('Link in neuem Tab öffnen'), icon: 'tab', onClick: () => Tabs.create(p.linkURL, { background: true, index: state.tabs.indexOf(Tabs.active()) + 1 }) },
       { label: $t('Link in Seitenleiste öffnen'), icon: 'pip', onClick: () => Sidebar.openUrl(p.linkURL) },

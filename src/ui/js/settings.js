@@ -47,10 +47,16 @@ const Settings = (() => {
       : $t('Links aus anderen Programmen in Falcon öffnen.');
   }
   $('#sDefaultBtn').addEventListener('click', async () => {
-    await F.defaultBrowser.set();
-    toast($t('Wähle in den Windows-Einstellungen bei „Webbrowser“ Falcon aus.'), 'settings');
+    const done = await F.defaultBrowser.set().catch(() => false);
+    await renderDefaultBrowser();
+    if (done) { toast($t('Falcon ist dein Standardbrowser'), 'check'); return; }
+    const hint = F.platform === 'darwin' ? $t('Bestätige die Frage von macOS. Erscheint keine: Systemeinstellungen → Schreibtisch & Dock → Standard-Webbrowser.')
+      : F.platform === 'linux' ? $t('Wähle in den Systemeinstellungen unter „Standardanwendungen“ bei „Web“ Falcon aus.')
+        : $t('Wähle in den Windows-Einstellungen bei „Webbrowser“ Falcon aus.');
+    toast(hint, 'settings');
+    $('#sDefaultText').textContent = hint; // bleibt stehen, bis Falcon wieder den Fokus bekommt
   });
-  // Nach der Rückkehr aus den Windows-Einstellungen neu prüfen
+  // Nach der Rückkehr aus den Einstellungen des Systems neu prüfen
   window.addEventListener('focus', () => { if (isOpen() && section === 'general') renderDefaultBrowser(); });
 
   function select(name) {
@@ -105,48 +111,25 @@ const Settings = (() => {
   const swatches = $('#sAccents');
   swatches.append(...ACCENTS.map((a) => h('button', {
     class: 'swatch', dataset: { value: a.value, name: a.name },
-    onclick: () => { if (accentAllowed()) updateSettings({ accent: a.value }); }
+    onclick: () => { if (!Updates.blocked()) updateSettings({ accent: a.value }); }
   })));
   // Eigene CSS-Variablen gehen nur über setProperty
   $$('.swatch', swatches).forEach((s) => s.style.setProperty('--c', s.dataset.value));
 
-  // Akzentfarbe nur mit Beta-Zugriff (der Hauptprozess prüft das ebenfalls)
-  function accentAllowed() {
-    const acc = typeof Account !== 'undefined' ? Account.state : {};
-    if (acc.signedIn && acc.beta) return true;
-    toast(acc.signedIn ? $t('Die Akzentfarbe ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'palette',
-      { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
-    return false;
-  }
   // Eigene Farbe: Farbwähler des Systems, Vorschau beim Ziehen, gespeichert wird beim Schließen
   const ownColor = h('input', { type: 'color', id: 'sAccentOwn' });
   const ownSwatch = h('label', { class: 'swatch own' }, ownColor);
   swatches.append(ownSwatch);
-  ownColor.addEventListener('click', (e) => { if (!accentAllowed()) e.preventDefault(); });
+  ownColor.addEventListener('click', (e) => { if (Updates.blocked()) e.preventDefault(); });
   ownColor.addEventListener('input', () => { if (!state.settings.rgbMode) applyAccent(ownColor.value); ownSwatch.style.setProperty('--c', ownColor.value); });
   ownColor.addEventListener('change', () => updateSettings({ accent: ownColor.value }));
 
-  // RGB-Modus nur mit Beta-Zugriff
   $('#sRgb').addEventListener('change', (e) => {
-    const acc = typeof Account !== 'undefined' ? Account.state : {};
-    if (e.target.checked && !(acc.signedIn && acc.beta)) {
-      e.target.checked = false;
-      toast(acc.signedIn ? $t('Der RGB-Modus ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'palette',
-        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
-      return;
-    }
+    if (Updates.blocked()) { e.target.checked = false; return; }
     updateSettings({ rgbMode: e.target.checked });
   });
 
-  $('#wishEdit').addEventListener('click', () => {
-    const acc = typeof Account !== 'undefined' ? Account.state : {};
-    if (!(acc.signedIn && acc.beta)) {
-      toast(acc.signedIn ? $t('Die Angebots-Wunschliste ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei.') : $t('Melde dich an und schalte den Beta-Zugriff im FalCoin-Shop frei.'), 'gamepad',
-        { label: acc.signedIn ? $t('Zum Shop') : $t('Anmelden'), onClick: () => (acc.signedIn ? Account.shopDialog() : Account.authDialog('signin')) });
-      return;
-    }
-    Wishlist.dialog();
-  });
+  $('#wishEdit').addEventListener('click', () => { if (!Updates.blocked()) Wishlist.dialog(); });
 
   const toggles = { sBookmarksBar: 'showBookmarksBar', sSidebar: 'showSidebar', sHud: 'showHud', sGame: 'gameMode', sAdblock: 'adblock', sAdblockAnnoy: 'adblockAnnoyances', sPwAuth: 'pwRequireAuth', sDlAsk: 'downloadAsk' };
   for (const [id, key] of Object.entries(toggles)) {

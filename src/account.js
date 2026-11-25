@@ -78,8 +78,18 @@ function persist() {
   fs.writeFileSync(FILE(), JSON.stringify(data, null, 2));
 }
 
+// Pflicht-Update (updater.js): Das Konto ruht, die Anmeldung bleibt gespeichert. Nach dem Update ist man wieder angemeldet.
+let locked = false;
+function setLocked(on) {
+  if (locked === !!on) return;
+  locked = !!on;
+  changed();
+  if (!locked && load() && secret?.dataKey) scheduleSync(1500);
+}
+
 function publicState() {
   load();
+  if (locked) return { signedIn: false, locked: true, hadAccount: !!data };
   if (!data) return { signedIn: false };
   return {
     signedIn: true,
@@ -153,6 +163,7 @@ function setTokens(r) {
 }
 
 async function token() {
+  if (locked) throw new AccountError('UPDATE_REQUIRED');
   if (!load()) throw new AccountError('SIGNED_OUT');
   if (idToken && Date.now() < idTokenExp - 60_000) return idToken;
   try {
@@ -287,7 +298,8 @@ async function finishSignIn(password) {
   loadCoins().then(checkAdmin).catch(() => {});
 }
 
-const safe = (fn) => async (...args) => {
+const safe = (fn, { always = false } = {}) => async (...args) => {
+  if (locked && !always) return { ok: false, error: 'UPDATE_REQUIRED' };
   try { return { ok: true, ...(await fn(...args)) }; } catch (e) {
     if (!(e instanceof AccountError)) console.error('Konto:', e);
     return { ok: false, error: e.code || 'UNKNOWN' };
@@ -495,7 +507,7 @@ async function syncKind(kind, attempt = 0) {
 }
 
 async function syncNow() {
-  if (!load() || syncing) return publicState();
+  if (locked || !load() || syncing) return publicState();
   if (!secret.dataKey) {
     // Schlüssel konnte bei der Anmeldung nicht eingerichtet werden – jetzt erneut versuchen
     if (!data.keyError) return publicState();
@@ -599,7 +611,7 @@ const fromFields = (f = {}) => Object.fromEntries(Object.entries(f).map(([k, v])
   [k, v.stringValue ?? (v.integerValue != null ? Number(v.integerValue) : v.timestampValue ?? v.booleanValue ?? null)]));
 
 const submitReport = safe(async (r) => {
-  const signedIn = !!load();
+  const signedIn = !locked && !!load();
   const body = {
     text: String(r.text || '').trim().slice(0, 5000),
     category: String(r.category || 'bug').slice(0, 40),
@@ -625,16 +637,16 @@ const submitReport = safe(async (r) => {
     await request(`${STORE}/reportsPublic/${id}?currentDocument.exists=false&key=${config.apiKey}`, o).catch(() => {});
   }
   return {};
-});
+}, { always: true });
 
 // Öffentliche Liste – für alle lesbar, auch ohne Anmeldung
 const listPublicReports = safe(async () => {
-  const opts = load() ? { token: await token() } : {};
+  const opts = !locked && load() ? { token: await token() } : {};
   const res = await request(`${STORE}/reportsPublic?pageSize=200&key=${config.apiKey}`, opts);
   const reports = (res.documents || []).map((d) => ({ id: d.name.split('/').pop(), ...fromFields(d.fields) }))
     .sort((a, b) => String(b.created).localeCompare(String(a.created)));
   return { reports };
-});
+}, { always: true });
 
 // Nur der Admin (siehe Firestore-Regeln) darf Meldungen lesen
 const listReports = safe(async () => {
@@ -708,7 +720,7 @@ async function ensureWallet() {
 }
 
 function addCoin(n = 1, host = '') {
-  if (!load()) return;
+  if (locked || !load()) return;
   data.coins = data.coins || { balance: 0, pending: 0 };
   data.coins.pending += n;
   const m = missionState();
@@ -719,7 +731,7 @@ function addCoin(n = 1, host = '') {
   if (!coinTimer) coinTimer = setTimeout(() => { coinTimer = null; flushCoins(); }, 30_000);
 }
 async function flushCoins() {
-  if (!load() || !data.coins?.pending) return;
+  if (locked || !load() || !data.coins?.pending) return;
   const n = data.coins.pending;
   try {
     await ensureWallet();
@@ -752,9 +764,10 @@ async function loadCoins() {
 // FalCoin-Shop
 // ---------------------------------------------------------------------------
 // Zeitlich begrenzte Freischaltungen – ein erneuter Kauf verlängert ab dem bisherigen Ende
-// Game Mode gibt es seit 2.1.8 nicht mehr einzeln, sondern als Beta-Funktion im Beta-Zugriff
+// Seit 2.6.0 sind alle Beta-Funktionen (auch der Game Mode) für alle frei – der Beta-Zugriff ist nicht mehr käuflich.
+// Zum Wiedereinschalten: available hier, in src/ui/js/account.js und in mobile/src/lib/session.tsx entfernen.
 const SHOP = {
-  beta14: { price: 350, field: 'betaUntil', days: 30 }
+  beta14: { price: 350, field: 'betaUntil', days: 30, available: false }
 };
 function extend(from, it) {
   const d = new Date(Math.max(Date.now(), from || 0));
@@ -888,7 +901,7 @@ function missionList() {
 }
 let gmNotify = null;
 function trackGameModeMinute() {
-  if (!load()) return;
+  if (locked || !load()) return;
   missionState().gmMinutes += 1;
   if (!gmNotify) gmNotify = setTimeout(() => { gmNotify = null; persist(); changed(); }, 1000);
 }
@@ -1059,7 +1072,7 @@ const adminUpdateWallet = safe(async ({ uid, balance, gameModeUntil, betaUntil }
 });
 
 function setKinds(kinds) {
-  if (!load()) return publicState();
+  if (locked || !load()) return publicState();
   if (typeof kinds?.tabs === 'boolean') { data.kinds.tabs = kinds.tabs; lastTabsHash = null; }
   for (const k of KINDS) if (typeof kinds?.[k] === 'boolean') {
     if (kinds[k] && !data.kinds[k]) data.sync[k] = { rev: null, dirty: true }; // wieder eingeschaltet: zusammenführen
@@ -1082,7 +1095,7 @@ function syncIfStale() {
 }
 
 module.exports = {
-  KINDS, init, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
+  KINDS, init, setLocked, state: publicState, signUp, signIn, signOut, resetPassword, resendVerification, refreshProfile,
   updateProfile, unlockKey, resetSyncData, changePassword, deleteAccount, syncNow, setKinds, markDirty, syncIfStale, remoteTabs,
   submitReport, listReports, listPublicReports, updateReport, deleteReport, addCoin, flushCoins, purchase, refreshCoins, listWallets, adminUpdateWallet, coinLog, claimDaily, claimMission, trackGameModeMinute,
   listPurchases, requestRefund, refundNotices, markRefundSeen, adminListRefunds, adminDecideRefund,

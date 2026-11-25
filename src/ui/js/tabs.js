@@ -541,6 +541,8 @@ const Tabs = (() => {
   const saveSessionNow = () => {
     if (INCOGNITO || F.detached) return; // herausgezogene Fenster überschreiben die Sitzung des Hauptfensters nicht
     const saved = state.tabs.filter((t) => !isInternal(t.url));
+    // Angebot „Tabs wiederherstellen“ noch offen und nichts Neues geöffnet: alte Sitzung behalten
+    if (offered && saved.every((t) => isStartPage(t.url))) return;
     store.set(SESSION_KEY, {
       tabs: saved.map((t) => ({ url: t.url, title: t.title })),
       active: saved.indexOf(active())
@@ -550,13 +552,58 @@ const Tabs = (() => {
   // Vor dem Beenden (z. B. Neustart für ein Update) sofort speichern
   window.addEventListener('beforeunload', saveSessionNow);
 
-  function restoreSession() {
-    if (INCOGNITO || F.detached) return false;
+  const isStartPage = (url) => !state.settings.restoreSession && state.settings.startPage === 'custom' && !!state.settings.startUrl && url === state.settings.startUrl;
+  function lastSession() {
+    if (INCOGNITO || F.detached) return null;
     const s = store.get(SESSION_KEY, null);
-    if (!s || !Array.isArray(s.tabs) || !s.tabs.length) return false;
+    return s && Array.isArray(s.tabs) && s.tabs.length ? s : null;
+  }
+  function openSession(s) {
     const created = s.tabs.map((t) => create(t.url, { title: t.title, lazy: true, activate: false }));
     activate((created[s.active] || created[0]).id);
+  }
+  function restoreSession() {
+    const s = lastSession();
+    if (!s) return false;
+    openSession(s);
     return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // „Tabs wiederherstellen?“ oben links – wenn Falcon die letzten Tabs nicht von selbst öffnet:
+  // nach einem Absturz/erzwungenen Beenden immer, sonst bei einem anderen Start als „Letzte Sitzung“
+  // -------------------------------------------------------------------------
+  let offered = null;
+  /** Vor dem Anlegen des ersten Tabs aufrufen – danach wird die Sitzung überschrieben */
+  function offerSession(clean) {
+    const last = lastSession();
+    if (!last) return;
+    // Die eigene Startseite öffnet sich ohnehin von selbst
+    const tabs = last.tabs.filter((t) => !isStartPage(t.url));
+    if (!tabs.length) return;
+    const s = offered = { tabs, active: tabs.indexOf(last.tabs[last.active]) };
+    const n = s.tabs.length;
+    const box = h('section', { class: 'restore-pop', role: 'dialog', 'aria-label': $t('Letzte Tabs wiederherstellen?') },
+      h('button', { class: 'tb-btn sm', title: $t('Nicht wiederherstellen'), onclick: () => finish(false) }, icon('x')),
+      h('span', { class: 'restore-icon' }, icon('restore')),
+      h('div', { class: 'restore-text' },
+        h('h3', {}, clean ? $t('Letzte Tabs wiederherstellen?') : $t('Falcon wurde nicht richtig beendet')),
+        h('p', {}, n === 1
+          ? (clean ? $t('Beim Schließen war noch ein Tab offen.') : $t('Möchtest du deinen letzten Tab wiederherstellen?'))
+          : (clean ? $t('Beim Schließen waren noch {n} Tabs offen.', { n }) : $t('Möchtest du deine letzten {n} Tabs wiederherstellen?', { n }))),
+        h('p', { class: 'restore-tabs', 'data-no-i18n': '' }, s.tabs.slice(0, 3).map((t) => t.title || hostOf(t.url) || t.url).join(' · ') + (n > 3 ? ` · +${n - 3}` : ''))),
+      h('button', { class: 'btn primary', onclick: () => finish(true) }, n === 1 ? $t('Tab wiederherstellen') : $t('Tabs wiederherstellen')));
+    function finish(restore) {
+      const blank = restore ? state.tabs.filter((t) => isNewTab(t.url)) : [];
+      offered = null;
+      box.remove();
+      if (restore) {
+        openSession(s);
+        for (const t of blank) close(t.id);
+      }
+      saveSession();
+    }
+    $('#content').append(box);
   }
 
   on('settings', () => state.tabs.forEach(render));
@@ -564,7 +611,7 @@ const Tabs = (() => {
   return {
     create, activate, close, closeAll, closeOthers, closeRight, duplicate, reopen, navigate, reload, toggleMute,
     byWebview: (wv) => state.tabs.find((t) => t.webview === wv),
-    cycle, goTo, sleep, sleepInactive, restoreSession, displayTitle, active, byId, isShown,
+    cycle, goTo, sleep, sleepInactive, restoreSession, offerSession, displayTitle, active, byId, isShown,
     startSplit, splitWithNew, endSplit, swapSplit, setVolume, volumePopover, get split() { return split ? { ...split } : null; },
     get closedCount() { return closedTabs.length; }
   };

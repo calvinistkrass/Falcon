@@ -6,15 +6,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, CoinIcon, Divider, Field, Row, Title } from '@/components/ui';
-import { APP_VERSION, ERRORS, errorText, fmtDate, useSession } from '@/lib/session';
+import { APP_VERSION, ERRORS, errorText, useSession } from '@/lib/session';
 import { resetPassword } from '@/lib/firebase';
+import { useUpdateRequired } from '@/lib/required';
 import { C, R } from '@/lib/theme';
 
 
 export default function Account() {
   const session = useSession();
+  const mustUpdate = useUpdateRequired();
+  if (mustUpdate) return <MustUpdate />;
   if (session.status === 'loading') return <SafeAreaView style={[s.screen, s.center]}><ActivityIndicator color={C.accent} /></SafeAreaView>;
   return session.user && session.status === 'signedIn' ? <Profile /> : <Login />;
+}
+
+function MustUpdate() {
+  return (
+    <SafeAreaView style={[s.screen, s.center, { padding: 28, gap: 14 }]}>
+      <Ionicons name="arrow-down-circle" size={46} color={C.accent} />
+      <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', textAlign: 'center' }}>Update erforderlich</Text>
+      <Text style={{ color: C.text2, fontSize: 15, lineHeight: 21, textAlign: 'center' }}>Falcon ist zu alt. Aktualisiere Falcon, um dein Konto wieder zu nutzen. Danach bist du automatisch wieder angemeldet.</Text>
+      <Button title="Zum Update" icon="download-outline" onPress={() => router.navigate('/')} />
+    </SafeAreaView>
+  );
 }
 
 function Login() {
@@ -106,12 +120,9 @@ function Login() {
 function Profile() {
   const { user, wallet, daily, claimDaily, signOut, reload, loadingData, dataError, bookmarks, devices, passwords, history, missions, admin } = useSession();
   const [claiming, setClaiming] = useState(false);
-  const [now] = useState(Date.now);
   if (!user) return null;
   const name = user.name || user.email.split('@')[0];
   const coins = wallet.balance + wallet.pending;
-  const gm = wallet.gameModeUntil > now;
-  const beta = wallet.betaUntil > now;
   const ready = missions.filter((m) => m.done && !m.claimed).length;
 
   const claim = async () => {
@@ -141,7 +152,7 @@ function Profile() {
             <Text style={s.coins}>{coins.toLocaleString('de-DE')}</Text>
             <Text style={s.coinsLabel}>FalCoins</Text>
           </View>
-          <Text style={s.walletNote}>1 FalCoin pro Website, die du besuchst – hier und in Falcon auf dem PC. Im Shop tauschst du sie gegen den Beta-Zugriff mit Game Mode.</Text>
+          <Text style={s.walletNote}>1 FalCoin pro Website, die du besuchst – hier und in Falcon auf dem PC.</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}><Button title="Shop" icon="storefront-outline" small onPress={() => router.push('/shop')} /></View>
             <View style={{ flex: 1 }}><Button title="Verlauf" icon="time-outline" small variant="ghost" onPress={() => router.push('/coinlog')} /></View>
@@ -151,12 +162,6 @@ function Profile() {
           ) : (
             <View style={s.claimed}><Ionicons name="checkmark-circle" size={18} color={C.green} /><Text style={s.claimedText}>Heute abgeholt · Serie: {daily.streak} {daily.streak === 1 ? 'Tag' : 'Tage'}</Text></View>
           )}
-          {gm || beta ? (
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              {gm ? <View style={s.tag}><Text style={s.tagText}>Game Mode bis {fmtDate(wallet.gameModeUntil)}</Text></View> : null}
-              {beta ? <View style={s.tag}><Text style={s.tagText}>Beta bis {fmtDate(wallet.betaUntil)}</Text></View> : null}
-            </View>
-          ) : null}
         </Card>
 
         <Card style={{ marginTop: 14 }}>

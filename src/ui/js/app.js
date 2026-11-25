@@ -171,7 +171,7 @@ F.on('win-state', (s) => {
 // ---------------------------------------------------------------------------
 (() => {
   let prev = {};
-  // RGB-Modus (Beta): Farbton wandert alle 80 ms ein Stück weiter; pausiert, wenn das Fenster verdeckt ist
+  // RGB-Modus: Farbton wandert alle 80 ms ein Stück weiter; pausiert, wenn das Fenster verdeckt ist
   let rgbTimer = 0, hue = 0;
   const hsl = (h) => {
     const f = (n) => { const k = (n + h / 30) % 12; const c = 0.72 * Math.min(0.62, 1 - 0.62); return Math.round(255 * (0.62 - c * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
@@ -209,8 +209,10 @@ F.on('win-state', (s) => {
   state.settings = await F.getSettings();
   emit('settings', state.settings);
   if (INCOGNITO) { document.body.classList.add('incognito'); document.title = 'Falcon Inkognito'; }
+  const clean = INCOGNITO || F.detached || await F.lastExitClean().catch(() => true);
   if (F.initialUrl) Tabs.create(F.initialUrl); // herausgezogener Tab
-  else if (!(state.settings.restoreSession && Tabs.restoreSession())) {
+  else if (!(clean && state.settings.restoreSession && Tabs.restoreSession())) {
+    Tabs.offerSession(clean);
     // Eigene Startseite nur beim Start eines normalen Fensters – neue Tabs, Inkognito und herausgezogene Fenster zeigen Falcon
     const s = state.settings;
     const custom = !INCOGNITO && !F.detached && !s.restoreSession && s.startPage === 'custom' && /^https?:\/\//i.test(s.startUrl || '');

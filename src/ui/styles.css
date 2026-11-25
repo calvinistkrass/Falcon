@@ -357,7 +357,7 @@ body.resizing webview { pointer-events: none; }
 
 /* Downloads */
 .downloads { width: 360px; }
-/* Seite übersetzen (Beta) */
+/* Seite übersetzen */
 .translate-pop { width: 300px; padding: 12px 12px 10px; }
 .tr-head { display: flex; align-items: center; gap: 12px; }
 .tr-ic { width: 34px; height: 34px; border-radius: var(--r); background: var(--accent-soft, var(--raised-2)); color: var(--accent); display: grid; place-items: center; flex: none; }
@@ -605,6 +605,9 @@ body.gamemode .spinner { animation-duration: .7s !important; }
 .update-btn:hover, .update-btn.pressed { background: color-mix(in oklab, var(--accent) 24%, transparent); }
 .update-btn span:first-child { display: grid; }
 .update-btn .ic { width: 14px; height: 14px; }
+.update-btn.required { background: color-mix(in oklab, var(--danger) 22%, transparent); color: var(--danger); }
+.update-required .dialog-body { display: grid; gap: 10px; }
+.update-required p { margin: 0; }
 .update-btn.ready { background: var(--accent); color: var(--accent-fg); }
 .update-pop { width: 400px; max-width: calc(100vw - 16px); }
 .up-notes { margin: 0 16px; max-height: min(320px, 45vh); overflow: hidden auto; padding: 12px 14px; border-radius: var(--r); background: var(--content); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font: 12.5px/1.5 var(--font); overflow-wrap: anywhere; user-select: text; }
@@ -633,6 +636,18 @@ body.gamemode .spinner { animation-duration: .7s !important; }
 .falcon-game { width: 100%; aspect-ratio: 640 / 220; border-radius: var(--r-lg); background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); outline: none; cursor: pointer; overflow: hidden; }
 .falcon-game:focus-visible { box-shadow: inset 0 0 0 1px var(--accent-ring), 0 0 0 3px var(--accent-soft); }
 .falcon-game canvas { display: block; width: 100%; height: 100%; }
+
+/* „Tabs wiederherstellen?“ oben links */
+.restore-pop { position: absolute; left: 12px; top: 12px; z-index: 60; width: 330px; max-width: calc(100% - 24px); display: grid; grid-template-columns: auto 1fr; gap: 12px; padding: 16px; border-radius: var(--r-lg); background: var(--raised); box-shadow: var(--shadow-pop); animation: drop-in .18s var(--ease); }
+.restore-pop > .tb-btn { position: absolute; top: 8px; right: 8px; }
+.restore-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.restore-icon .ic { width: 18px; height: 18px; }
+.restore-text { min-width: 0; }
+.restore-text h3 { margin: 0 26px 3px 0; font-size: 13.5px; font-weight: 600; }
+.restore-text p { margin: 0; color: var(--text-2); font-size: 12.5px; line-height: 1.45; }
+.restore-text .restore-tabs { margin-top: 6px; overflow: hidden; color: var(--text-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.restore-pop > .btn { grid-column: 1 / -1; justify-self: end; }
+body.fullscreen .restore-pop { display: none; }
 
 /* Passkey-Hinweis */
 .pk-prompt { width: 360px; }
@@ -1139,7 +1154,7 @@ select.field-input { cursor: pointer; }
 .rf-done-row { padding: 3px 0; }
 .dialog[role="alertdialog"] .dialog-body p { white-space: pre-line; }
 
-/* RGB-Modus (Beta): Neon-Leuchten in der wandernden Akzentfarbe */
+/* RGB-Modus: Neon-Leuchten in der wandernden Akzentfarbe */
 body.rgb .tab.active { box-shadow: inset 0 -2px 0 var(--accent), 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent); }
 body.rgb .btn.primary { box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent); }
 body.rgb #urlbar:focus-within, body.rgb .omnibox:focus-within { box-shadow: 0 0 0 1px var(--accent), 0 0 16px color-mix(in srgb, var(--accent) 40%, transparent); }

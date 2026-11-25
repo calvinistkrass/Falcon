@@ -7,6 +7,7 @@ import { Linking, Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { File, Paths } from 'expo-file-system';
 import * as IntentLauncher from 'expo-intent-launcher';
+import { setUpdateRequired } from './required';
 import { load, save } from './storage';
 import { APP_VERSION } from './session';
 
@@ -16,7 +17,8 @@ const CHECK_EVERY_MS = 6 * 3600_000;
 const DOWNLOAD_PAGE = 'https://falconbrowser.de/download#android';
 const FLAG_GRANT_READ_URI_PERMISSION = 1;
 
-export type AppUpdate = { version: string; url: string; size: number };
+export type AppUpdate = { version: string; url: string; size: number; behind: number };
+const MAX_BEHIND = 2; // ab so vielen Versionen Rückstand ist das Update Pflicht
 
 /** „1.10.0“ > „1.9.2“ */
 export function newer(a: string, b: string) {
@@ -30,14 +32,16 @@ export async function findUpdate(current = APP_VERSION): Promise<AppUpdate | nul
   if (!res.ok) return null;
   const list = (await res.json()) as { draft?: boolean; prerelease?: boolean; assets?: { name: string; browser_download_url: string; size: number }[] }[];
   let best: AppUpdate | null = null;
+  const versions = new Set<string>(); // alle neueren Versionen mit APK
   for (const r of Array.isArray(list) ? list : []) {
     if (r.draft || r.prerelease) continue;
     for (const a of r.assets || []) {
       const m = a.name.match(/^Falcon-Mobile-(\d+\.\d+\.\d+)\.apk$/i);
-      if (m && newer(m[1], best?.version || current)) best = { version: m[1], url: a.browser_download_url, size: a.size };
+      if (m && newer(m[1], current)) versions.add(m[1]);
+      if (m && newer(m[1], best?.version || current)) best = { version: m[1], url: a.browser_download_url, size: a.size, behind: 0 };
     }
   }
-  return best;
+  return best ? { ...(best as AppUpdate), behind: versions.size } : null;
 }
 
 const supported = () => Platform.OS === 'android' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
@@ -53,7 +57,9 @@ export function useAppUpdate() {
       try {
         const u = await findUpdate();
         const dismissed = await load(DISMISS_KEY);
-        if (!stop) setUpdate(u && u.version !== dismissed ? u : null);
+        const must = !!u && u.behind >= MAX_BEHIND;
+        await setUpdateRequired(must, APP_VERSION);
+        if (!stop) setUpdate(u && (must || u.version !== dismissed) ? u : null);
       } catch { /* offline */ }
     };
     const first = setTimeout(check, 1500);

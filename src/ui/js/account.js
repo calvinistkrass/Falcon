@@ -15,6 +15,7 @@ const Account = (() => {
     ['tabs', 'Offene Tabs für andere PCs', 'devices']
   ];
   const ERRORS = {
+    UPDATE_REQUIRED: 'Falcon ist zu alt. Aktualisiere Falcon, um dein Konto wieder zu nutzen.',
     ALREADY_REQUESTED: 'Für diesen Kauf läuft schon eine Rückerstattung.',
     REFUND_EXPIRED: 'Die Frist ist abgelaufen: Für den Beta-Zugriff gibt es eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.',
     ALREADY_DECIDED: 'Über diesen Antrag wurde schon entschieden.',
@@ -95,7 +96,13 @@ const Account = (() => {
   function openPop(rerender = false) {
     // Beim Neuzeichnen das vorhandene Popover nur füllen – nicht schließen und neu öffnen
     if (rerender && !(pop && Popover.isOpen(pop))) return;
-    const body = acc.signedIn
+    const body = acc.locked
+      ? [h('div', { class: 'acc-hero' },
+          h('img', { src: F.logoUrl, alt: '', width: 44, height: 44 }),
+          h('b', {}, $t('Update erforderlich')),
+          h('p', {}, $t('Falcon ist zu alt. Aktualisiere Falcon, um dein Konto wieder zu nutzen.'), ' ', acc.hadAccount ? $t('Danach bist du automatisch wieder angemeldet.') : '')),
+        h('div', { class: 'acc-actions' }, h('button', { class: 'btn primary', onclick: () => { closePop(); Updates.updateNow(); } }, $t('Jetzt aktualisieren')))]
+      : acc.signedIn
       ? [
           h('div', { class: 'acc-head' }, avatar(44),
             h('div', { class: 'acc-id' }, h('b', { 'data-no-i18n': '' }, acc.displayName || acc.email.split('@')[0]), h('span', { 'data-no-i18n': '' }, acc.email))),
@@ -107,7 +114,6 @@ const Account = (() => {
             h('span', {}, $t('Tägliche Belohnung abholen')), h('b', {}, `+${acc.daily.next}`)) : null,
           h('button', { class: 'acc-coins', title: $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.'), onclick: () => { closePop(); shopDialog(); } },
             h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale)), h('span', {}, $t('FalCoins')),
-            acc.beta ? h('small', { class: 'beta-badge' }, 'Beta') : null,
             h('small', { class: 'coin-soon' }, icon('shop'), $t('Shop'))),
           h('div', { class: 'acc-sync' }, syncLine(),
             h('button', { class: 'tb-btn sm', title: $t('Jetzt synchronisieren'), disabled: acc.syncing || acc.needsKey, onclick: syncNow }, icon('sync'))),
@@ -148,6 +154,7 @@ const Account = (() => {
   }
 
   function authDialog(mode = 'signin') {
+    if (Updates.blocked()) return;
     const error = h('p', { class: 'dialog-error' });
     const name = field($t('Name'), { name: 'name', autocomplete: 'off', placeholder: $t('Wie sollen wir dich nennen?') });
     const email = field($t('E-Mail-Adresse'), { name: 'email', type: 'email', autocomplete: 'off' });
@@ -307,6 +314,8 @@ const Account = (() => {
   const SHOP = [
     {
       id: 'beta14', price: 350, icon: 'flask', field: 'betaUntil', extendLabel: 'Um 30 Tage verlängern', title: 'Beta-Zugriff · 30 Tage',
+      // Seit 2.6.0 abgeschaltet: alle Beta-Funktionen sind frei. Zum Wiedereinschalten die nächsten Zeilen entfernen (und available in src/account.js)
+      available: false, offLabel: 'Für alle kostenlos', unavailableText: 'Alle Beta-Funktionen sind jetzt für alle kostenlos – auch ohne Konto. Du musst nichts mehr kaufen.',
       text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.',
       perks: [
         'Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt',
@@ -362,13 +371,13 @@ const Account = (() => {
             renderAll(); render();
             toast($t('{name} aktiv bis {date}', { name: $t(item.title), date: fmtUntil(r.until) }), 'check');
           }
-        }, off ? $t('Zurzeit nicht verfügbar') : active ? $t('Bereits erworben') : missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : $t('Kaufen'));
+        }, off ? $t(item.offLabel || 'Zurzeit nicht verfügbar') : active ? $t('Bereits erworben') : missing > 0 ? $t('Noch {n} FalCoins', { n: missing.toLocaleString(I18N.locale) }) : $t('Kaufen'));
         return h('div', { class: `shop-item${active ? ' owned' : ''}` },
           h('span', { class: 'shop-ic' }, icon(item.icon)),
           h('div', { class: 'shop-main' },
             h('b', {}, $t(item.title), active ? h('span', { class: 'beta-badge' }, $t('Aktiv')) : null),
             h('p', {}, $t(item.text)),
-            off ? h('small', { class: 'shop-unavailable' }, icon('clock'), h('span', {}, $t(item.unavailableText))) : null,
+            off ? h('small', { class: 'shop-unavailable' }, icon(item.offLabel ? 'check' : 'clock'), h('span', {}, $t(item.unavailableText))) : null,
             item.perks ? h('div', { class: 'shop-perks' }, h('small', {}, $t('Das bekommst du:')),
               h('ul', {}, item.perks.map((p) => h('li', {}, icon('check'), h('span', {}, $t(p)))))) : null,
             active ? h('small', { class: 'shop-until' }, $t('Aktiv bis {date}', { date: fmtUntil(acc[item.field]) })) : null,
@@ -791,6 +800,15 @@ const Account = (() => {
   function renderSettings() {
     const root = $('#accountSettings');
     if (!root) return;
+    if (acc.locked) {
+      root.replaceChildren(h('div', { class: 's-card acc-signed-out' },
+        h('img', { src: F.logoUrl, alt: '', width: 56, height: 56 }),
+        h('div', {},
+          h('b', {}, $t('Update erforderlich')),
+          h('p', {}, $t('Falcon ist zu alt. Aktualisiere Falcon, um dein Konto wieder zu nutzen.'), ' ', acc.hadAccount ? $t('Danach bist du automatisch wieder angemeldet.') : ''),
+          h('div', { class: 'acc-actions' }, h('button', { class: 'btn primary', onclick: () => { Settings.close(); Updates.updateNow(); } }, $t('Jetzt aktualisieren'))))));
+      return;
+    }
     if (!acc.signedIn) {
       root.replaceChildren(h('div', { class: 's-card acc-signed-out' },
         h('img', { src: F.logoUrl, alt: '', width: 56, height: 56 }),
@@ -825,12 +843,10 @@ const Account = (() => {
         row($t('Name'), acc.displayName || $t('Nicht festgelegt'), h('button', { class: 'btn ghost', onclick: editName }, $t('Ändern'))),
         row($t('Profilfarbe'), $t('Farbe deines Profilbilds.'), swatches),
         row($t('Dieser PC'), acc.deviceName, h('button', { class: 'btn ghost', onclick: editDevice }, $t('Umbenennen'))),
-        row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist. Im Shop tauschst du sie gegen den Beta-Zugriff mit Game Mode ein.'),
+        row($t('FalCoins'), $t('Du bekommst einen FalCoin für jede Website, die du besuchst, solange du angemeldet bist.'),
           h('div', { class: 'acc-coin-row' },
             h('span', { class: 'acc-coins inline' }, h('span', { class: 'coin-ic' }, icon('coin')), h('b', {}, (acc.coins || 0).toLocaleString(I18N.locale))),
-            h('button', { class: 'btn ghost', onclick: () => shopDialog() }, icon('shop'), $t('Shop')))),
-        acc.beta ? row($t('Beta-Zugriff'), $t('Aktiv bis {date}', { date: fmtUntil(acc.betaUntil) }), h('span', { class: 'beta-badge big' }, 'Beta')) : null,
-        acc.gameModeOwned ? row($t('Game Mode'), (acc.gameModeUntil || 0) > Date.now() ? $t('Aktiv bis {date}', { date: fmtUntil(acc.gameModeUntil) }) : $t('Teil deines Beta-Zugriffs'), h('span', { class: 'beta-badge big' }, $t('Aktiv'))) : null),
+            h('button', { class: 'btn ghost', onclick: () => shopDialog() }, icon('shop'), $t('Shop'))))),
 
       h('h3', { class: 's-sub' }, $t('Synchronisierung')),
       h('div', { class: 's-card' },
@@ -888,21 +904,8 @@ const Account = (() => {
   on('tabs-changed', tabsDirty);
   on('tab-loaded', tabsDirty);
 
-  // Game Mode ist nur mit gültiger Freischaltung nutzbar – abgelaufen oder abgemeldet → aus
-  function enforceGameMode() {
-    if (state.settings.rgbMode && !(acc.signedIn && acc.beta)) updateSettings({ rgbMode: false });
-    if (state.settings.gameMode && !(acc.signedIn && acc.gameModeOwned)) {
-      updateSettings({ gameMode: false });
-      toast($t('Game Mode ist eine Beta-Funktion. Schalte den Beta-Zugriff im FalCoin-Shop frei (350 FalCoins für 30 Tage).'), 'gamepad', { label: $t('Shop'), onClick: () => (acc.signedIn ? shopDialog() : authDialog('signin')) });
-    }
-  }
-  let accountKnown = false;
-  F.on('account-changed', () => { if (accountKnown) enforceGameMode(); });
-  setInterval(() => { if (accountKnown) { acc = { ...acc, beta: (acc.betaUntil || 0) > Date.now(), gameModeOwned: (acc.gameModeUntil || 0) > Date.now() || (acc.betaUntil || 0) > Date.now() }; enforceGameMode(); } }, 60_000);
   setTimeout(async () => {
     if (!INCOGNITO) acc = await F.account.state();
-    accountKnown = true;
-    enforceGameMode();
     if (!INCOGNITO && acc.signedIn) { showRefundNotices().catch(() => {}); checkPendingRefunds().catch(() => {}); }
     if (acc.signedIn && acc.daily?.available) toast($t('Deine tägliche Belohnung wartet: +{n} FalCoins', { n: acc.daily.next }), 'coin', { label: $t('Abholen'), onClick: () => claimDaily() });
   }, 8000);

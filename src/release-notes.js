@@ -66,7 +66,20 @@ function between(sections, installed, available) {
     .slice(0, MAX_VERSIONS);
 }
 
-/** Lädt die CHANGELOG.md zum Tag der neuen Version. Bei Fehlern: null (dann ohne Text) */
+/** Wie viele Versionen liegt die installierte zurück? (die neue zählt mit: 2.5.7 → 2.5.9 = 2) */
+const countBehind = (sections, installed, available) => sections.filter((s) => newer(s.version, installed) && !newer(s.version, available)).length;
+
+/** Ohne CHANGELOG: vorsichtige Schätzung aus den Nummern */
+function guessBehind(installed, available) {
+  if (!newer(available, installed)) return 0;
+  const a = String(installed).split('.').map(Number);
+  const b = String(available).split('.').map(Number);
+  if (a[0] !== b[0]) return 2;
+  const step = a[1] !== b[1] ? b[1] - a[1] : b[2] - a[2];
+  return step >= 2 ? 2 : 1;
+}
+
+/** Lädt die CHANGELOG.md zum Tag der neuen Version → { notes, behind }. Bei Fehlern: null (dann ohne Text) */
 async function load(fetchFn, repo, installed, available) {
   if (!repo || !/^\d+\.\d+\.\d+$/.test(String(available))) return null;
   const stop = new AbortController();
@@ -76,8 +89,9 @@ async function load(fetchFn, repo, installed, available) {
     if (!res.ok) return null;
     const text = await res.text();
     if (text.length > MAX_LENGTH) return null;
-    const notes = between(parse(text), installed, available);
-    return notes.length ? notes : null;
+    const sections = parse(text);
+    const notes = between(sections, installed, available);
+    return notes.length ? { notes, behind: countBehind(sections, installed, available) } : null;
   } catch {
     return null;
   } finally {
@@ -85,4 +99,4 @@ async function load(fetchFn, repo, installed, available) {
   }
 }
 
-module.exports = { parse, between, load, newer };
+module.exports = { parse, between, countBehind, guessBehind, load, newer };

@@ -111,7 +111,8 @@ const Updates = (() => {
   }
 
   function render() {
-    const show = ['available', 'downloading', 'downloaded'].includes(status.state);
+    renderLock();
+    const show = ['available', 'downloading', 'downloaded'].includes(status.state) || status.required;
     btn.classList.toggle('hidden', !show);
     btn.classList.toggle('ready', status.state === 'downloaded');
     btn.title = statusText(status);
@@ -122,7 +123,7 @@ const Updates = (() => {
     if (status.state === 'available' && announced !== status.available) {
       announced = status.available;
       // Kurz warten, bis die Oberfläche steht, dann den Hinweis gut sichtbar öffnen
-      setTimeout(() => { if (!Popover.current && !Settings.isOpen()) open(); }, 600);
+      setTimeout(() => { if (!status.required && !Popover.current && !Settings.isOpen()) open(); }, 600);
     }
   }
 
@@ -141,7 +142,8 @@ const Updates = (() => {
   $('#upAction').addEventListener('click', () => {
     if (status.state === 'downloaded') return install();
     if (status.portable && status.url) { Popover.close(); Tabs.create(status.url); return; }
-    if (status.state === 'available') { requestedHere = true; F.updates.download(); }
+    if (status.state === 'available') { requestedHere = true; F.updates.download(); return; }
+    if (status.required && status.state !== 'downloading') updateNow();
   });
   $('#upCheck').addEventListener('click', async () => {
     status = await F.updates.check();
@@ -149,9 +151,48 @@ const Updates = (() => {
     if (status.state === 'latest') toast($t('Falcon ist auf dem neuesten Stand.'), 'check');
   });
 
+  // Pflicht-Update: Ab zwei Versionen Rückstand sind Konto und Zusatzfunktionen gesperrt, bis aktualisiert wird
+  let gate = null;
+  let gateShown = false;
+  async function updateNow() {
+    if (status.state === 'downloaded') return install();
+    if (status.portable && status.url) { Tabs.create(status.url); return; }
+    if (!['available', 'downloading'].includes(status.state)) { status = await F.updates.check(); render(); }
+    if (status.state === 'available') F.updates.download();
+    requestedHere = true;
+    open();
+  }
+  function showRequired() {
+    gateShown = true;
+    if (gate?.isConnected) return;
+    let close = () => {};
+    const box = gate = h('div', { class: 'dialog update-required', role: 'alertdialog' },
+      h('div', { class: 'dialog-body' },
+        h('span', { class: 'restore-icon' }, icon('download')),
+        h('h3', {}, $t('Update erforderlich')),
+        h('p', {}, $t('Falcon {v} ist {n} Versionen veraltet. Bis du aktualisierst, sind dein Falcon-Konto, Game Mode, Akzentfarbe, RGB-Modus, Wunschliste und das Übersetzen gesperrt.', { v: F.version, n: status.behind })),
+        h('p', {}, $t('Nach dem Update ist alles wieder da und du bist automatisch wieder angemeldet.'))),
+      h('div', { class: 'dialog-foot' },
+        h('button', { class: 'btn ghost', onclick: () => close() }, $t('Eingeschränkt weitersurfen')),
+        h('button', { class: 'btn primary', onclick: () => { close(); updateNow(); } }, $t('Jetzt aktualisieren'))));
+    close = dialogShell(box);
+    box.querySelector('.btn.primary').focus();
+  }
+  /** Gesperrt? Dann den Hinweis zeigen und true zurückgeben */
+  function blocked() {
+    if (!status.required) return false;
+    showRequired();
+    return true;
+  }
+  function renderLock() {
+    btn.classList.toggle('required', !!status.required);
+    if (!status.required) { gateShown = false; return; }
+    if (!gateShown && !F.detached && !INCOGNITO) { gateShown = true; setTimeout(() => { if (status.required) showRequired(); }, 1200); }
+  }
+
   F.on('update-status', (s) => { status = s; render(); });
   on('settings', () => render());
   F.updates.status().then((s) => { status = s; render(); });
 
-  return { open };
+  return { open, blocked, updateNow, get required() { return !!status.required; }, get behind() { return status.behind || 0; } };
 })();

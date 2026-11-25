@@ -9,6 +9,7 @@ import { Button, Card, CoinIcon, Field, Favicon } from '@/components/ui';
 import { errorText, useSession } from '@/lib/session';
 import { fetchJson } from '@/lib/firebase';
 import { C, R, toUrl } from '@/lib/theme';
+import { useUpdateRequired } from '@/lib/required';
 import { useAppUpdate } from '@/lib/update';
 import { useSuggestions } from '@/lib/suggest';
 import Suggestions from '@/components/Suggestions';
@@ -28,6 +29,7 @@ export default function Start() {
   const [games, setGames] = useState<Game[]>([]);
   const [claiming, setClaiming] = useState(false);
   const { update, download, dismiss, progress, error: updateError, openWebsite } = useAppUpdate();
+  const mustUpdate = useUpdateRequired();
   const downloading = typeof progress === 'number';
 
   useEffect(() => {
@@ -74,8 +76,9 @@ export default function Start() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={s.updateIc}><Ionicons name="arrow-down-circle" size={24} color={C.accent} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>Neue Version verfügbar</Text>
+                <Text style={s.cardTitle}>{mustUpdate ? 'Update erforderlich' : 'Neue Version verfügbar'}</Text>
                 <Text style={s.cardText}>
+                  {mustUpdate ? `Deine Version ist ${update.behind} Versionen veraltet. Dein Falcon-Konto ist gesperrt, bis du aktualisierst – danach bist du automatisch wieder angemeldet. ` : ''}
                   Falcon Mobile {update.version}{update.size ? ` · ${Math.round(update.size / 1048576)} MB` : ''}
                   {downloading ? ` – wird heruntergeladen … ${Math.round(progress * 100)} %`
                     : progress === 'ready' ? ' – bestätige die Installation im Fenster von Android.'
@@ -88,6 +91,7 @@ export default function Start() {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 {updateError ? <Button title="falconbrowser.de" variant="ghost" small onPress={openWebsite} />
+                  : mustUpdate ? <Button title="falconbrowser.de" variant="ghost" small onPress={openWebsite} disabled={downloading} />
                   : <Button title="Später" variant="ghost" small onPress={dismiss} disabled={downloading} />}
               </View>
               <View style={{ flex: 1 }}>

@@ -8,7 +8,7 @@
  * selbst ersetzen – dort öffnet Falcon die Download-Seite auf falconbrowser.de.
  */
 
-const { app, net } = require('electron');
+const { app, net, BrowserWindow } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
@@ -86,8 +86,7 @@ async function checkViaApi() {
     if (latest && newer(latest.version, pkg.version)) {
       announce(latest.version, { portable: true, url: releaseUrl() });
     } else {
-      remember(null);
-      setStatus({ state: 'latest', checkedAt: Date.now() });
+      upToDate();
     }
   } catch (err) {
     setStatus({ state: 'error', error: String(err?.message || err).split('\n')[0].slice(0, 200) });
@@ -106,19 +105,37 @@ function setStatus(patch) {
   send('update-status', status);
 }
 
-/** Neue Version melden; der Text „Was ist neu?“ kommt aus der CHANGELOG.md nach */
+/*
+ * Pflicht-Update (seit 2.6.0): Ab zwei Versionen Rückstand sperrt Falcon das Konto und die Zusatzfunktionen, bis
+ * aktualisiert wird (main.js und die Oberfläche lesen status.required). Die Anmeldung bleibt gespeichert – nach dem
+ * Update ist man automatisch wieder angemeldet. Nur wenn es für dieses System wirklich ein Update gibt.
+ */
+const MAX_BEHIND = 2;
+const lock = (behind) => ({ behind: behind || 0, required: (behind || 0) >= MAX_BEHIND });
+
+/** Neue Version melden; der Text „Was ist neu?“ und der Rückstand kommen aus der CHANGELOG.md nach */
 function announce(version, extra) {
   const known = status.available === version && Array.isArray(status.notes) ? status.notes : null;
-  remember({ version, notes: known });
-  setStatus({ state: 'available', available: version, notes: known, checkedAt: Date.now(), ...extra });
+  // Bis der genaue Rückstand da ist, gilt der bisher bekannte
+  const behind = known ? status.behind : Math.max(1, status.behind || 0);
+  remember({ version, notes: known, behind });
+  setStatus({ state: 'available', available: version, notes: known, ...lock(behind), checkedAt: Date.now(), ...extra });
   if (!known) loadNotes(version);
 }
 
 async function loadNotes(version) {
-  const notes = await releaseNotes.load((url, opts) => net.fetch(url, opts), repository(), pkg.version, version);
-  if (!notes || status.available !== version) return; // inzwischen noch neuere Version gefunden
-  remember({ version, notes });
-  setStatus({ notes });
+  const r = await releaseNotes.load((url, opts) => net.fetch(url, opts), repository(), pkg.version, version);
+  if (status.available !== version) return; // inzwischen noch neuere Version gefunden
+  const behind = r ? r.behind : Math.max(status.behind || 0, releaseNotes.guessBehind(pkg.version, version));
+  const notes = r ? r.notes : null;
+  remember({ version, notes, behind });
+  setStatus({ notes, ...lock(behind) });
+}
+
+/** Es gibt nichts Neueres (mehr): Sperre aufheben */
+function upToDate() {
+  remember(null);
+  setStatus({ state: 'latest', checkedAt: Date.now(), available: null, notes: null, ...lock(0) });
 }
 
 /**
@@ -132,7 +149,7 @@ function init(sender, cache) {
   const known = cache?.get();
   if (known && newer(known.version, pkg.version)) {
     // Bis 2.5.8 stand in notes ein Text (Commit-Nachricht von GitHub) – der wird verworfen und neu geladen
-    status = { ...status, state: 'available', available: known.version, notes: Array.isArray(known.notes) ? known.notes : null, portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto() };
+    status = { ...status, state: 'available', available: known.version, notes: Array.isArray(known.notes) ? known.notes : null, ...lock(known.behind), portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto() };
   } else if (known) {
     remember(null); // inzwischen installiert
   }
@@ -152,8 +169,10 @@ function init(sender, cache) {
   autoUpdater.logger = null;
   configured = true;
 
+  if (linuxAuto()) waitForWindowsOnLinux();
+
   autoUpdater.on('checking-for-update', () => setStatus({ state: 'checking' }));
-  autoUpdater.on('update-not-available', () => { remember(null); setStatus({ state: 'latest', checkedAt: Date.now() }); });
+  autoUpdater.on('update-not-available', upToDate);
   autoUpdater.on('update-available', (info) => {
     announce(info.version, { portable: manualUpdate(), url: releaseUrl(), linux: linuxAuto() });
   });
@@ -181,6 +200,41 @@ function check() {
   return autoUpdater.checkForUpdates().then(() => status).catch(() => status);
 }
 
+/*
+ * Linux: Die Paketinstallation (pkexec + dpkg/dnf) hält den Hauptprozess an, bis das Passwort eingegeben ist.
+ * Mit offenen Fenstern meldet der Desktop dann „Falcon antwortet nicht“. Darum beendet sich Falcon erst ganz
+ * normal (Fenster zu, Sitzung gespeichert); electron-updater installiert danach im „quit“-Ereignis, und Falcon
+ * startet wieder – auch wenn die Passwortabfrage abgebrochen wurde (dann mit der alten Version).
+ */
+const WINDOWS_GONE_MS = 600;
+const FORCE_CLOSE_MS = 4000;
+let restarting = false;
+
+function installOnLinux() {
+  if (restarting) return;
+  restarting = true;
+  global.falconQuitForUpdate = true; // nicht nach laufenden Downloads fragen
+  // Nach dem Installieren (der quit-Handler von electron-updater ist früher angemeldet): neu starten
+  app.once('quit', () => app.relaunch());
+  app.quit();
+  // Hält eine Seite das Schließen auf, Fenster trotzdem schließen
+  setTimeout(() => {
+    for (const w of BrowserWindow.getAllWindows()) w.destroy();
+    app.quit();
+  }, FORCE_CLOSE_MS);
+}
+
+/** Vor der Installation kurz warten, bis der Desktop die geschlossenen Fenster wirklich entfernt hat */
+function waitForWindowsOnLinux() {
+  let waited = false;
+  app.on('will-quit', (e) => {
+    if (waited || status.state !== 'downloaded') return;
+    waited = true;
+    e.preventDefault();
+    setTimeout(() => app.quit(), WINDOWS_GONE_MS);
+  });
+}
+
 /** Beim Zurückkehren zu Falcon erneut prüfen, wenn die letzte Prüfung länger her ist */
 function checkIfStale() {
   if (Date.now() - lastCheck > RECHECK_ON_FOCUS_MS) check();
@@ -193,6 +247,7 @@ function download() {
 }
 
 function install() {
+  if (status.state === 'downloaded' && linuxAuto()) { installOnLinux(); return; }
   // Installer unsichtbar ausführen (/S) und Falcon danach automatisch wieder öffnen
   // Beim Update nicht nach laufenden Downloads fragen (main.js prüft das Flag)
   if (status.state === 'downloaded') setImmediate(() => { global.falconQuitForUpdate = true; autoUpdater.quitAndInstall(true, true); });

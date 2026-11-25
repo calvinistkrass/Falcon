@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('falcon', {
     capture: (webContentsId, mode) => ipcRenderer.invoke('screenshot:capture', webContentsId, mode),
     save: (dataUrl) => ipcRenderer.invoke('screenshot:save', dataUrl)
   },
+  lastExitClean: () => ipcRenderer.invoke('app:last-exit-clean'),
   defaultBrowser: {
     status: () => ipcRenderer.invoke('default-browser:status'),
     set: () => ipcRenderer.invoke('default-browser:set')

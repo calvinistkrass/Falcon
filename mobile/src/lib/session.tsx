@@ -2,6 +2,7 @@
 // Alle Formate entsprechen Falcon auf dem PC (src/account.js), damit beide Seiten dieselben Daten lesen und schreiben.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
+import { isUpdateRequired, restoreUpdateRequired, useUpdateRequired } from './required';
 import * as FB from './firebase';
 import { decryptJson, encryptJson, fromBase64, newDataKey, randomId, toBase64, unwrapKey, wrapKey } from './crypto';
 import { load, save } from './storage';
@@ -10,7 +11,7 @@ import { onIncoming, takeIncoming } from './incoming';
 import { hostOf } from './theme';
 
 // Muss zu app.json → expo.version passen (Update-Hinweis vergleicht damit die APKs im GitHub-Release)
-export const APP_VERSION = '2.5.9';
+export const APP_VERSION = '2.6.0';
 
 export type Bookmark = { title?: string; url?: string; folder?: boolean; children?: Bookmark[] };
 export type Password = { id: string; origin: string; username: string; password: string; created?: number; updated?: number; lastUsed?: number };
@@ -44,9 +45,10 @@ type MissionState = { date: string; visits: number; domains: string[]; claimed: 
 
 // ---------- FalCoin-Shop (wie auf dem PC) ----------
 export const SHOP = [
-  // Game Mode gibt es seit 2.1.8 nur noch als Beta-Funktion (wirkt in Falcon auf dem PC)
+  // Seit 2.6.0 sind alle Beta-Funktionen für alle frei – der Beta-Zugriff ist nicht mehr käuflich (available wie am PC)
   {
     id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 30, title: 'Beta-Zugriff · 30 Tage', extendLabel: 'Um 30 Tage verlängern',
+    available: false, offLabel: 'Für alle kostenlos', unavailableText: 'Alle Beta-Funktionen sind jetzt für alle kostenlos – auch ohne Konto. Du musst nichts mehr kaufen.',
     text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.',
     perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'Akzentfarbe – Falcon in deiner Farbe, auch mit eigenen Farben (in Falcon auf dem PC)', 'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten (in Falcon auf dem PC)', 'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist (in Falcon auf dem PC)', 'Seite übersetzen – Websites direkt in deine Sprache übersetzen', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
   }
@@ -76,7 +78,6 @@ type Ctx = {
   searchEngine: string;
   pwNever: string[];
   admin: boolean;
-  betaActive: boolean;
   loadingData: boolean;
   /** Gespeicherte Tabs sind gelesen (für den Ladebildschirm) */
   tabsReady: boolean;
@@ -215,8 +216,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // Uhr für „aktiv bis“-Anzeigen und den Tageswechsel der Missionen
   useEffect(() => { const iv = setInterval(() => setClock(Date.now()), 60_000); return () => clearInterval(iv); }, []);
 
+  const locked = useUpdateRequired();
+
   // Gültiges ID-Token (wird bei Bedarf erneuert)
   const token = useCallback(async () => {
+    if (isUpdateRequired()) throw new FB.ApiError('UPDATE_REQUIRED');
     const t = tokens.current;
     if (!t) throw new FB.ApiError('SIGNED_OUT');
     if (Date.now() < t.expiresAt - 60_000) return t.idToken;
@@ -324,6 +328,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         const m = await load(MISSIONS_KEY);
         if (m) { const x = JSON.parse(m); if (x.date === today()) setMstate(x); }
       } catch { /* egal */ }
+      await restoreUpdateRequired(APP_VERSION);
       try {
         const raw = await load(SESSION_KEY);
         if (!raw) { setStatus('signedOut'); return; }
@@ -362,6 +367,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (isUpdateRequired()) throw new FB.ApiError('UPDATE_REQUIRED');
     const r = await FB.signIn(email.trim(), password);
     tokens.current = r.tokens;
     setStatus('unlocking');
@@ -380,6 +386,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [persist, reloadFor, setupKey]);
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
+    if (isUpdateRequired()) throw new FB.ApiError('UPDATE_REQUIRED');
     let t = await FB.signUp(email.trim(), password);
     tokens.current = t;
     setStatus('unlocking');
@@ -714,11 +721,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const submitReport = useCallback(async (r: { text: string; category: string; url?: string; email?: string }) => {
     const text = r.text.trim().slice(0, 5000);
     if (!text) throw new FB.ApiError('EMPTY');
-    const t = user ? await token() : undefined;
+    const u = isUpdateRequired() ? null : user; // gesperrt: ohne Konto melden
+    const t = u ? await token() : undefined;
     const body = {
       text, category: r.category.slice(0, 40), version: `Mobile ${APP_VERSION}`, os: `${Platform.OS} ${Platform.Version ?? ''}`.trim(),
       url: r.url ? r.url.slice(0, 1000) : undefined, email: r.email ? r.email.trim().slice(0, 200) : undefined,
-      uid: user?.uid, created: new Date().toISOString(), status: 'new'
+      uid: u?.uid, created: new Date().toISOString(), status: 'new'
     };
     const res = await FB.addDoc('reports', toFields(body), t);
     const id = String(res.name || '').split('/').pop();
@@ -728,7 +736,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, token]);
   const listReports = useCallback(async (path: string) => {
-    const docs = await FB.query(path, 'pageSize=200', user ? await token() : undefined);
+    const docs = await FB.query(path, 'pageSize=200', user && !isUpdateRequired() ? await token() : undefined);
     return docs.map((d) => ({ id: d.name.split('/').pop() as string, ...fromFields(d.fields) }) as Report)
       .sort((a, b) => String(b.created).localeCompare(String(a.created)));
   }, [user, token]);
@@ -868,7 +876,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const value: Ctx = {
     status, user, bookmarks, passwords, history, devices, wallet, daily, missions, admin, loadingData, tabsReady, dataError, tabs, activeId,
     searchEngine: typeof settings.searchEngine === 'string' ? settings.searchEngine : 'google',
-    betaActive: wallet.betaUntil > clock,
     pwNever: Array.isArray(settings.pwNever) ? settings.pwNever as string[] : [],
     signIn, signUp, signOut, reload: async () => { if (user) { await flushCoins(); await flushHistory(); await reloadFor(user); pushTabs(true); } },
     updateName, changePassword, deleteAccount, resendVerification,
@@ -878,7 +885,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     submitReport, publicReports, adminReports, updateReport, deleteReport, adminWallets, adminUpdateWallet,
     openUrl, navigate, newTab, closeTab, closeAllTabs, switchTab, updateTab, visited
   };
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  // Pflicht-Update: Das Konto ruht (Anmeldung und Daten bleiben gespeichert und kommen nach dem Update zurück)
+  const shown: Ctx = locked ? {
+    ...value, status: 'signedOut', user: null, bookmarks: [], passwords: [], history: [], devices: [], wallet: EMPTY_WALLET,
+    admin: false, loadingData: false, dataError: null
+  } : value;
+  return <SessionContext.Provider value={shown}>{children}</SessionContext.Provider>;
 }
 
 export function useSession() {
@@ -888,6 +900,7 @@ export function useSession() {
 }
 
 export const ERRORS: Record<string, string> = {
+  UPDATE_REQUIRED: 'Falcon ist zu alt. Aktualisiere Falcon, um dein Konto wieder zu nutzen. Danach bist du automatisch wieder angemeldet.',
   INVALID_LOGIN_CREDENTIALS: 'E-Mail-Adresse oder Passwort ist falsch.',
   INVALID_PASSWORD: 'E-Mail-Adresse oder Passwort ist falsch.',
   EMAIL_NOT_FOUND: 'E-Mail-Adresse oder Passwort ist falsch.',

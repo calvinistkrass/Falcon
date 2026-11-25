@@ -1,7 +1,7 @@
 'use strict';
 // Falcon – Hauptprozess
 
-const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen, protocol, net, webContents, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen, protocol, net, webContents, Notification, powerMonitor } = require('electron');
 const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
@@ -72,7 +72,7 @@ const DEFAULTS = {
   ramLimit: 0,
   netLimit: 0,           // Mbit/s, 0 = aus
   netLimitGameOnly: true,
-  rgbMode: false,       // Beta: Akzentfarbe läuft durch den Regenbogen
+  rgbMode: false,       // Akzentfarbe läuft durch den Regenbogen
   wishlist: [],         // Angebots-Wunschliste [{ name, added }]
   wishlistSeen: {},     // schon gemeldete Angebote (Schlüssel → Zeit)
   downloadDir: '',
@@ -158,12 +158,19 @@ function loadSettings() {
   catch { settings = { ...DEFAULTS }; }
   if (LEGACY_ACCENTS[settings.accent]) settings.accent = LEGACY_ACCENTS[settings.accent];
 }
-// Akzentfarbe ist eine Beta-Funktion: ohne Zugriff zeigt Falcon die Standardfarbe. Die gewählte Farbe bleibt gespeichert
-// und gilt wieder, sobald der Beta-Zugriff aktiv ist.
-const betaActive = () => { try { return (account.state().betaUntil || 0) > Date.now(); } catch { return false; } };
-const accentNow = () => (betaActive() && /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : DEFAULT_ACCENT);
+// Pflicht-Update: ab zwei Versionen Rückstand ruhen Konto und Zusatzfunktionen (gespeicherte Einstellungen bleiben)
+let updateLock = false;
+function setUpdateLock(on) {
+  if (updateLock === !!on) return;
+  updateLock = !!on;
+  account.setLocked(updateLock);
+  lastAccent = accentNow();
+  applyNetLimit();
+  broadcast('settings-changed', uiSettings());
+}
+const accentNow = () => (!updateLock && /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : DEFAULT_ACCENT);
 /** Einstellungen für die Oberfläche (mit der tatsächlich geltenden Akzentfarbe) */
-const uiSettings = () => ({ ...settings, accent: accentNow() });
+const uiSettings = () => ({ ...settings, accent: accentNow(), ...(updateLock ? { gameMode: false, rgbMode: false } : {}) });
 let lastAccent = '';
 function refreshAccent() {
   const a = accentNow();
@@ -283,6 +290,8 @@ function createWindow({ incognito = false, detached = false, at = null, open = '
     settings.window = { ...b, maximized: w.isMaximized() };
     writeSettingsNow();
   });
+  // Windows wird heruntergefahren oder der Benutzer meldet sich ab: kein Absturz
+  w.on('session-end', markClosed);
   w.on('closed', () => {
     uiWindows.delete(w);
     if (win === w) win = [...uiWindows].find((x) => alive(x) && !x.falconIncognito) || [...uiWindows].find(alive) || null;
@@ -600,7 +609,7 @@ async function throttleWebview(wc, bytes) {
 }
 function applyNetLimit() {
   const mbps = Number(settings.netLimit) || 0;
-  const active = mbps > 0 && (!settings.netLimitGameOnly || settings.gameMode);
+  const active = mbps > 0 && (!settings.netLimitGameOnly || (settings.gameMode && !updateLock));
   // Chromiums Drosselung erreicht nur ~65 % des Werts (Protokoll-Overhead) – daher ausgleichen
   netLimitBytes = active ? Math.round(mbps * 125000 * 1.5) : 0;
   for (const wc of webContents.getAllWebContents()) throttleWebview(wc, netLimitBytes);
@@ -844,7 +853,7 @@ async function checkWishlist() {
   return out;
 }
 async function wishlistTick() {
-  if (!(settings.wishlist || []).length || !(account.state().betaUntil > Date.now())) return;
+  if (updateLock || !(settings.wishlist || []).length) return;
   const hits = await checkWishlist().catch(() => []);
   const seen = { ...(settings.wishlistSeen || {}) };
   const now = Date.now();
@@ -866,15 +875,15 @@ async function wishlistTick() {
     }
   }
 }
-ipcMain.handle('wishlist:check', () => (account.state().betaUntil > Date.now() ? checkWishlist().catch(() => []) : []));
+ipcMain.handle('wishlist:check', () => (updateLock ? [] : checkWishlist().catch(() => [])));
 
 // ---------------------------------------------------------------------------
-// Seite übersetzen (Beta, seit 2.3.9): Die Oberfläche sammelt die Texte der Seite, hier werden sie
+// Seite übersetzen (seit 2.3.9, seit 2.6.0 für alle): Die Oberfläche sammelt die Texte der Seite, hier werden sie
 // stapelweise übersetzt und wieder in die Seite geschrieben – ohne Umleitung auf translate.google.com.
 // ---------------------------------------------------------------------------
 const TRANSLATE_LANG = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
 ipcMain.handle('translate:batch', async (_e, texts, target, format) => {
-  if (!(account.state().betaUntil > Date.now())) return { error: 'beta' };
+  if (updateLock) return { error: 'update' };
   if (!Array.isArray(texts) || !texts.length || texts.length > 150 || !TRANSLATE_LANG.test(String(target))) return { error: 'invalid' };
   const list = texts.map((t) => String(t ?? '').slice(0, 5000));
   if (list.reduce((n, t) => n + t.length, 0) > 12000) return { error: 'invalid' };
@@ -1191,8 +1200,9 @@ ipcMain.handle('settings:set', async (e, patch) => {
   if (safe.pwRequireAuth === false && settings.pwRequireAuth && !(await confirmUser('Falcon möchte den Passwortschutz ausschalten.'))) {
     delete safe.pwRequireAuth;
   }
-  // Akzentfarbe nur mit Beta-Zugriff und nur als gültige Farbe
-  if ('accent' in safe && (!betaActive() || !/^#[0-9a-f]{6}$/i.test(safe.accent))) delete safe.accent;
+  // Akzentfarbe nur als gültige Farbe
+  if ('accent' in safe && !/^#[0-9a-f]{6}$/i.test(safe.accent)) delete safe.accent;
+  if (updateLock) for (const k of ['accent', 'gameMode', 'rgbMode']) delete safe[k];
   if ('startUrl' in safe && !/^https?:\/\/[^\s]+$/i.test(safe.startUrl)) safe.startUrl = '';
   settings = { ...settings, ...safe };
   if ('netLimit' in safe || 'netLimitGameOnly' in safe || 'gameMode' in safe) applyNetLimit();
@@ -1519,6 +1529,18 @@ ipcMain.handle('passkey:remove', async (_e, id) => {
 });
 
 // ---------- Start ----------
+// Merker „Falcon läuft“: Liegt er beim Start noch da, wurde Falcon nicht richtig beendet (Absturz, „Beenden erzwingen“, Stromausfall)
+const RUNNING_FILE = path.join(app.getPath('userData'), 'running');
+let lastExitClean = true;
+function markRunning() {
+  try { lastExitClean = !fs.existsSync(RUNNING_FILE); fs.writeFileSync(RUNNING_FILE, ''); } catch { /* Ordner nicht beschreibbar */ }
+}
+function markClosed() {
+  try { fs.rmSync(RUNNING_FILE, { force: true }); } catch { /* bleibt liegen – dann bietet Falcon die Tabs noch einmal an */ }
+}
+// Nur das erste Fenster nach dem Start bekommt die echte Antwort
+ipcMain.handle('app:last-exit-clean', () => { const clean = lastExitClean; lastExitClean = true; return clean; });
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -1543,6 +1565,8 @@ if (!gotLock) {
   });
 
   app.whenReady().then(async () => {
+    markRunning();
+    powerMonitor.on('shutdown', markClosed);
     loadSettings();
     // macOS braucht ein App-Menü, sonst funktionieren Cmd+C/V/X/A/Q nicht; Windows/Linux zeigen keins
     Menu.setApplicationMenu(IS_MAC ? Menu.buildFromTemplate([
@@ -1565,10 +1589,11 @@ if (!gotLock) {
     // Erweiterungen laden, bevor die ersten Seiten öffnen
     await extensions.loadAll().catch((err) => console.error('Erweiterungen:', err));
     const first = createWindow();
-    updater.init((channel, data) => broadcast(channel, data), {
+    updater.init((channel, data) => { broadcast(channel, data); setUpdateLock(data.required); }, {
       get: () => settings.pendingUpdate || null,
       set: (v) => { settings.pendingUpdate = v; saveSettings(); }
     });
+    setUpdateLock(updater.getStatus().required);
     // Sofort prüfen, sobald die Oberfläche geladen ist – nicht erst nach einer Wartezeit
     first.webContents.once('did-finish-load', () => {
       updater.check();
@@ -1577,11 +1602,10 @@ if (!gotLock) {
       if (startUrl) setTimeout(() => { if (alive(first)) first.webContents.send('open-tab', startUrl); }, 300);
     });
     defaultBrowser.refreshRegistration();
-    setInterval(refreshAccent, 60_000); // Beta-Zugriff läuft ab, während Falcon offen ist
     account.init({ notify: (state) => { broadcast('account-changed', state, { incognito: false }); refreshAccent(); }, providers: syncProviders, locale: pageLanguage });
     app.on('browser-window-focus', () => account.syncIfStale());
     // Mission „Game Mode nutzen“: jede Minute mit aktivem Game Mode zählt
-    setInterval(() => { if (settings.gameMode) account.trackGameModeMinute(); }, 60_000);
+    setInterval(() => { if (settings.gameMode && !updateLock) account.trackGameModeMinute(); }, 60_000);
     app.on('browser-window-focus', () => updater.checkIfStale());
   });
 
@@ -1591,6 +1615,7 @@ if (!gotLock) {
     if (IS_MAC && !quitOk && confirmQuitWithDownloads(null, () => { quitOk = true; app.quit(); })) { e.preventDefault(); return; }
     writeSettingsNow();
   });
+  app.on('will-quit', markClosed);
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
   app.on('activate', () => { if (uiWindows.size === 0) createWindow(); });
 }

@@ -10,7 +10,7 @@ import { C, R } from '@/lib/theme';
 // Vorteile-Liste (optional je Artikel)
 const perksOf = (item: ShopItem): readonly string[] => ('perks' in item ? (item as { perks: readonly string[] }).perks : []);
 // Optionale Felder je Artikel (Hinweis, „zurzeit nicht kaufbar“)
-const extra = (item: ShopItem) => item as ShopItem & { note?: string; available?: boolean; unavailableText?: string };
+const extra = (item: ShopItem) => item as ShopItem & { note?: string; available?: boolean; offLabel?: string; unavailableText?: string };
 
 export default function Shop() {
   const { user, wallet, refreshCoins, purchase } = useSession();
@@ -82,11 +82,11 @@ export default function Shop() {
               ) : null}
               {extra(item).note ? <Text style={s.note}>{extra(item).note}</Text> : null}
               {off && extra(item).unavailableText ? (
-                <View style={s.off}><Ionicons name="time-outline" size={16} color={C.text2} /><Text style={[s.text, { flex: 1 }]}>{extra(item).unavailableText}</Text></View>
+                <View style={s.off}><Ionicons name="checkmark-circle-outline" size={16} color={C.text2} /><Text style={[s.text, { flex: 1 }]}>{extra(item).unavailableText}</Text></View>
               ) : null}
               {active ? <Text style={s.until}>Aktiv bis {fmtDate(until)}</Text> : null}
               <Button
-                title={off ? 'Zurzeit nicht verfügbar' : active ? 'Bereits erworben' : missing > 0 ? `Noch ${missing.toLocaleString('de-DE')} FalCoins` : 'Kaufen'}
+                title={off ? extra(item).offLabel ?? 'Zurzeit nicht verfügbar' : active ? 'Bereits erworben' : missing > 0 ? `Noch ${missing.toLocaleString('de-DE')} FalCoins` : 'Kaufen'}
                 disabled={off || active || missing > 0} loading={busy === item.id} onPress={() => buy(item, active)} />
             </Card>
           );
