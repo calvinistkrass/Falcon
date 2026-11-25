@@ -167,14 +167,19 @@ jobs:
       - name: APK bauen
         working-directory: mobile/android
         shell: bash
-        # Bei Fehlern einmal wiederholen (Downloads von Gradle/Maven brechen gelegentlich ab) und das Ende der Ausgabe als lesbare Annotation zeigen
+        # Downloads von Gradle/Maven brechen gelegentlich ab: bis zu 3 Versuche mit Pause dazwischen.
+        # Bei einem Fehler landet der Grund („What went wrong“) als Hinweis in der Übersicht (ohne Anmeldung lesbar).
         run: |
           set -o pipefail
-          for i in 1 2; do
+          for i in 1 2 3; do
             if ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86,x86_64 2>&1 | tee build.log; then exit 0; fi
             echo "Versuch $i fehlgeschlagen"
+            if [ "$i" -lt 3 ]; then sleep $((i * 45)); fi
           done
-          echo "::error title=Android-Build fehlgeschlagen::$(grep -E 'FAILURE|What went wrong|error:|Error:|> ' build.log | tail -c 3500 | tr '\n' ' ' | sed 's/%/%25/g')"
+          # Alles ab der letzten FAILURE-Zeile; gibt es keine (z. B. Gradle selbst nicht ladbar), das Ende der Ausgabe
+          REASON="$(awk '/^FAILURE: /{r="";f=1} f{r=r $0 "\n"} END{printf "%s", r}' build.log | grep -vE '^> (Run with|Get more help)' || true)"
+          [ -n "$REASON" ] || REASON="$(tail -n 40 build.log)"
+          echo "::error title=Android-Build fehlgeschlagen::$(printf '%s' "$REASON" | head -c 3500 | sed 's/%/%25/g' | tr '\r\n' '  ')"
           exit 1
 
       - name: An das Release anhängen
