@@ -2,6 +2,16 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.6.2] – 2026-11-25
+
+### Changed
+- **Test release** for the update process. Nothing else has changed.
+
+## [2.6.1] – 2026-11-25
+
+### Changed
+- **Internal version**, published together with 2.6.2.
+
 ## [2.6.0] – 2026-11-25
 
 ### Added
