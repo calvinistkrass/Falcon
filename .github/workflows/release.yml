@@ -35,22 +35,28 @@ jobs:
 
       - run: npm ci
 
+      # Release vorher genau einmal anlegen – mit dem Abschnitt aus der CHANGELOG.md als Text.
+      # Seit electron-builder 26 laden mehrere Dateien gleichzeitig hoch; ohne vorhandenes Release legte jede ihr
+      # eigenes an (2.7.0 hatte zwei Releases mit verteilten Dateien). Die Builds laden danach nur noch hinzu.
+      - name: Release anlegen
+        shell: bash
+        run: |
+          awk -v v="## [${GITHUB_REF_NAME#v}]" '/^## /{f=(index($0,v)==1);next} /^\[[0-9.]+\]:/{f=0} f' CHANGELOG.md > release-notes.md
+          grep -q '[^[:space:]]' release-notes.md || echo "Falcon ${GITHUB_REF_NAME#v}" > release-notes.md
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "${GITHUB_REF_NAME#v}" --notes-file release-notes.md --verify-tag
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Bauen und veröffentlichen
         run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Abschnitt aus der CHANGELOG.md als Release-Text. Ohne ihn zeigt GitHub (und damit das Update-Fenster von
-      # Falcon bis 2.5.8) die abgeschnittene Commit-Nachricht. Scheitert das, bleibt der Build trotzdem gültig.
-      - name: Release-Text aus der CHANGELOG.md
-        continue-on-error: true
-        shell: bash
-        run: |
-          awk -v v="## [${GITHUB_REF_NAME#v}]" '/^## /{f=(index($0,v)==1);next} /^\[[0-9.]+\]:/{f=0} f' CHANGELOG.md > release-notes.md
-          grep -q '[^[:space:]]' release-notes.md
-          gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Release ist schon angelegt (Job windows) – auch hochladen, wenn ein Build länger als 2 Stunden wartet
+          EP_GH_IGNORE_TIME: 'true'
 
   mac:
     needs: windows
@@ -81,6 +87,8 @@ jobs:
           exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Release ist schon angelegt (Job windows) – auch hochladen, wenn ein Build länger als 2 Stunden wartet
+          EP_GH_IGNORE_TIME: 'true'
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
   # .deb (Ubuntu, Debian, Mint …)
@@ -108,6 +116,8 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Release ist schon angelegt (Job windows) – auch hochladen, wenn ein Build länger als 2 Stunden wartet
+          EP_GH_IGNORE_TIME: 'true'
 
   # .rpm (Fedora, openSUSE …) – auf Ubuntu 22.04: dessen rpmbuild (4.17) verträgt sich mit dem fpm von
   # electron-builder; mit rpmbuild 4.18+ (Ubuntu 24.04, Fedora 41) scheiterte der Build
@@ -137,6 +147,8 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Release ist schon angelegt (Job windows) – auch hochladen, wenn ein Build länger als 2 Stunden wartet
+          EP_GH_IGNORE_TIME: 'true'
 
   android:
     needs: windows
