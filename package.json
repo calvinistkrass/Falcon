@@ -93,12 +93,14 @@
         "text/html"
       ],
       "desktop": {
-        "Name": "Falcon",
-        "GenericName": "Web Browser",
-        "GenericName[de]": "Webbrowser",
-        "Comment[de]": "Der schnelle Browser für Gamer",
-        "Keywords": "browser;web;internet;gaming;",
-        "StartupWMClass": "Falcon"
+        "entry": {
+          "Name": "Falcon",
+          "GenericName": "Web Browser",
+          "GenericName[de]": "Webbrowser",
+          "Comment[de]": "Der schnelle Browser für Gamer",
+          "Keywords": "browser;web;internet;gaming;",
+          "StartupWMClass": "Falcon"
+        }
       },
       "publish": [
         {
