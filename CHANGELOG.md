@@ -2,7 +2,9 @@
 
 All notable changes to Falcon are documented here.
 
-## [2.7.0] – 2026-11-27
+## [2.7.0] – 2026-11-27 (Beta)
+
+> **Beta:** This version brings many changes and hasn't been fully tested yet. If something doesn't work, please report it via the menu → Report a problem.
 
 ### Added
 - **Automatic Game Mode** (Windows): Falcon turns Game Mode on while a game runs in full screen and off again afterwards. Can be switched off under Settings → Performance.

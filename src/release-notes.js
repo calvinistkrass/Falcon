@@ -35,7 +35,7 @@ function parse(markdown) {
     if (!section) continue;
     m = line.match(/^#{3,}\s+(.+)$/);
     if (m) { group = { kind: KINDS[m[1].trim().toLowerCase()] || '', items: [] }; section.groups.push(group); item = null; continue; }
-    const text = line.trim();
+    const text = line.trim().replace(/^>\s*/, ''); // Hinweis-Zeilen („> **Beta:** …“) als normaler Text
     // Leerzeile beendet den Punkt; „[2.0.2]: https://…“ sind Verweise am Dateiende
     if (!text || /^\[[^\]]+\]:\s/.test(text)) { item = null; continue; }
     m = line.match(/^(\s*)[-*]\s+(.+)$/);
