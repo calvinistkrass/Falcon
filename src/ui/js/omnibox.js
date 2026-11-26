@@ -114,6 +114,9 @@ const Omnibox = (() => {
     rows = out;
     sel = 0;
     render();
+    // Vorladen: Verbindung zum wahrscheinlichsten Ziel schon aufbauen
+    const best = rows[0]?.kind === 'search' ? searchUrl(rows[0].query) : rows[0]?.url;
+    if (best && state.settings.preconnect !== false) F.preconnect(best);
   }
 
   function render() {

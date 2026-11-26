@@ -1,4 +1,4 @@
-// App-Zustand: Falcon-Konto, Sync-Daten (Ende-zu-Ende-verschlüsselt), FalCoins, Shop, Missionen und Browser-Tabs.
+// App-Zustand: Falcon-Konto, Sync-Daten (Ende-zu-Ende-verschlüsselt) und Browser-Tabs.
 // Alle Formate entsprechen Falcon auf dem PC (src/account.js), damit beide Seiten dieselben Daten lesen und schreiben.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -18,52 +18,13 @@ export type Password = { id: string; origin: string; username: string; password:
 export type HistoryEntry = { url: string; title?: string; visits?: number; last?: number };
 export type Device = { id: string; name: string; at: number; kind?: string; tabs: { url: string; title?: string }[] };
 export type Tab = { id: string; src: string; nonce: number; url: string; title: string; incognito?: boolean };
-export type Wallet = { balance: number; pending: number; betaUntil: number; gameModeUntil: number; lastDaily: string; streak: number };
-export type Mission = { id: string; goal: number; reward: number; progress: number; done: boolean; claimed: boolean; pcOnly?: boolean };
-export type LogEntry = { type: string; amount: number; label: string; at: number };
-export type Purchase = { id: string; item: string; price: number; at: number; until: number; refund: string | null; refundUntil: number; expired: boolean; hoursLeft: number };
-// Rückerstattung nur innerhalb dieser Frist nach dem Kauf (seit 2.5.0: Beta-Zugriff 24 Stunden, wie am PC)
-const REFUND_WINDOW_MS: Record<string, number> = { beta14: 24 * 3600_000 };
-export const refundUntil = (item: string, at: number) => (REFUND_WINDOW_MS[item] ? at + REFUND_WINDOW_MS[item] : 0);
-export type Refund = { id: string; uid: string; email: string; name: string; purchaseId: string; item: string; price: number; reason: string; created: number; status: string; note: string; decidedAt: number; seen: boolean };
-export const ITEM_NAME = (id: string) => (id === 'beta14' ? 'Beta-Zugriff' : id === 'gameMode' ? 'Game Mode' : id);
-const SHOP_FIELDS: Record<string, string> = { beta14: 'betaUntil', gameMode: 'gameModeUntil' };
-const fromRefund = (d: FB.Doc): Refund => {
-  const f = d.fields || {};
-  return {
-    id: d.name.split('/').pop() as string, uid: FB.text(f.uid), email: FB.text(f.email), name: FB.text(f.name), purchaseId: FB.text(f.purchaseId),
-    item: FB.text(f.item), price: FB.num(f.price), reason: FB.text(f.reason), created: FB.num(f.created), status: FB.text(f.status) || 'pending',
-    note: FB.text(f.note), decidedAt: FB.num(f.decidedAt), seen: !!f.seen?.booleanValue
-  };
-};
+export type Notice = { id: string; title: string; text: string; created: number };
 export type Report = { id: string; text?: string; category?: string; version?: string; created?: string; status?: string; url?: string; email?: string; os?: string };
-export type AdminWallet = { uid: string; email: string; name: string; balance: number; betaUntil: number; gameModeUntil: number };
 type User = { uid: string; email: string; name: string; emailVerified: boolean };
 type Status = 'loading' | 'signedOut' | 'unlocking' | 'signedIn';
 type Kind = 'bookmarks' | 'passwords' | 'history' | 'settings';
-type MissionState = { date: string; visits: number; domains: string[]; claimed: string[] };
 
-// ---------- FalCoin-Shop (wie auf dem PC) ----------
-export const SHOP = [
-  // Seit 2.6.0 sind alle Beta-Funktionen für alle frei – der Beta-Zugriff ist nicht mehr käuflich (available wie am PC)
-  {
-    id: 'beta14', price: 350, icon: 'flask-outline', field: 'betaUntil', days: 30, title: 'Beta-Zugriff · 30 Tage', extendLabel: 'Um 30 Tage verlängern',
-    available: false, offLabel: 'Für alle kostenlos', unavailableText: 'Alle Beta-Funktionen sind jetzt für alle kostenlos – auch ohne Konto. Du musst nichts mehr kaufen.',
-    text: 'Teste neue Funktionen vor allen anderen – dazu gehört der Game Mode. Dein Zugriff gilt ab dem Kauf 30 Tage lang. Eine Rückerstattung ist nur innerhalb von 24 Stunden nach dem Kauf möglich.',
-    perks: ['Game Mode – gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden pausiert und schlafen gelegt (wirkt in Falcon auf dem PC)', 'Akzentfarbe – Falcon in deiner Farbe, auch mit eigenen Farben (in Falcon auf dem PC)', 'RGB-Modus – die Akzentfarbe läuft durch alle Farben, Tabs und Knöpfe leuchten (in Falcon auf dem PC)', 'Angebots-Wunschliste – Falcon meldet sich, wenn ein Spiel kostenlos oder reduziert ist (in Falcon auf dem PC)', 'Seite übersetzen – Websites direkt in deine Sprache übersetzen', 'Alle weiteren Beta-Funktionen, sobald sie erscheinen']
-  }
-] as const;
-export type ShopItem = (typeof SHOP)[number];
-const MISSIONS = [
-  { id: 'visits20', metric: 'visits', goal: 20, reward: 20 },
-  { id: 'sites5', metric: 'domains', goal: 5, reward: 10 },
-  { id: 'gamemode30', metric: 'gmMinutes', goal: 30, reward: 15 }
-] as const;
-export const MISSION_TEXT: Record<string, string> = {
-  visits20: 'Besuche heute {goal} Seiten',
-  sites5: 'Besuche {goal} verschiedene Websites',
-  gamemode30: 'Nutze {goal} Minuten den Game Mode'
-};
+
 
 type Ctx = {
   status: Status;
@@ -72,9 +33,6 @@ type Ctx = {
   passwords: Password[];
   history: HistoryEntry[];
   devices: Device[];
-  wallet: Wallet;
-  daily: { available: boolean; streak: number; next: number };
-  missions: Mission[];
   searchEngine: string;
   pwNever: string[];
   admin: boolean;
@@ -93,19 +51,6 @@ type Ctx = {
   changePassword: (current: string, next: string) => Promise<void>;
   deleteAccount: (password: string) => Promise<void>;
   resendVerification: () => Promise<void>;
-  // FalCoins
-  claimDaily: () => Promise<{ reward: number; streak: number }>;
-  claimMission: (id: string) => Promise<{ reward: number }>;
-  purchase: (item: string) => Promise<{ until: number }>;
-  refreshCoins: () => Promise<void>;
-  coinLog: () => Promise<LogEntry[]>;
-  // Rückerstattungen
-  listPurchases: () => Promise<Purchase[]>;
-  requestRefund: (r: { purchaseId: string; email: string; reason: string }) => Promise<void>;
-  refundNotices: () => Promise<Refund[]>;
-  markRefundSeen: (id: string) => Promise<void>;
-  adminRefunds: () => Promise<Refund[]>;
-  adminDecideRefund: (r: Refund, approve: boolean, note?: string) => Promise<void>;
   // Sync-Daten bearbeiten
   addBookmark: (url: string, title: string) => Promise<void>;
   removeBookmark: (url: string) => Promise<void>;
@@ -120,8 +65,10 @@ type Ctx = {
   adminReports: () => Promise<Report[]>;
   updateReport: (id: string, status: string) => Promise<void>;
   deleteReport: (id: string) => Promise<void>;
-  adminWallets: () => Promise<AdminWallet[]>;
-  adminUpdateWallet: (uid: string, patch: { balance?: number; gameModeUntil?: number; betaUntil?: number }) => Promise<void>;
+  // Benachrichtigungen vom Admin an alle mit Konto
+  notices: () => Promise<Notice[]>;
+  sendNotice: (title: string, text: string) => Promise<void>;
+  deleteNotice: (id: string) => Promise<void>;
   // Browser
   openUrl: (url: string) => void;
   navigate: (url: string) => void;
@@ -134,9 +81,7 @@ type Ctx = {
 };
 
 const SESSION_KEY = 'falcon.session';
-const MISSIONS_KEY = 'falcon.missions';
 const DEVICE_KEY = 'falcon.device';
-const EMPTY_WALLET: Wallet = { balance: 0, pending: 0, betaUntil: 0, gameModeUntil: 0, lastDaily: '', streak: 0 };
 const DEVICE_NAME = Platform.OS === 'ios' ? 'iPhone' : Platform.OS === 'android' ? 'Android-Handy' : 'Handy';
 const SessionContext = createContext<Ctx | null>(null);
 const retryable = (e: unknown) => e instanceof FB.ApiError && /FAILED_PRECONDITION|ABORTED|ALREADY_EXISTS/.test(e.code);
@@ -144,34 +89,6 @@ const retryable = (e: unknown) => e instanceof FB.ApiError && /FAILED_PRECONDITI
 // ---------- Hilfen ----------
 export function today(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-const DAILY = 10, STREAK_BONUS = 50, STREAK_DAYS = 7;
-const dailyReward = (streak: number) => DAILY + (streak % STREAK_DAYS === 0 ? STREAK_BONUS : 0);
-function nextStreak(w: Wallet) {
-  const y = new Date(); y.setDate(y.getDate() - 1);
-  return w.lastDaily === today(y) ? w.streak + 1 : 1;
-}
-function walletFrom(doc: FB.Doc | null, pending = 0): Wallet {
-  const f = doc?.fields || {};
-  return {
-    balance: FB.num(f.balance), pending, betaUntil: FB.num(f.betaUntil), gameModeUntil: FB.num(f.gameModeUntil),
-    lastDaily: FB.text(f.lastDaily), streak: FB.num(f.streak)
-  };
-}
-function extend(from: number, it: { months?: number; days?: number }) {
-  const d = new Date(Math.max(Date.now(), from || 0));
-  if (it.months) d.setMonth(d.getMonth() + it.months);
-  if (it.days) d.setDate(d.getDate() + it.days);
-  return d.getTime();
-}
-function logWrites(uid: string, { id = randomId(), type, amount, label = '', increment = false }:
-  { id?: string; type: string; amount: number; label?: string; increment?: boolean }) {
-  const name = FB.docName(`users/${uid}/coinlog/${id}`);
-  if (!increment) return [{ update: { name, fields: { type: FB.str(type), amount: FB.int(amount), label: FB.str(label), at: FB.int(Date.now()) } }, currentDocument: { exists: false } }];
-  return [
-    { update: { name, fields: { type: FB.str(type), label: FB.str(label), at: FB.int(Date.now()) } }, updateMask: { fieldPaths: ['type', 'label', 'at'] } },
-    { transform: { document: name, fieldTransforms: [{ fieldPath: 'amount', increment: { integerValue: String(amount) } }] } }
-  ];
 }
 const fromFields = (f: Record<string, any> = {}) => Object.fromEntries(Object.entries(f).map(([k, v]) =>
   [k, v.stringValue ?? (v.integerValue != null ? Number(v.integerValue) : v.timestampValue ?? v.booleanValue ?? null)]));
@@ -196,25 +113,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [devices, setDevices] = useState<Device[]>([]);
-  const [wallet, setWallet] = useState<Wallet>(EMPTY_WALLET);
-  const [mstate, setMstate] = useState<MissionState>({ date: today(), visits: 0, domains: [], claimed: [] });
   const [admin, setAdmin] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
   const [tabs, setTabs] = useState<Tab[]>(() => [{ id: randomId(), src: '', nonce: 0, url: '', title: '' }]);
   const [activeId, setActiveId] = useState(() => tabs[0].id);
-  const [clock, setClock] = useState(() => Date.now());
 
   const tokens = useRef<FB.Tokens | null>(null);
   const key = useRef<Uint8Array | null>(null);
-  const pending = useRef(0);
   const lastVisit = useRef({ url: '', at: 0 });
   const pendingHistory = useRef<Map<string, HistoryEntry>>(new Map());
   const deviceId = useRef('');
   const lastTabsHash = useRef('');
 
-  // Uhr für „aktiv bis“-Anzeigen und den Tageswechsel der Missionen
-  useEffect(() => { const iv = setInterval(() => setClock(Date.now()), 60_000); return () => clearInterval(iv); }, []);
 
   const locked = useUpdateRequired();
 
@@ -266,17 +177,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [user, token, SETTERS, EMPTY]);
 
   // ---------- Daten laden ----------
-  const ensureWallet = useCallback(async (u: User) => {
-    const t = await token();
-    let doc = await FB.getDoc(`wallets/${u.uid}`, t);
-    if (!doc) {
-      try {
-        doc = await FB.createDoc(`wallets/${u.uid}`, { balance: FB.int(0), betaUntil: FB.int(0), gameModeUntil: FB.int(0), email: FB.str(u.email), name: FB.str(u.name), created: FB.int(Date.now()) }, t);
-      } catch { doc = await FB.getDoc(`wallets/${u.uid}`, t); }
-    }
-    return doc;
-  }, [token]);
-
   const checkAdmin = useCallback(async () => {
     try { await FB.query('reports', 'pageSize=1', await token()); setAdmin(true); } catch { setAdmin(false); }
   }, [token]);
@@ -288,10 +188,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       const t = await token();
       const kinds: Kind[] = ['bookmarks', 'passwords', 'history', 'settings'];
-      const [docs, devs, w] = await Promise.all([
+      const [docs, devs] = await Promise.all([
         Promise.all(kinds.map((k) => FB.getDoc(`users/${u.uid}/sync/${k}`, t).catch(() => null))),
-        FB.listDocs(`users/${u.uid}/devices`, t).catch(() => [] as FB.Doc[]),
-        ensureWallet(u)
+        FB.listDocs(`users/${u.uid}/devices`, t).catch(() => [] as FB.Doc[])
       ]);
       kinds.forEach((k, i) => {
         const d = docs[i];
@@ -309,7 +208,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         } catch { /* anderer Schlüssel */ }
       }
       setDevices(list.sort((a, b) => b.at - a.at));
-      setWallet(walletFrom(w, pending.current));
       FB.lookup(t).then((p) => setUser((cur) => (cur ? { ...cur, name: p.displayName || cur.name, emailVerified: p.emailVerified } : cur))).catch(() => {});
       checkAdmin();
     } catch (e) {
@@ -317,7 +215,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoadingData(false);
     }
-  }, [token, ensureWallet, SETTERS, EMPTY, checkAdmin]);
+  }, [token, SETTERS, EMPTY, checkAdmin]);
 
   // ---------- Gespeicherte Sitzung beim Start ----------
   useEffect(() => {
@@ -325,8 +223,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       try {
         deviceId.current = (await load(DEVICE_KEY)) || '';
         if (!deviceId.current) { deviceId.current = randomId(); await save(DEVICE_KEY, deviceId.current); }
-        const m = await load(MISSIONS_KEY);
-        if (m) { const x = JSON.parse(m); if (x.date === today()) setMstate(x); }
+        save('falcon.missions', null).catch(() => {}); // seit 2.7.0 ohne Missionen
       } catch { /* egal */ }
       await restoreUpdateRequired(APP_VERSION);
       try {
@@ -406,24 +303,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persist, reloadFor, setupKey]);
 
-  const flushCoins = useCallback(async () => {
-    const u = user;
-    const n = pending.current;
-    if (!u || !n || !key.current) return;
-    try {
-      const t = await token();
-      await ensureWallet(u);
-      const res = await FB.commit([
-        { update: { name: FB.docName(`wallets/${u.uid}`), fields: { email: FB.str(u.email), name: FB.str(u.name) } }, updateMask: { fieldPaths: ['email', 'name'] }, currentDocument: { exists: true } },
-        { transform: { document: FB.docName(`wallets/${u.uid}`), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(n) } }] } },
-        ...logWrites(u.uid, { id: `visits-${today()}`, type: 'visits', amount: n, label: today(), increment: true })
-      ], t);
-      pending.current -= n;
-      const balance = Number(res.writeResults?.[1]?.transformResults?.[0]?.integerValue);
-      setWallet((w) => ({ ...w, balance: Number.isFinite(balance) ? balance : w.balance, pending: pending.current }));
-    } catch { /* später erneut */ }
-  }, [user, token, ensureWallet]);
-
   // Verlauf vom Handy mit dem Konto zusammenführen (wie der PC: neueste zuerst, höchstens 3000)
   const flushHistory = useCallback(async () => {
     if (!user || !key.current || !pendingHistory.current.size) return;
@@ -462,27 +341,25 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [user, tabs, token]);
 
   const forget = useCallback(async () => {
-    tokens.current = null; key.current = null; pending.current = 0; pendingHistory.current = new Map(); lastTabsHash.current = '';
-    setUser(null); setBookmarks([]); setPasswords([]); setHistory([]); setSettings({}); setDevices([]); setWallet(EMPTY_WALLET); setAdmin(false);
+    tokens.current = null; key.current = null; pendingHistory.current = new Map(); lastTabsHash.current = '';
+    setUser(null); setBookmarks([]); setPasswords([]); setHistory([]); setSettings({}); setDevices([]); setAdmin(false);
     await save(SESSION_KEY, null);
     setStatus('signedOut');
   }, []);
 
   const signOut = useCallback(async () => {
-    await flushCoins();
     await flushHistory();
     try { if (user && deviceId.current) await FB.deleteDoc(`users/${user.uid}/devices/${deviceId.current}`, await token()); } catch { /* offline */ }
     await forget();
-  }, [flushCoins, flushHistory, forget, user, token]);
+  }, [flushHistory, forget, user, token]);
 
-  // FalCoins alle 30 Sekunden, Verlauf alle 2 Minuten, Tabs jede Minute – und alles beim Wechsel in den Hintergrund
+  // Verlauf alle 2 Minuten, Tabs jede Minute – und alles beim Wechsel in den Hintergrund
   useEffect(() => {
-    const a = setInterval(flushCoins, 30_000);
     const b = setInterval(flushHistory, 120_000);
     const c = setInterval(() => pushTabs(), 60_000);
-    const sub = AppState.addEventListener('change', (s) => { if (s !== 'active') { flushCoins(); flushHistory(); pushTabs(); } });
-    return () => { clearInterval(a); clearInterval(b); clearInterval(c); sub.remove(); };
-  }, [flushCoins, flushHistory, pushTabs]);
+    const sub = AppState.addEventListener('change', (s) => { if (s !== 'active') { flushHistory(); pushTabs(); } });
+    return () => { clearInterval(b); clearInterval(c); sub.remove(); };
+  }, [flushHistory, pushTabs]);
   // Spätestens alle 6 Stunden neu melden, damit das Handy bei den PCs als aktiv gilt
   useEffect(() => { if (user) { const iv = setInterval(() => pushTabs(true), 6 * 3600_000); return () => clearInterval(iv); } }, [user, pushTabs]);
 
@@ -518,184 +395,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [user, forget]);
 
   const resendVerification = useCallback(async () => { await FB.sendVerification(await token()); }, [token]);
-
-  // ---------- Tägliche Belohnung ----------
-  const claimDaily = useCallback(async () => {
-    const u = user;
-    if (!u) throw new FB.ApiError('SIGNED_OUT');
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const t = await token();
-      const doc = await ensureWallet(u);
-      const w = walletFrom(doc, pending.current);
-      if (w.lastDaily === today()) { setWallet(w); throw new FB.ApiError('ALREADY_CLAIMED'); }
-      const streak = nextStreak(w);
-      const reward = dailyReward(streak);
-      try {
-        await FB.commit([
-          {
-            update: { name: FB.docName(`wallets/${u.uid}`), fields: { balance: FB.int(w.balance + reward), lastDaily: FB.str(today()), streak: FB.int(streak) } },
-            updateMask: { fieldPaths: ['balance', 'lastDaily', 'streak'] },
-            currentDocument: { updateTime: doc?.updateTime }
-          },
-          ...logWrites(u.uid, { type: 'daily', amount: reward, label: String(streak) })
-        ], t);
-        setWallet({ ...w, balance: w.balance + reward, lastDaily: today(), streak });
-        return { reward, streak };
-      } catch (e) {
-        if (!retryable(e) || attempt === 2) throw e;
-      }
-    }
-    throw new FB.ApiError('UNKNOWN');
-  }, [user, token, ensureWallet]);
-
-  // ---------- Shop ----------
-  const refreshCoins = useCallback(async () => {
-    if (!user) return;
-    await flushCoins();
-    try { setWallet(walletFrom(await ensureWallet(user), pending.current)); } catch { /* offline */ }
-  }, [user, flushCoins, ensureWallet]);
-
-  const purchase = useCallback(async (itemId: string) => {
-    const u = user;
-    const it = SHOP.find((x) => x.id === itemId);
-    if (!it) throw new FB.ApiError('INVALID');
-    if ((it as { available?: boolean }).available === false) throw new FB.ApiError('UNAVAILABLE');
-    if (!u) throw new FB.ApiError('SIGNED_OUT');
-    // Erst offene FalCoins gutschreiben, damit der Kontostand stimmt
-    await flushCoins();
-    if (pending.current) throw new FB.ApiError('NETWORK');
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const t = await token();
-      const doc = await ensureWallet(u);
-      const w = walletFrom(doc, 0);
-      if (w[it.field] > Date.now()) { setWallet(w); throw new FB.ApiError('ALREADY_OWNED'); }
-      if (w.balance < it.price) { setWallet(w); throw new FB.ApiError('NOT_ENOUGH'); }
-      const until = extend(w[it.field], it as { months?: number; days?: number });
-      const fields = { balance: FB.int(w.balance - it.price), [it.field]: FB.int(until) };
-      try {
-        await FB.commit([
-          { update: { name: FB.docName(`wallets/${u.uid}`), fields }, updateMask: { fieldPaths: Object.keys(fields) }, currentDocument: { updateTime: doc?.updateTime } },
-          {
-            update: { name: FB.docName(`users/${u.uid}/purchases/${randomId()}`), fields: { item: FB.str(it.id), price: FB.int(it.price), at: FB.int(Date.now()), until: FB.int(until) } },
-            currentDocument: { exists: false }
-          },
-          ...logWrites(u.uid, { type: 'purchase', amount: -it.price, label: it.id })
-        ], t);
-        setWallet({ ...w, balance: w.balance - it.price, [it.field]: until });
-        return { until };
-      } catch (e) {
-        if (!retryable(e) || attempt === 2) throw e;
-      }
-    }
-    throw new FB.ApiError('UNKNOWN');
-  }, [user, token, flushCoins, ensureWallet]);
-
-  const coinLog = useCallback(async () => {
-    if (!user) throw new FB.ApiError('SIGNED_OUT');
-    await flushCoins();
-    const docs = await FB.query(`users/${user.uid}/coinlog`, 'pageSize=100&orderBy=at%20desc', await token());
-    return docs.map((d) => {
-      const f = d.fields || {};
-      return { type: FB.text(f.type), amount: FB.num(f.amount), label: FB.text(f.label), at: FB.num(f.at) };
-    }).sort((a, b) => b.at - a.at);
-  }, [user, token, flushCoins]);
-
-  // ---------- Rückerstattungen (Antrag → Admin entscheidet → Hinweis beim nächsten Start) ----------
-  const listPurchases = useCallback(async () => {
-    if (!user) throw new FB.ApiError('SIGNED_OUT');
-    const t = await token();
-    const [docs, mine] = await Promise.all([
-      FB.listDocs(`users/${user.uid}/purchases`, t),
-      FB.runQuery('refunds', 'uid', user.uid, t).catch(() => [] as FB.Doc[])
-    ]);
-    const refunds = mine.map(fromRefund);
-    return docs.map((d) => {
-      const f = d.fields || {};
-      const id = d.name.split('/').pop() as string;
-      const item = FB.text(f.item), at = FB.num(f.at);
-      const deadline = refundUntil(item, at);
-      return { id, item, price: FB.num(f.price), at, until: FB.num(f.until), refund: refunds.find((r) => r.purchaseId === id)?.status || null, refundUntil: deadline, expired: !!deadline && Date.now() > deadline, hoursLeft: deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 3600_000)) : 0 };
-    }).sort((a, b) => b.at - a.at);
-  }, [user, token]);
-  const requestRefund = useCallback(async ({ purchaseId, email, reason }: { purchaseId: string; email: string; reason: string }) => {
-    if (!user) throw new FB.ApiError('SIGNED_OUT');
-    const text = reason.trim().slice(0, 1000);
-    const mail = email.trim().slice(0, 200);
-    if (!text) throw new FB.ApiError('EMPTY_REASON');
-    if (!/^\S+@\S+\.\S+$/.test(mail)) throw new FB.ApiError('INVALID_EMAIL');
-    if (!/^[\w-]{6,64}$/.test(purchaseId)) throw new FB.ApiError('INVALID');
-    const t = await token();
-    const p = await FB.getDoc(`users/${user.uid}/purchases/${purchaseId}`, t);
-    if (!p) throw new FB.ApiError('INVALID');
-    const mine = (await FB.runQuery('refunds', 'uid', user.uid, t).catch(() => [] as FB.Doc[])).map(fromRefund);
-    if (mine.some((r) => r.purchaseId === purchaseId)) throw new FB.ApiError('ALREADY_REQUESTED');
-    const deadline = refundUntil(FB.text(p.fields?.item), FB.num(p.fields?.at));
-    if (deadline && Date.now() > deadline) throw new FB.ApiError('REFUND_EXPIRED');
-    await FB.addDoc('refunds', {
-      uid: FB.str(user.uid), email: FB.str(mail), name: FB.str(user.name || ''), purchaseId: FB.str(purchaseId),
-      item: FB.str(FB.text(p.fields?.item)), price: FB.int(FB.num(p.fields?.price)), reason: FB.str(text), created: FB.int(Date.now()), status: FB.str('pending')
-    }, t);
-  }, [user, token]);
-  const refundNotices = useCallback(async () => {
-    if (!user) return [];
-    return (await FB.runQuery('refunds', 'uid', user.uid, await token())).map(fromRefund).filter((r) => r.status !== 'pending' && !r.seen);
-  }, [user, token]);
-  const markRefundSeen = useCallback(async (id: string) => {
-    if (!/^[\w-]{6,64}$/.test(id)) throw new FB.ApiError('INVALID');
-    await FB.putDoc(`refunds/${id}`, { seen: { booleanValue: true } }, await token(), { exists: true }, ['seen']);
-  }, [token]);
-  const adminRefunds = useCallback(async () => {
-    const docs = await FB.query('refunds', 'pageSize=200', await token());
-    return docs.map(fromRefund).sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.created - a.created);
-  }, [token]);
-  const adminDecideRefund = useCallback(async (r: Refund, approve: boolean, note = '') => {
-    const t = await token();
-    const doc = await FB.getDoc(`refunds/${r.id}`, t);
-    if (!doc) throw new FB.ApiError('INVALID');
-    if (fromRefund(doc).status !== 'pending') throw new FB.ApiError('ALREADY_DECIDED');
-    const decided = { status: FB.str(approve ? 'approved' : 'denied'), decidedAt: FB.int(Date.now()), note: FB.str(note.trim().slice(0, 500)) };
-    const writes: unknown[] = [{ update: { name: FB.docName(`refunds/${r.id}`), fields: decided }, updateMask: { fieldPaths: Object.keys(decided) }, currentDocument: { updateTime: doc.updateTime } }];
-    if (approve) {
-      writes.push({ transform: { document: FB.docName(`wallets/${r.uid}`), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(r.price) } }] } });
-      const field = SHOP_FIELDS[r.item];
-      if (field) writes.push({ update: { name: FB.docName(`wallets/${r.uid}`), fields: { [field]: FB.int(0) } }, updateMask: { fieldPaths: [field] }, currentDocument: { exists: true } });
-      writes.push(...logWrites(r.uid, { type: 'refund', amount: r.price, label: r.item }));
-    }
-    await FB.commit(writes, t);
-    if (approve && user && r.uid === user.uid) await refreshCoins();
-  }, [token, user, refreshCoins]);
-
-  // ---------- Missionen (Fortschritt wird auf diesem Handy gezählt, wie auf jedem PC) ----------
-  const mcur = mstate.date === today(new Date(clock)) ? mstate : { date: today(new Date(clock)), visits: 0, domains: [], claimed: [] };
-  const missions: Mission[] = MISSIONS.map((x) => {
-    const value = x.metric === 'domains' ? mcur.domains.length : x.metric === 'visits' ? mcur.visits : 0;
-    return { id: x.id, goal: x.goal, reward: x.reward, progress: Math.min(value, x.goal), done: value >= x.goal, claimed: mcur.claimed.includes(x.id), pcOnly: x.metric === 'gmMinutes' };
-  });
-  const updateMissions = useCallback((fn: (m: MissionState) => MissionState) => {
-    setMstate((prev) => {
-      const base = prev.date === today() ? prev : { date: today(), visits: 0, domains: [], claimed: [] };
-      const next = fn(base);
-      save(MISSIONS_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-  const claimMission = useCallback(async (id: string) => {
-    const u = user;
-    if (!u) throw new FB.ApiError('SIGNED_OUT');
-    const m = missions.find((x) => x.id === id);
-    if (!m) throw new FB.ApiError('INVALID');
-    if (m.claimed) throw new FB.ApiError('ALREADY_CLAIMED');
-    if (!m.done) throw new FB.ApiError('NOT_DONE');
-    await ensureWallet(u);
-    const res = await FB.commit([
-      { transform: { document: FB.docName(`wallets/${u.uid}`), fieldTransforms: [{ fieldPath: 'balance', increment: { integerValue: String(m.reward) } }] } },
-      ...logWrites(u.uid, { type: 'mission', amount: m.reward, label: id })
-    ], await token());
-    const balance = Number(res.writeResults?.[0]?.transformResults?.[0]?.integerValue);
-    if (Number.isFinite(balance)) setWallet((w) => ({ ...w, balance }));
-    updateMissions((s) => ({ ...s, claimed: [...s.claimed, id] }));
-    return { reward: m.reward };
-  }, [user, missions, ensureWallet, token, updateMissions]);
 
   // ---------- Lesezeichen, Passwörter, Verlauf ----------
   const addBookmark = useCallback((url: string, title: string) =>
@@ -754,27 +453,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     await FB.deleteDoc(`reports/${id}`, t);
     await FB.deleteDoc(`reportsPublic/${id}`, t).catch(() => {});
   }, [token]);
-  const adminWallets = useCallback(async () => {
-    const docs = await FB.query('wallets', 'pageSize=300', await token());
-    return docs.map((d) => {
-      const f = d.fields || {};
-      return { uid: d.name.split('/').pop() as string, email: FB.text(f.email), name: FB.text(f.name), balance: FB.num(f.balance), betaUntil: FB.num(f.betaUntil), gameModeUntil: FB.num(f.gameModeUntil) };
-    }).sort((a, b) => b.balance - a.balance);
+  // Benachrichtigungen: notices/{id} – lesen dürfen alle mit Konto, schreiben nur der Admin (Firestore-Regeln)
+  const notices = useCallback(async () => {
+    if (!user || isUpdateRequired()) return [];
+    const docs = await FB.query('notices', 'pageSize=20&orderBy=created%20desc', await token());
+    return docs.map((d) => ({ id: d.name.split('/').pop() as string, title: FB.text(d.fields?.title), text: FB.text(d.fields?.text), created: FB.num(d.fields?.created) }))
+      .filter((n) => n.text && Date.now() - n.created < 60 * 86400_000);
+  }, [user, token]);
+  const sendNotice = useCallback(async (title: string, text: string) => {
+    const body = text.trim().slice(0, 1000);
+    if (!body) throw new FB.ApiError('EMPTY');
+    await FB.addDoc('notices', { title: FB.str(title.trim().slice(0, 80)), text: FB.str(body), created: FB.int(Date.now()) }, await token());
   }, [token]);
-  const adminUpdateWallet = useCallback(async (uid: string, patch: { balance?: number; gameModeUntil?: number; betaUntil?: number }) => {
-    if (!/^[\w-]{6,128}$/.test(uid)) throw new FB.ApiError('INVALID');
-    const fields: Record<string, unknown> = {};
-    if (patch.balance !== undefined) {
-      const n = Math.round(Number(patch.balance));
-      if (!Number.isFinite(n) || n < 0 || n > 1e9) throw new FB.ApiError('INVALID');
-      fields.balance = FB.int(n);
-    }
-    if (patch.gameModeUntil !== undefined) fields.gameModeUntil = FB.int(Math.max(0, Math.round(patch.gameModeUntil)));
-    if (patch.betaUntil !== undefined) fields.betaUntil = FB.int(Math.max(0, Math.round(patch.betaUntil)));
-    if (!Object.keys(fields).length) throw new FB.ApiError('INVALID');
-    await FB.putDoc(`wallets/${uid}`, fields, await token(), { exists: true }, Object.keys(fields));
-    if (user && uid === user.uid) await refreshCoins();
-  }, [token, user, refreshCoins]);
+  const deleteNotice = useCallback(async (id: string) => {
+    if (!/^[\w-]{10,40}$/.test(id)) throw new FB.ApiError('INVALID');
+    await FB.deleteDoc(`notices/${id}`, await token());
+  }, [token]);
+
 
   // ---------- Browser-Tabs ----------
   const blank = (incognito = false): Tab => ({ id: randomId(), src: '', nonce: 0, url: '', title: '', ...(incognito ? { incognito: true } : {}) });
@@ -849,7 +544,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const updateTab = useCallback((id: string, patch: Partial<Pick<Tab, 'url' | 'title'>>) => {
     setTabs((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   }, []);
-  // 1 FalCoin pro neuer Seite (kein Neuladen, höchstens alle 5 Sekunden); Verlauf nur außerhalb von Inkognito
+  // Verlauf (nicht in Inkognito)
   const visited = useCallback((url: string, title?: string, incognito?: boolean) => {
     if (!user || !/^https?:/i.test(url)) return;
     const clean = url.replace(/#.*$/, '');
@@ -858,36 +553,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (e) { if (title) e.title = title; if (clean !== lastVisit.current.url) { e.visits = (e.visits || 0) + 1; e.last = Date.now(); } }
       else if (clean !== lastVisit.current.url) pendingHistory.current.set(clean, { url: clean, title: title || '', visits: 1, last: Date.now() });
     }
-    const last = lastVisit.current;
-    if (clean === last.url || Date.now() - last.at < 5000) { last.url = clean; return; }
     lastVisit.current = { url: clean, at: Date.now() };
-    pending.current += 1;
-    setWallet((w) => ({ ...w, pending: pending.current }));
-    const host = hostOf(clean);
-    updateMissions((m) => ({ ...m, visits: m.visits + 1, domains: host && !m.domains.includes(host) && m.domains.length < 50 ? [...m.domains, host] : m.domains }));
-  }, [user, updateMissions]);
-
-  const daily = useMemo(() => {
-    const claimed = wallet.lastDaily === today();
-    const next = claimed ? wallet.streak + 1 : nextStreak(wallet);
-    return { available: !claimed, streak: claimed ? wallet.streak : next - 1, next: dailyReward(next) };
-  }, [wallet]);
+  }, [user]);
 
   const value: Ctx = {
-    status, user, bookmarks, passwords, history, devices, wallet, daily, missions, admin, loadingData, tabsReady, dataError, tabs, activeId,
+    status, user, bookmarks, passwords, history, devices, admin, loadingData, tabsReady, dataError, tabs, activeId,
     searchEngine: typeof settings.searchEngine === 'string' ? settings.searchEngine : 'google',
     pwNever: Array.isArray(settings.pwNever) ? settings.pwNever as string[] : [],
-    signIn, signUp, signOut, reload: async () => { if (user) { await flushCoins(); await flushHistory(); await reloadFor(user); pushTabs(true); } },
+    signIn, signUp, signOut, reload: async () => { if (user) { await flushHistory(); await reloadFor(user); pushTabs(true); } },
     updateName, changePassword, deleteAccount, resendVerification,
-    claimDaily, claimMission, purchase, refreshCoins, coinLog,
-    listPurchases, requestRefund, refundNotices, markRefundSeen, adminRefunds, adminDecideRefund,
     addBookmark, removeBookmark, savePassword, deletePassword, clearHistory, removeHistory, neverSave,
-    submitReport, publicReports, adminReports, updateReport, deleteReport, adminWallets, adminUpdateWallet,
+    submitReport, publicReports, adminReports, updateReport, deleteReport, notices, sendNotice, deleteNotice,
     openUrl, navigate, newTab, closeTab, closeAllTabs, switchTab, updateTab, visited
   };
   // Pflicht-Update: Das Konto ruht (Anmeldung und Daten bleiben gespeichert und kommen nach dem Update zurück)
   const shown: Ctx = locked ? {
-    ...value, status: 'signedOut', user: null, bookmarks: [], passwords: [], history: [], devices: [], wallet: EMPTY_WALLET,
+    ...value, status: 'signedOut', user: null, bookmarks: [], passwords: [], history: [], devices: [],
     admin: false, loadingData: false, dataError: null
   } : value;
   return <SessionContext.Provider value={shown}>{children}</SessionContext.Provider>;
@@ -913,16 +594,7 @@ export const ERRORS: Record<string, string> = {
   EMAIL_EXISTS: 'Für diese E-Mail-Adresse gibt es schon ein Konto. Melde dich stattdessen an.',
   WEAK_PASSWORD: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
   OPERATION_NOT_ALLOWED: 'Registrieren ist gerade nicht möglich.',
-  ALREADY_CLAIMED: 'Heute schon abgeholt – komm morgen wieder!',
-  NOT_ENOUGH: 'Nicht genug FalCoins.',
-  NOT_DONE: 'Die Mission ist noch nicht geschafft.',
-  UNAVAILABLE: 'Das gibt es zurzeit nicht zu kaufen.',
-  ALREADY_OWNED: 'Bereits erworben – du kannst erst nach Ablauf erneut kaufen.',
   EMPTY: 'Bitte beschreib kurz, was passiert ist.',
-  EMPTY_REASON: 'Bitte gib einen Grund an.',
-  ALREADY_REQUESTED: 'Für diesen Kauf läuft schon eine Rückerstattung.',
-  REFUND_EXPIRED: 'Die Frist ist abgelaufen: Für den Beta-Zugriff gibt es eine Rückerstattung nur innerhalb von 24 Stunden nach dem Kauf.',
-  ALREADY_DECIDED: 'Über diesen Antrag wurde schon entschieden.',
   CREDENTIAL_TOO_OLD_LOGIN_AGAIN: 'Bitte melde dich ab und wieder an.',
   PERMISSION_DENIED: 'Der Server hat den Zugriff verweigert.',
   SIGNED_OUT: 'Bitte melde dich zuerst an.'

@@ -1,12 +1,12 @@
-// Startseite: Suche, Verknüpfungen, tägliche Belohnung und Gratis-Spiele
+// Startseite: Suche, Verknüpfungen und Gratis-Spiele
 import React, { useEffect, useState } from 'react';
-import { Alert, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Card, CoinIcon, Field, Favicon } from '@/components/ui';
-import { errorText, useSession } from '@/lib/session';
+import { Button, Card, Field, Favicon } from '@/components/ui';
+import { useSession } from '@/lib/session';
 import { fetchJson } from '@/lib/firebase';
 import { C, R, toUrl } from '@/lib/theme';
 import { useUpdateRequired } from '@/lib/required';
@@ -22,12 +22,11 @@ const SHORTCUTS = [
 type Game = { title: string; image: string; url: string; platform: string; worth: string };
 
 export default function Start() {
-  const { user, wallet, daily, claimDaily, openUrl, history, bookmarks, searchEngine } = useSession();
+  const { user, openUrl, history, bookmarks, searchEngine } = useSession();
   const [q, setQ] = useState('');
   const [searching, setSearching] = useState(false);
   const suggestions = useSuggestions(q, { history, bookmarks, engine: searchEngine, enabled: searching });
   const [games, setGames] = useState<Game[]>([]);
-  const [claiming, setClaiming] = useState(false);
   const { update, download, dismiss, progress, error: updateError, openWebsite } = useAppUpdate();
   const mustUpdate = useUpdateRequired();
   const downloading = typeof progress === 'number';
@@ -46,14 +45,6 @@ export default function Start() {
   const go = (url: string) => { openUrl(url); router.navigate('/browser'); };
   const search = (text: string) => { const url = toUrl(text, searchEngine); if (url) { Keyboard.dismiss(); setSearching(false); go(url); setQ(''); } };
   const submit = () => search(q);
-  const claim = async () => {
-    setClaiming(true);
-    try {
-      const r = await claimDaily();
-      Alert.alert('Tägliche Belohnung', r.streak % 7 === 0 ? `+${r.reward} FalCoins – ${r.streak} Tage in Folge, Bonus!` : `+${r.reward} FalCoins · Tag ${r.streak} in Folge`);
-    } catch (e) { Alert.alert('Tägliche Belohnung', errorText(e)); }
-    setClaiming(false);
-  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
@@ -63,12 +54,6 @@ export default function Start() {
             <Image source={require('../../../assets/logo.png')} style={{ width: 34, height: 34 }} />
             <Text style={s.brandText}>Falcon</Text>
           </View>
-          {user ? (
-            <Pressable style={s.coins} onPress={() => router.push('/shop')} accessibilityLabel="FalCoin-Shop">
-              <CoinIcon size={18} />
-              <Text style={s.coinsText}>{(wallet.balance + wallet.pending).toLocaleString('de-DE')}</Text>
-            </Pressable>
-          ) : null}
         </View>
 
         {update ? (
@@ -125,22 +110,10 @@ export default function Start() {
           ))}
         </View>
 
-        {user && daily.available ? (
-          <Card style={s.daily}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={s.dailyIc}><Ionicons name="gift" size={22} color={C.gold} /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>Tägliche Belohnung</Text>
-                <Text style={s.cardText}>Tag {daily.streak + 1} in Folge · +{daily.next} FalCoins</Text>
-              </View>
-            </View>
-            <Button title={`+${daily.next} abholen`} variant="gold" onPress={claim} loading={claiming} small />
-          </Card>
-        ) : null}
         {!user ? (
           <Card style={s.daily}>
             <Text style={s.cardTitle}>Falcon auf dem Handy</Text>
-            <Text style={s.cardText}>Melde dich an, um Lesezeichen und die Tabs deiner PCs zu sehen und FalCoins zu sammeln.</Text>
+            <Text style={s.cardText}>Melde dich an, um Lesezeichen und die Tabs deiner PCs zu sehen.</Text>
             <Button title="Anmelden" icon="log-in-outline" onPress={() => router.navigate('/account')} small />
           </Card>
         ) : null}

@@ -1,7 +1,7 @@
 'use strict';
 // Falcon – Hauptprozess
 
-const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen, protocol, net, webContents, Notification, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Menu, clipboard, shell, nativeImage, dialog, screen, protocol, net, webContents, Notification, powerMonitor, ClipboardItem } = require('electron');
 const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
@@ -17,6 +17,7 @@ const googleSignin = require('./google-signin');
 const updater = require('./updater');
 const { translator } = require('./i18n-main');
 const defaultBrowser = require('./default-browser');
+const gameDetect = require('./game-detect');
 const account = require('./account');
 const extensions = require('./extensions');
 
@@ -61,6 +62,8 @@ const DEFAULTS = {
   searchEngine: 'google',
   adblock: true,
   gameMode: false,
+  autoGameMode: true,   // seit 2.7.0: Game Mode an, solange ein Spiel im Vollbild läuft (Windows)
+  bgFreeze: true,       // seit 2.7.0: Tabs einfrieren, solange Falcon minimiert/verdeckt ist
   sleepMinutes: 10,
   showHud: true,
   showBookmarksBar: true,
@@ -164,6 +167,7 @@ function setUpdateLock(on) {
   if (updateLock === !!on) return;
   updateLock = !!on;
   account.setLocked(updateLock);
+  adblock.setOffline(updateLock);
   lastAccent = accentNow();
   applyNetLimit();
   broadcast('settings-changed', uiSettings());
@@ -393,7 +397,7 @@ function setupAdblock(ses) {
 }
 ipcMain.handle('adblock:stats', (_e, id) => adblock.stats(id));
 ipcMain.handle('adblock:info', () => adblock.info());
-ipcMain.handle('adblock:update', async () => { await adblock.update(); return adblock.info(); });
+ipcMain.handle('adblock:update', async () => { if (!updateLock) await adblock.update(); return adblock.info(); });
 
 // ---------------------------------------------------------------------------
 // Downloads
@@ -758,20 +762,12 @@ const accountHandlers = {
   dirty: (kind) => { if (kind === 'history' || kind === 'tabs') account.markDirty(kind); return true; },
   remoteTabs: () => account.remoteTabs(),
   submitReport: (a) => account.submitReport(a),
-  purchase: (a) => account.purchase(a),
-  refreshCoins: () => account.refreshCoins(),
-  coinLog: () => account.coinLog(),
-  claimDaily: () => account.claimDaily(),
-  claimMission: (a) => account.claimMission(a),
+  listNotices: () => account.listNotices(),
+  markNoticeSeen: (id) => account.markNoticeSeen(id),
+  adminNotices: () => (account.state().admin ? account.listNotices({ all: true }) : { ok: false, error: 'FORBIDDEN' }),
+  sendNotice: (a) => (account.state().admin ? account.sendNotice(a) : { ok: false, error: 'FORBIDDEN' }),
+  deleteNotice: (a) => (account.state().admin ? account.deleteNotice(a) : { ok: false, error: 'FORBIDDEN' }),
   // Nur für das Admin-Konto (zusätzlich durch die Firestore-Regeln geschützt)
-  listWallets: () => (account.state().admin ? account.listWallets() : { ok: false, error: 'FORBIDDEN' }),
-  listPurchases: () => account.listPurchases(),
-  requestRefund: (a) => account.requestRefund(a),
-  refundNotices: () => account.refundNotices(),
-  markRefundSeen: (a) => account.markRefundSeen(a),
-  adminListRefunds: () => (account.state().admin ? account.adminListRefunds() : { ok: false, error: 'FORBIDDEN' }),
-  adminDecideRefund: (a) => (account.state().admin ? account.adminDecideRefund(a) : { ok: false, error: 'FORBIDDEN' }),
-  adminUpdateWallet: (a) => (account.state().admin ? account.adminUpdateWallet(a) : { ok: false, error: 'FORBIDDEN' })
 };
 ipcMain.handle('account', async (e, action, arg) => {
   const w = BrowserWindow.fromWebContents(e.sender);
@@ -790,8 +786,18 @@ async function fetchJson(url) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+// Schneller Start (seit 2.7.0): die letzte Liste liegt auf der Platte und erscheint sofort; ist sie älter als
+// eine Stunde, wird im Hintergrund neu geladen und beim nächsten Öffnen der Startseite gezeigt.
+const DEALS_FILE = () => path.join(app.getPath('userData'), 'deals-cache.json');
+let dealsLoading = null;
 async function loadDeals() {
-  if (dealsCache && Date.now() - dealsCache.at < 60 * 60_000) return dealsCache.data;
+  if (!dealsCache) { try { dealsCache = JSON.parse(fs.readFileSync(DEALS_FILE(), 'utf8')); } catch { /* noch keine */ } }
+  const fresh = dealsCache && Date.now() - dealsCache.at < 60 * 60_000;
+  if (fresh) return dealsCache.data;
+  if (!dealsLoading) dealsLoading = fetchDeals().finally(() => { dealsLoading = null; });
+  return dealsCache ? dealsCache.data : dealsLoading;
+}
+async function fetchDeals() {
   const [free, deals] = await Promise.allSettled([
     fetchJson('https://www.gamerpower.com/api/giveaways?platform=pc&type=game&sort-by=popularity'),
     fetchJson('https://www.cheapshark.com/api/1.0/deals?storeID=1,25,7&onSale=1&sortBy=Deal%20Rating&pageSize=12&AAA=1')
@@ -811,12 +817,16 @@ async function loadDeals() {
       price: Number(d.salePrice), normal: Number(d.normalPrice), savings: Math.round(Number(d.savings)), store: STORES[d.storeID] || ''
     })) : []
   };
-  if (data.free.length || data.deals.length) dealsCache = { at: Date.now(), data };
+  if (data.free.length || data.deals.length) {
+    dealsCache = { at: Date.now(), data };
+    fs.promises.writeFile(DEALS_FILE(), JSON.stringify(dealsCache)).catch(() => {});
+  }
   return data;
 }
 ipcMain.handle('newtab:deals', async (e) => {
   if (!/^file:.*\/ui\/newtab\.html/.test(e.senderFrame?.url || '')) return null;
   if (settings.newtab?.showDeals === false) return null;
+  if (updateLock) return { free: [], deals: [], locked: true };
   try { return await loadDeals(); } catch { return { free: [], deals: [] }; }
 });
 
@@ -918,6 +928,7 @@ function passwordStrength(p) {
   return !common && (p.length >= 12 || (p.length >= 8 && classes >= 3));
 }
 ipcMain.handle('pw:check', async (e) => {
+  if (updateLock) return { ok: false, error: 'UPDATE_REQUIRED' };
   if (!isUi(e)) return null;
   const list = pw.all();
   const hashes = new Map(); // SHA-1 → ids
@@ -961,6 +972,7 @@ const fromNormalUi = (e) => { const w = BrowserWindow.fromWebContents(e.sender);
 const extChanged = () => broadcast('extensions-changed', extensions.list());
 ipcMain.handle('ext:list', (e) => (isUi(e) ? extensions.list() : []));
 ipcMain.handle('ext:install-store', async (e, input) => {
+  if (updateLock) return { ok: false, error: 'UPDATE_REQUIRED' };
   if (!fromNormalUi(e)) return { ok: false, error: 'FORBIDDEN' };
   const r = await extensions.installFromStore(input);
   extChanged();
@@ -1108,20 +1120,10 @@ function setupPopup(popup, contents, tab) {
 app.on('web-contents-created', (_e, contents) => {
   // Neue Tabs sofort in den Netzwerk-Limiter aufnehmen
   if (netLimitBytes) setImmediate(() => throttleWebview(contents, netLimitBytes));
-  // FalCoins: neue Seite im Tab (kein Neuladen, keine Inkognito-Tabs, höchstens alle 5 Sekunden)
-  if (contents.getType() === 'webview') {
-    let lastUrl = '', lastAt = 0;
-    contents.on('did-navigate', (_ev, url) => {
-      if (!/^https?:/i.test(url) || contents.session === incognitoSession()) return;
-      const clean = url.replace(/#.*$/, '');
-      if (clean === lastUrl || Date.now() - lastAt < 5000) { lastUrl = clean; return; }
-      lastUrl = clean; lastAt = Date.now();
-      let host = '';
-      try { host = new URL(clean).hostname.replace(/^www\./, ''); } catch { /* egal */ }
-      account.addCoin(1, host);
-    });
-  }
   if (contents.getType() !== 'webview') return;
+
+  // Link unter der Maus: Verbindung schon aufbauen (spart beim Klick DNS, TCP und TLS)
+  contents.on('update-target-url', (_ev, url) => { if (url && settings.preconnect !== false) preconnect(contents.session, url); });
 
   // Neue Seite im Tab → Werbeblocker-Zähler zurücksetzen
   contents.on('did-start-navigation', (_ev, url, isInPlace, isMainFrame) => {
@@ -1227,6 +1229,44 @@ ipcMain.handle('metrics', () => {
   }
   return { memMB: Math.round(mem / 1024), cpu: Math.round(cpu * 10) / 10, processes: m.length, blocked: adblock.stats(-1).total };
 });
+
+// Task-Manager im Leistungs-Fenster: CPU und Speicher je Tab (Tabs derselben Website teilen sich einen Prozess)
+ipcMain.handle('metrics:tabs', (e) => {
+  if (!isUi(e)) return [];
+  const byPid = new Map(app.getAppMetrics().map((m) => [m.pid, m]));
+  const host = e.sender;
+  const out = [];
+  for (const wc of webContents.getAllWebContents()) {
+    if (wc.isDestroyed() || wc.getType() !== 'webview' || wc.hostWebContents !== host) continue;
+    const pid = wc.getOSProcessId();
+    const m = byPid.get(pid);
+    if (!m) continue;
+    out.push({ id: wc.id, pid, cpu: Math.round((m.cpu.percentCPUUsage || 0) * 10) / 10, memMB: Math.round((m.memory.workingSetSize || 0) / 1024) });
+  }
+  const shared = new Map();
+  for (const x of out) shared.set(x.pid, (shared.get(x.pid) || 0) + 1);
+  return out.map((x) => ({ ...x, shared: shared.get(x.pid) > 1 }));
+});
+// Vorladen: Verbindung zu einer Seite aufbauen, bevor sie geöffnet wird (Adressleiste)
+const preconnected = new Map();
+function preconnect(ses, url) {
+  if (updateLock) return;
+  let origin;
+  try { const u = new URL(url); if (!/^https?:$/.test(u.protocol)) return; origin = u.origin; } catch { return; }
+  const now = Date.now();
+  if (now - (preconnected.get(origin) || 0) < 30_000) return;
+  preconnected.set(origin, now);
+  if (preconnected.size > 300) preconnected.clear();
+  try { ses.preconnect({ url: origin, numSockets: 1 }); } catch { /* egal */ }
+}
+// Falcon minimiert/verdeckt: nach der Wartezeit dem Fenster sagen, dass es Tabs einfrieren soll
+ipcMain.on('ui:hidden', (e, hidden, ms) => {
+  if (!isUi(e)) return;
+  const wc = e.sender;
+  clearTimeout(wc.falconBgTimer);
+  if (hidden) wc.falconBgTimer = setTimeout(() => { if (!wc.isDestroyed()) wc.send('bg-freeze'); }, Math.min(Math.max(Number(ms) || 120_000, 3000), 3_600_000));
+});
+ipcMain.on('net:preconnect', (e, url) => { if (isUi(e)) preconnect(BrowserWindow.fromWebContents(e.sender)?.falconIncognito ? incognitoSession() : session.defaultSession, String(url)); });
 
 ipcMain.handle('open-external', (_e, p) => shell.openPath(p));
 ipcMain.handle('show-in-folder', (_e, p) => shell.showItemInFolder(p));
@@ -1361,10 +1401,10 @@ ipcMain.handle('pw:export', async (e) => {
   fs.writeFileSync(filePath, pw.exportCsv(), 'utf8');
   return { count: pw.count(), filePath };
 });
-ipcMain.handle('copy', (_e, text) => { clipboard.writeText(String(text)); return true; });
+ipcMain.handle('copy', async (_e, text) => { await clipboard.writeText(String(text)); return true; });
 // Bearbeiten-Befehle für Textfelder der Oberfläche (Rechtsklick-Menü der Adressleiste usw.)
 ipcMain.handle('edit', (e, cmd) => { if (['undo', 'redo', 'cut', 'copy', 'paste', 'delete', 'selectAll'].includes(cmd)) e.sender[cmd](); return true; });
-ipcMain.handle('clipboard:read', () => clipboard.readText());
+ipcMain.handle('clipboard:read', () => clipboard.readText().catch(() => ''));
 
 // „Bild kopieren“: copyImageAt funktioniert in Webviews nicht zuverlässig. Deshalb lädt Falcon das
 // Bild selbst (mit den Cookies der Sitzung), die Oberfläche wandelt es in PNG um und schreibt es hier.
@@ -1381,11 +1421,11 @@ ipcMain.handle('image:fetch', async (e, url) => {
     return null;
   }
 });
-ipcMain.handle('image:write', (e, png) => {
+ipcMain.handle('image:write', async (e, png) => {
   if (!isUi(e)) return false;
   const img = nativeImage.createFromBuffer(Buffer.from(png));
   if (img.isEmpty()) return false;
-  clipboard.writeImage(img);
+  await clipboard.write([new ClipboardItem({ 'image/png': new Blob([img.toPNG()], { type: 'image/png' }) })]);
   return true;
 });
 ipcMain.handle('auth:available', () => isAvailable());
@@ -1604,9 +1644,11 @@ if (!gotLock) {
     defaultBrowser.refreshRegistration();
     account.init({ notify: (state) => { broadcast('account-changed', state, { incognito: false }); refreshAccent(); }, providers: syncProviders, locale: pageLanguage });
     app.on('browser-window-focus', () => account.syncIfStale());
-    // Mission „Game Mode nutzen“: jede Minute mit aktivem Game Mode zählt
-    setInterval(() => { if (settings.gameMode && !updateLock) account.trackGameModeMinute(); }, 60_000);
     app.on('browser-window-focus', () => updater.checkIfStale());
+    // Automatischer Game Mode: Spiel im Vollbild erkannt → Oberfläche schaltet Game Mode ein (und danach wieder aus)
+    gameDetect.watch((game) => { if (settings.autoGameMode !== false) broadcast('game-detected', { game }, { incognito: false }); });
+    // Suchmaschine und häufige Seiten schon beim Start ansprechen
+    setTimeout(() => { for (const u of ['https://www.google.com', 'https://duckduckgo.com', 'https://www.youtube.com']) preconnect(session.defaultSession, u); }, 2500);
   });
 
   // macOS (Cmd+Q): Fenster schließen dort nicht die App – darum auch beim Beenden nach laufenden Downloads fragen

@@ -1,11 +1,12 @@
 // Entschlüsselung im gleichen Format wie Falcon (Desktop):
 // PBKDF2-SHA256 → Schlüssel-Verpackung, AES-256-GCM mit AAD, Daten gzip-komprimiert.
-// Gespeichert ist jeweils base64(iv[12] | tag[16] | ciphertext). Reines JavaScript, läuft in Expo Go.
+// Gespeichert ist jeweils base64(iv[12] | tag[16] | ciphertext). PBKDF2 nativ über den WebView (fast-kdf.ts), sonst reines JavaScript.
 import { pbkdf2Async } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { gcm } from '@noble/ciphers/aes.js';
 import { gunzipSync, gzipSync } from 'fflate';
 import * as ExpoCrypto from 'expo-crypto';
+import { nativePbkdf2 } from './fast-kdf';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -51,9 +52,15 @@ function sealBox(key: Uint8Array, plain: Uint8Array, aad: string): Uint8Array {
   return packed;
 }
 
-/** Sync-Schlüssel mit dem Kontopasswort entpacken (dauert auf dem Handy ein paar Sekunden). */
+/** PBKDF2-SHA256 (32 Byte): nativ über den WebView, sonst in JavaScript (langsam) */
+async function deriveKek(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+  try { return await nativePbkdf2(enc.encode(password), salt, iterations); }
+  catch { return pbkdf2Async(sha256, enc.encode(password), salt, { c: iterations, dkLen: 32, asyncTick: 25 }); }
+}
+
+/** Sync-Schlüssel mit dem Kontopasswort entpacken. */
 export async function unwrapKey(fields: { salt: string; iter: number; wrapped: string }, password: string, uid: string): Promise<Uint8Array> {
-  const kek = await pbkdf2Async(sha256, enc.encode(password), fromBase64(fields.salt), { c: fields.iter, dkLen: 32, asyncTick: 25 });
+  const kek = await deriveKek(password, fromBase64(fields.salt), fields.iter);
   return openBox(kek, fromBase64(fields.wrapped), `falcon-key:${uid}`);
 }
 
@@ -61,7 +68,7 @@ export const PBKDF2_ITER = 310000;
 /** Neuen Sync-Schlüssel mit dem Kontopasswort verpacken (gleiches Format wie Falcon auf dem PC). */
 export async function wrapKey(dataKey: Uint8Array, password: string, uid: string) {
   const salt = ExpoCrypto.getRandomBytes(16);
-  const kek = await pbkdf2Async(sha256, enc.encode(password), salt, { c: PBKDF2_ITER, dkLen: 32, asyncTick: 25 });
+  const kek = await deriveKek(password, salt, PBKDF2_ITER);
   return { salt: toBase64(salt), iter: PBKDF2_ITER, wrapped: toBase64(sealBox(kek, dataKey, `falcon-key:${uid}`)) };
 }
 export const newDataKey = () => ExpoCrypto.getRandomBytes(32);

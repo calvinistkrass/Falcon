@@ -234,6 +234,8 @@
       </div>
       <label class="switch"><input type="checkbox" id="pGame" /><span></span></label>
     </div>
+    <div class="perf-tabs-head"><b>Tabs</b><span>Speicher · CPU</span></div>
+    <div id="pTabList" class="perf-tabs" data-no-i18n></div>
     <button id="pSleepNow" class="btn block">Inaktive Tabs jetzt schlafen legen</button>
   </section>
 
@@ -428,6 +430,18 @@
             <div class="s-row">
               <div class="s-label"><b>Game Mode</b><span>Gibt CPU und Arbeitsspeicher für Spiele frei: Hintergrund-Tabs werden nach 30 Sekunden pausiert und später schlafen gelegt, Animationen abgeschaltet. Tabs, die Ton abspielen, bleiben aktiv.</span></div>
               <label class="switch"><input type="checkbox" id="sGame" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Game Mode automatisch</b><span>Schaltet den Game Mode ein, solange ein Spiel im Vollbild läuft, und danach wieder aus (Windows).</span></div>
+              <label class="switch"><input type="checkbox" id="sAutoGame" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Im Hintergrund sparen</b><span>Ist Falcon minimiert oder verdeckt, werden Tabs nach 2 Minuten eingefroren – außer Musik, Videos, Chats und Mail.</span></div>
+              <label class="switch"><input type="checkbox" id="sBgFreeze" /><span></span></label>
+            </div>
+            <div class="s-row">
+              <div class="s-label"><b>Seiten vorladen</b><span>Baut die Verbindung zu einem Link schon auf, wenn du mit der Maus darüberfährst oder eine Adresse tippst.</span></div>
+              <label class="switch"><input type="checkbox" id="sPreconnect" /><span></span></label>
             </div>
             <div class="s-row">
               <div class="s-label"><b>Tabs schlafen legen nach</b><span>Gilt, solange Game Mode aktiv ist.</span></div>

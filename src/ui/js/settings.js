@@ -131,6 +131,11 @@ const Settings = (() => {
 
   $('#wishEdit').addEventListener('click', () => { if (!Updates.blocked()) Wishlist.dialog(); });
 
+  // Standard an: ein fehlender Wert zählt als „an“
+  for (const [id, key] of [['sAutoGame', 'autoGameMode'], ['sBgFreeze', 'bgFreeze'], ['sPreconnect', 'preconnect']]) {
+    $(`#${id}`).addEventListener('change', (e) => updateSettings({ [key]: e.target.checked }));
+    on('settings', (s) => { $(`#${id}`).checked = s[key] !== false; });
+  }
   const toggles = { sBookmarksBar: 'showBookmarksBar', sSidebar: 'showSidebar', sHud: 'showHud', sGame: 'gameMode', sAdblock: 'adblock', sAdblockAnnoy: 'adblockAnnoyances', sPwAuth: 'pwRequireAuth', sDlAsk: 'downloadAsk' };
   for (const [id, key] of Object.entries(toggles)) {
     $(`#${id}`).addEventListener('change', (e) => {

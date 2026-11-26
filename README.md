@@ -26,7 +26,10 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 ## Features
 
 ### 🎮 Made for gaming
-- **Game Mode** (unlock in the FalCoin shop, 150 FalCoins for 2 months): pauses background tabs after 30 seconds and later puts them to sleep, so your game gets the CPU and memory. Tabs playing audio stay active.
+- **Game Mode**: pauses background tabs after 30 seconds and later puts them to sleep, so your game gets the CPU and memory. Tabs playing audio stay active.
+- **Automatic Game Mode** (Windows): turns on while a game runs in full screen and off again afterwards.
+- **Tab task manager** in the performance panel: memory and CPU per tab, put tabs to sleep or close them.
+- **Saves resources in the background**: tabs are frozen while Falcon is minimized (music, videos, chats and mail stay awake).
 - **Network limiter**: caps websites and downloads so your game keeps a stable ping – always or only in Game Mode.
 - **Free games & deals** from Steam, Epic and GOG right on the start page.
 - **Volume per tab**: turn a stream down without touching Discord.
@@ -59,7 +62,6 @@ Game Mode frees up RAM and CPU while you play. Discord, Twitch and Spotify stay 
 - **Sync between your PCs**: bookmarks, passwords, history and settings – pick what you want to sync.
 - **End-to-end encrypted**: data is encrypted on your PC (AES-256-GCM) with a key protected by your password before it's uploaded. The server only ever sees ciphertext.
 - **Tabs from other PCs**: open what you were reading on your other computer.
-- **FalCoins**: earn one coin per website visit, a daily reward and daily missions while signed in, and see every transaction in the history.
 - **Bookmarks on your phone**: the [Falcon web app](https://falconbrowser.de/app) shows your bookmarks and your PCs' tabs, decrypted only on the phone.
 - **Profile** with name and color, device names, password reset by email and account deletion.
 

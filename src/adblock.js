@@ -55,12 +55,14 @@ function cacheFile() {
   return path.join(app.getPath('userData'), options.annoyances ? 'adblock-full.bin' : 'adblock-ads.bin');
 }
 
+let offline = false; // Pflicht-Update: keine Listen laden, die vorhandenen weiter nutzen
 async function loadEngine({ forceUpdate = false } = {}) {
   const file = cacheFile();
   try {
     const age = Date.now() - fs.statSync(file).mtimeMs;
-    if (forceUpdate || age > LIST_MAX_AGE_MS) fs.rmSync(file, { force: true });
+    if (!offline && (forceUpdate || age > LIST_MAX_AGE_MS)) fs.rmSync(file, { force: true });
   } catch { /* noch kein Cache */ }
+  if (offline && !fs.existsSync(file)) { engine = null; info = { source: 'fallback', updated: null, rules: FALLBACK_HOSTS.size }; return info; }
 
   const fetchFn = (url, init) => net.fetch(url, init);
   const caching = { path: file, read: fs.promises.readFile, write: fs.promises.writeFile };
@@ -162,7 +164,8 @@ function attach(ses) {
   });
 
   // Kosmetische Filter (Werbeflächen in der Seite ausblenden) über Ghosterys Preload
-  ses.setPreloads([...ses.getPreloads().filter((p) => p !== PRELOAD_PATH), PRELOAD_PATH]);
+  // seit Electron 35: registerPreloadScript (setPreloads ist veraltet)
+  if (!ses.getPreloadScripts().some((s) => s.filePath === PRELOAD_PATH)) ses.registerPreloadScript({ type: 'frame', filePath: PRELOAD_PATH });
 }
 
 function configure(next) {
@@ -179,5 +182,6 @@ module.exports = {
   resetTab,
   stats,
   update: () => (ready = loadEngine({ forceUpdate: true })),
+  setOffline: (on) => { offline = !!on; },
   info: async () => { await ready; return { ...info, total: totalBlocked }; }
 };

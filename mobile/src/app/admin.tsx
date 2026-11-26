@@ -1,101 +1,67 @@
-// Admin: FalCoins und Game Mode aller Nutzer bearbeiten (nur für das Admin-Konto – die Firestore-Regeln prüfen das)
+// Admin: Benachrichtigungen an alle Nutzer mit Falcon-Konto senden (nur für das Admin-Konto – die Firestore-Regeln prüfen das)
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Card, CoinIcon, Empty, Screen } from '@/components/ui';
-import { AdminWallet, ITEM_NAME, Refund, errorText, fmtDate, useSession } from '@/lib/session';
+import { Alert, StyleSheet, Text, TextInput } from 'react-native';
+import { Button, Card, Empty, Screen } from '@/components/ui';
+import { Notice, errorText, useSession } from '@/lib/session';
 import { C, R } from '@/lib/theme';
 
 export default function Admin() {
-  const { admin, adminWallets, adminUpdateWallet, adminRefunds, adminDecideRefund } = useSession();
-  const [list, setList] = useState<AdminWallet[] | null>(null);
-  const [refunds, setRefunds] = useState<Refund[]>([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [now] = useState(Date.now);
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
-    try { setList(await adminWallets()); } catch (e) { setError(errorText(e)); }
-    adminRefunds().then(setRefunds).catch(() => setRefunds([]));
-    setLoading(false);
-  }, [adminWallets, adminRefunds]);
-  useEffect(() => { if (!admin) return; const t = setTimeout(load, 0); return () => clearTimeout(t); }, [admin, load]);
+  const { admin, notices, sendNotice, deleteNotice } = useSession();
+  const [list, setList] = useState<Notice[]>([]);
+  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const reload = useCallback(() => { notices().then(setList).catch(() => setList([])); }, [notices]);
+  useEffect(() => { if (admin) reload(); }, [admin, reload]);
 
   if (!admin) return <Screen title="Admin"><Empty icon="shield-outline" title="Kein Zugriff" text="Nur für das Admin-Konto." /></Screen>;
-  const commit = async (w: AdminWallet, patch: { balance?: number; gameModeUntil?: number; betaUntil?: number }) => {
-    try { await adminUpdateWallet(w.uid, patch); setList((l) => (l || []).map((x) => (x.uid === w.uid ? { ...x, ...patch } : x))); }
-    catch (e) { Alert.alert('Nicht gespeichert', errorText(e)); }
-  };
 
-  const decide = (r: Refund, approve: boolean) => {
-    const run = async (note = '') => {
-      try { await adminDecideRefund(r, approve, note); Alert.alert(approve ? 'Rückerstattung genehmigt' : 'Rückerstattung abgelehnt', 'Der Nutzer sieht die Antwort beim nächsten Start.'); load(); }
-      catch (e) { Alert.alert('Nicht gespeichert', errorText(e)); }
-    };
-    if (approve) Alert.alert('Rückerstattung genehmigen?', `${r.name || r.email} bekommt ${r.price.toLocaleString('de-DE')} FalCoins zurück, „${ITEM_NAME(r.item)}“ wird entzogen.`, [{ text: 'Abbrechen', style: 'cancel' }, { text: 'Genehmigen', onPress: () => run() }]);
-    else Alert.alert('Rückerstattung ablehnen?', 'Der Nutzer sieht die Ablehnung beim nächsten Start.', [{ text: 'Abbrechen', style: 'cancel' }, { text: 'Ablehnen', style: 'destructive', onPress: () => run() }]);
+  const send = () => {
+    if (!text.trim()) { Alert.alert('Benachrichtigung', 'Bitte schreib eine Nachricht.'); return; }
+    Alert.alert('An alle senden?', 'Alle mit Falcon-Konto sehen die Nachricht beim nächsten Start und klicken sie mit „Verstanden“ weg.', [
+      { text: 'Abbrechen', style: 'cancel' },
+      {
+        text: 'Senden', onPress: async () => {
+          setBusy(true);
+          try { await sendNotice(title, text); setTitle(''); setText(''); reload(); Alert.alert('Gesendet', 'Die Benachrichtigung ist unterwegs.'); }
+          catch (e) { Alert.alert('Nicht gesendet', errorText(e)); }
+          setBusy(false);
+        }
+      }
+    ]);
   };
-  const open = refunds.filter((r) => r.status === 'pending');
+  const remove = (n: Notice) => Alert.alert('Benachrichtigung löschen?', 'Wer sie noch nicht gesehen hat, bekommt sie dann nicht mehr.', [
+    { text: 'Abbrechen', style: 'cancel' },
+    { text: 'Löschen', style: 'destructive', onPress: async () => { try { await deleteNotice(n.id); reload(); } catch (e) { Alert.alert('Nicht gelöscht', errorText(e)); } } }
+  ]);
 
   return (
-    <Screen title="FalCoins verwalten" scroll={false}>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.text2} />} keyboardShouldPersistTaps="handled">
-        <Text style={s.small}>Nur für dein Admin-Konto sichtbar. Änderungen gelten sofort.</Text>
-        <Card style={{ padding: 14, gap: 10 }}>
-          <Text style={s.name}>Rückerstattungen{open.length ? ` (${open.length})` : ''}</Text>
-          {!open.length ? <Text style={s.small}>Keine offenen Anträge.</Text> : open.map((r) => (
-            <View key={r.id} style={s.refund}>
-              <Text style={s.refundTitle}>{r.name || r.email.split('@')[0]} · {ITEM_NAME(r.item)} · {r.price.toLocaleString('de-DE')} FalCoins</Text>
-              <Text style={s.small}>{r.email} · {fmtDate(r.created)}</Text>
-              <Text style={s.reason}>{r.reason}</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Button small title="Genehmigen" icon="checkmark" onPress={() => decide(r, true)} />
-                <Button small variant="ghost" title="Ablehnen" icon="close" onPress={() => decide(r, false)} />
-              </View>
-            </View>
-          ))}
+    <Screen title="Benachrichtigungen">
+      <Card style={{ padding: 16, gap: 10 }}>
+        <Text style={s.label}>Titel (optional)</Text>
+        <TextInput style={s.input} value={title} onChangeText={setTitle} maxLength={80} placeholder="z. B. Wartung heute Abend" placeholderTextColor={C.text3} />
+        <Text style={s.label}>Nachricht</Text>
+        <TextInput style={[s.input, { minHeight: 110, textAlignVertical: 'top' }]} value={text} onChangeText={setText} maxLength={1000} multiline placeholder="Was sollen alle erfahren?" placeholderTextColor={C.text3} />
+        <Button title="An alle senden" icon="send-outline" onPress={send} loading={busy} />
+      </Card>
+      <Text style={s.section}>Gesendet</Text>
+      {list.length ? list.map((n) => (
+        <Card key={n.id} style={{ padding: 14, gap: 6, marginBottom: 10 }}>
+          <Text style={s.title}>{n.title || 'Ohne Titel'}</Text>
+          <Text style={s.text}>{n.text}</Text>
+          <Text style={s.small}>{new Date(n.created).toLocaleString('de-DE')}</Text>
+          <Button title="Löschen" icon="trash-outline" variant="ghost" small onPress={() => remove(n)} />
         </Card>
-        {error ? <Empty icon="cloud-offline-outline" title="Nicht geladen" text={error} />
-          : !list ? <ActivityIndicator color={C.accent} style={{ marginTop: 30 }} />
-            : list.map((w) => <WalletCard key={w.uid} w={w} now={now} onCommit={(p) => commit(w, p)} />)}
-      </ScrollView>
+      )) : <Text style={s.small}>Noch keine Benachrichtigungen.</Text>}
     </Screen>
   );
 }
 
-function WalletCard({ w, now, onCommit }: { w: AdminWallet; now: number; onCommit: (p: { balance?: number; gameModeUntil?: number; betaUntil?: number }) => Promise<void> }) {
-  const [value, setValue] = useState(String(w.balance));
-  const gm = w.gameModeUntil > now;
-  const beta = w.betaUntil > now;
-  const save = () => { const n = Number(value); if (Number.isFinite(n) && n !== w.balance) onCommit({ balance: n }); };
-  const toggleBeta = () => { const d = new Date(); d.setDate(d.getDate() + 30); onCommit({ betaUntil: beta ? 0 : d.getTime() }); };
-  return (
-    <Card style={{ padding: 14, gap: 10 }}>
-      <View>
-        <Text style={s.name} numberOfLines={1}>{w.name || w.email || w.uid}</Text>
-        {w.name && w.email ? <Text style={s.small} numberOfLines={1}>{w.email}</Text> : null}
-        <Text style={s.small}>{[gm && `Game Mode bis ${fmtDate(w.gameModeUntil)}`, beta && `Beta bis ${fmtDate(w.betaUntil)}`].filter(Boolean).join(' · ') || 'Keine Freischaltungen'}</Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={s.input}>
-          <CoinIcon size={16} />
-          <TextInput value={value} onChangeText={setValue} onEndEditing={save} keyboardType="number-pad" style={s.inputText} selectionColor={C.accent} accessibilityLabel="FalCoins" />
-        </View>
-        <Button small title="Speichern" onPress={save} disabled={Number(value) === w.balance} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        {[100, 500, 1000].map((n) => <Button key={n} small variant="ghost" title={`+${n}`} onPress={() => { setValue(String(w.balance + n)); onCommit({ balance: w.balance + n }); }} />)}
-        <Button small variant="ghost" icon="flask-outline" title={beta ? 'Beta entziehen' : 'Beta 30 Tage'} onPress={toggleBeta} />
-      </View>
-    </Card>
-  );
-}
-
 const s = StyleSheet.create({
-  small: { color: C.text3, fontSize: 12.5, lineHeight: 17 },
-  name: { color: C.text, fontSize: 15.5, fontWeight: '700' },
-  refund: { gap: 4, padding: 12, borderRadius: R.sm, backgroundColor: C.raised },
-  refundTitle: { color: C.text, fontSize: 14, fontWeight: '700' },
-  reason: { color: C.text2, fontSize: 14, lineHeight: 19, marginVertical: 4 },
-  input: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 12, borderRadius: R.sm, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line },
-  inputText: { flex: 1, color: C.text, fontSize: 15, fontWeight: '700', height: '100%' }
+  label: { color: C.text2, fontSize: 13, fontWeight: '600' },
+  input: { color: C.text, fontSize: 15, padding: 12, borderRadius: R.md, backgroundColor: C.raised, borderWidth: 1, borderColor: C.line },
+  section: { color: C.text3, fontSize: 12.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 22, marginBottom: 10 },
+  title: { color: C.text, fontSize: 15, fontWeight: '700' },
+  text: { color: C.text2, fontSize: 14, lineHeight: 20 },
+  small: { color: C.text3, fontSize: 12.5 }
 });

@@ -1,11 +1,11 @@
-// Konto: Anmeldung, FalCoins, tägliche Belohnung, Abmelden
+// Konto: Anmeldung, Sync, Abmelden
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Card, CoinIcon, Divider, Field, Row, Title } from '@/components/ui';
+import { Button, Card, Divider, Field, Row, Title } from '@/components/ui';
 import { APP_VERSION, ERRORS, errorText, useSession } from '@/lib/session';
 import { resetPassword } from '@/lib/firebase';
 import { useUpdateRequired } from '@/lib/required';
@@ -75,8 +75,8 @@ function Login() {
             <Image source={require('../../../assets/logo.png')} style={{ width: 72, height: 72, marginBottom: 16 }} />
             <Text style={s.h1}>{up ? 'Falcon-Konto erstellen' : 'Bei Falcon anmelden'}</Text>
             <Text style={s.lead}>{up
-              ? 'Kostenlos – für Lesezeichen und Tabs auf all deinen Geräten und FalCoins.'
-              : 'Mit deinem Falcon-Konto siehst du Lesezeichen und die Tabs deiner PCs und sammelst FalCoins.'}</Text>
+              ? 'Kostenlos – für Lesezeichen und Tabs auf all deinen Geräten.'
+              : 'Mit deinem Falcon-Konto siehst du Lesezeichen und die Tabs deiner PCs.'}</Text>
           </View>
 
           <View style={s.segment}>
@@ -99,7 +99,7 @@ function Login() {
             <Button
               title={status === 'unlocking' ? (up ? 'Sync-Schlüssel wird erstellt …' : 'Sync-Daten werden entschlüsselt …') : up ? 'Konto erstellen' : 'Anmelden'}
               onPress={submit} loading={busy && status !== 'unlocking'} disabled={busy} />
-            {status === 'unlocking' ? <Text style={s.note}>Das dauert auf dem Handy ein paar Sekunden.</Text> : null}
+            {status === 'unlocking' ? <Text style={s.note}>Einen Moment …</Text> : null}
             {up ? null : <Pressable onPress={forgot} style={{ alignSelf: 'center', padding: 8 }}><Text style={s.link}>Passwort vergessen?</Text></Pressable>}
             <Pressable onPress={switchMode} style={{ alignSelf: 'center', padding: 8 }}>
               <Text style={s.switchText}>{up ? 'Schon ein Konto? ' : 'Noch kein Konto? '}<Text style={s.link}>{up ? 'Anmelden' : 'Registrieren'}</Text></Text>
@@ -118,18 +118,10 @@ function Login() {
 }
 
 function Profile() {
-  const { user, wallet, daily, claimDaily, signOut, reload, loadingData, dataError, bookmarks, devices, passwords, history, missions, admin } = useSession();
-  const [claiming, setClaiming] = useState(false);
+  const { user, signOut, reload, loadingData, dataError, bookmarks, devices, passwords, history, admin } = useSession();
   if (!user) return null;
   const name = user.name || user.email.split('@')[0];
-  const coins = wallet.balance + wallet.pending;
-  const ready = missions.filter((m) => m.done && !m.claimed).length;
 
-  const claim = async () => {
-    setClaiming(true);
-    try { const r = await claimDaily(); Alert.alert('Tägliche Belohnung', `+${r.reward} FalCoins · Tag ${r.streak} in Folge`); } catch (e) { Alert.alert('Tägliche Belohnung', errorText(e)); }
-    setClaiming(false);
-  };
   const logout = () => Alert.alert('Abmelden?', 'Deine Daten bleiben in deinem Falcon-Konto gespeichert.', [
     { text: 'Abbrechen', style: 'cancel' }, { text: 'Abmelden', style: 'destructive', onPress: signOut }
   ]);
@@ -144,29 +136,6 @@ function Profile() {
             <Text style={s.name} numberOfLines={1}>{name}</Text>
             <Text style={s.email} numberOfLines={1}>{user.email}</Text>
           </View>
-        </Card>
-
-        <Card style={s.wallet}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <CoinIcon size={30} />
-            <Text style={s.coins}>{coins.toLocaleString('de-DE')}</Text>
-            <Text style={s.coinsLabel}>FalCoins</Text>
-          </View>
-          <Text style={s.walletNote}>1 FalCoin pro Website, die du besuchst – hier und in Falcon auf dem PC.</Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flex: 1 }}><Button title="Shop" icon="storefront-outline" small onPress={() => router.push('/shop')} /></View>
-            <View style={{ flex: 1 }}><Button title="Verlauf" icon="time-outline" small variant="ghost" onPress={() => router.push('/coinlog')} /></View>
-          </View>
-          {daily.available ? (
-            <Button title={`Tägliche Belohnung: +${daily.next} abholen`} icon="gift-outline" variant="gold" onPress={claim} loading={claiming} />
-          ) : (
-            <View style={s.claimed}><Ionicons name="checkmark-circle" size={18} color={C.green} /><Text style={s.claimedText}>Heute abgeholt · Serie: {daily.streak} {daily.streak === 1 ? 'Tag' : 'Tage'}</Text></View>
-          )}
-        </Card>
-
-        <Card style={{ marginTop: 14 }}>
-          <Row icon="flag-outline" title="Belohnungen & Missionen" sub={ready ? `${ready} ${ready === 1 ? 'Mission' : 'Missionen'} bereit zum Abholen` : daily.available ? 'Tägliche Belohnung wartet' : 'Missionen von heute'}
-            onPress={() => router.push('/rewards')} right={ready ? <View style={s.dot}><Text style={s.dotText}>{ready}</Text></View> : undefined} />
         </Card>
 
         <Text style={s.section}>Synchronisierung</Text>
@@ -189,7 +158,7 @@ function Profile() {
           <Divider />
           <Row icon="bug-outline" title="Fehler melden" sub="Und alle Meldungen ansehen" onPress={() => router.push('/report')} />
           <Divider />
-          {admin ? <><Row icon="shield-checkmark-outline" title="Admin: FalCoins verwalten" onPress={() => router.push('/admin')} /><Divider /></> : null}
+          {admin ? <><Row icon="shield-checkmark-outline" title="Admin: Benachrichtigungen senden" onPress={() => router.push('/admin')} /><Divider /></> : null}
           <Row icon="download-outline" title="Falcon für Windows" sub="falconbrowser.de" onPress={() => Linking.openURL('https://falconbrowser.de/download')} />
           <Divider />
           <Row icon="log-out-outline" title="Abmelden" onPress={logout} />

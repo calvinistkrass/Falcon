@@ -281,7 +281,7 @@ const Tabs = (() => {
     state.activeId = id;
     tab.lastActive = Date.now();
     if (tab.sleeping) wake(tab);
-    if (tab.frozen) freeze(tab, false);
+    if (tab.frozen) freeze(tab, false, tab.frozen);
 
     // Partner der geteilten Ansicht mitwecken
     if (inSplit(tab)) { const other = byId(tab.id === split.a ? split.b : split.a); if (other?.sleeping) wake(other); if (other?.frozen) freeze(other, false); }
@@ -407,11 +407,13 @@ const Tabs = (() => {
   }
   // Game Mode: erst einfrieren (Seite bleibt geladen, keine CPU), später schlafen legen (Speicher frei)
   const FREEZE_AFTER_MS = 30_000;
-  async function freeze(tab, on) {
+  // reason: 'game' (Game Mode) oder 'bg' (Falcon minimiert/verdeckt) – jeder Grund taut nur seine eigenen Tabs wieder auf
+  async function freeze(tab, on, reason = 'game') {
     if (!tab.webview || !tab.ready || !!tab.frozen === on) return;
+    if (!on && tab.frozen !== reason) return;
     let id;
     try { id = tab.webview.getWebContentsId(); } catch { return; }
-    if (await F.setTabFrozen(id, on)) { tab.frozen = on; render(tab); emit('tabs-changed'); }
+    if (await F.setTabFrozen(id, on)) { tab.frozen = on ? reason : false; render(tab); emit('tabs-changed'); }
   }
   setInterval(() => {
     if (!state.settings.gameMode) return;
@@ -421,7 +423,24 @@ const Tabs = (() => {
     }
     sleepInactive((state.settings.sleepMinutes || 10) * 60_000);
   }, 10_000);
-  on('settings', (s) => { if (!s.gameMode) for (const t of state.tabs) if (t.frozen) freeze(t, false); });
+  on('settings', (s) => { if (!s.gameMode) for (const t of state.tabs) if (t.frozen === 'game') freeze(t, false, 'game'); });
+
+  // Falcon minimiert oder ganz verdeckt (z. B. Spiel im Vollbild): nach 2 Minuten alle Tabs einfrieren, die gerade
+  // nichts abspielen. Chat- und Mail-Seiten bleiben wach, damit Nachrichten weiter ankommen.
+  const BG_FREEZE_MS = 120_000;
+  const STAY_AWAKE = /(^|\.)(discord\.com|whatsapp\.com|telegram\.org|messenger\.com|teams\.microsoft\.com|slack\.com|mail\.google\.com|outlook\.(live|office)\.com|twitch\.tv|kick\.com|meet\.google\.com|zoom\.us)$/i;
+  // Die Wartezeit läuft im Hauptprozess: Timer in einem minimierten Fenster werden von Chromium stark gebremst
+  function bgCheck() {
+    const hidden = document.visibilityState === 'hidden';
+    F.uiHidden(hidden && state.settings.bgFreeze !== false, BG_FREEZE_MS);
+    if (!hidden) for (const t of state.tabs) if (t.frozen === 'bg') freeze(t, false, 'bg');
+  }
+  F.on('bg-freeze', () => {
+    if (document.visibilityState !== 'hidden' || state.settings.bgFreeze === false) return;
+    for (const t of state.tabs) if (!t.audible && !t.sleeping && !t.frozen && !STAY_AWAKE.test(hostOf(t.url))) freeze(t, true, 'bg');
+  });
+  document.addEventListener('visibilitychange', bgCheck);
+
 
   // -------------------------------------------------------------------------
   // Geteilte Ansicht

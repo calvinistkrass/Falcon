@@ -2,6 +2,21 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.7.0] – 2026-11-27
+
+### Added
+- **Automatic Game Mode** (Windows): Falcon turns Game Mode on while a game runs in full screen and off again afterwards. Can be switched off under Settings → Performance.
+- **Save resources in the background**: when Falcon is minimized or covered, tabs are frozen after 2 minutes – except music, videos, chats and mail.
+- **Tab task manager**: the performance panel shows how much memory and CPU each tab uses, with buttons to put tabs to sleep or close them.
+- **Faster page loading**: Falcon opens the connection to a link as soon as you hover over it or type an address.
+
+### Changed
+- **Up to date with Chromium 156** (Electron 45): faster, more secure and better compatible with websites.
+- **Faster start**: the start page appears sooner and free games show up right away from the last list.
+- **Faster sign-in on the phone**: unlocking your sync data takes a moment instead of minutes.
+- **FalCoins, the shop, daily rewards and missions have been removed.**
+- **Required updates** now lock all online features until you update (account, sync, translation, free games, password check, extensions from the web store, problem reports). Websites keep working.
+
 ## [2.6.2] – 2026-11-25
 
 ### Changed

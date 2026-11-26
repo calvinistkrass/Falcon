@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 const pkg = require('../package.json');
 
 const fileUrl = (...p) => pathToFileURL(path.join(__dirname, ...p)).href;
-const CHANNELS = ['extensions-changed', 'account-changed', 'history-replace', 'open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed', 'wishlist-hit'];
+const CHANNELS = ['extensions-changed', 'account-changed', 'history-replace', 'open-tab', 'search-tab', 'shortcut', 'win-state', 'blocked-count', 'download', 'pw-offer', 'page-context-menu', 'update-status', 'passkey-prompt', 'adblock-stats', 'settings-changed', 'wishlist-hit', 'game-detected', 'bg-freeze'];
 
 contextBridge.exposeInMainWorld('falcon', {
   incognito: new URLSearchParams(location.search).has('incognito'),
@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('falcon', {
   detachTab: (url, x, y) => ipcRenderer.send('win:detach-tab', { url, x, y }),
   openOverlay: (url) => ipcRenderer.send('overlay:open', url),
   setTabFrozen: (webContentsId, frozen) => ipcRenderer.invoke('tab:set-frozen', webContentsId, frozen),
+  tabMetrics: () => ipcRenderer.invoke('metrics:tabs'),
+  preconnect: (url) => ipcRenderer.send('net:preconnect', url),
+  uiHidden: (hidden, ms) => ipcRenderer.send('ui:hidden', hidden, ms),
   prioritizeTab: (webContentsId) => ipcRenderer.invoke('tab:prioritize', webContentsId),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
@@ -43,9 +46,7 @@ contextBridge.exposeInMainWorld('falcon', {
     openDir: () => ipcRenderer.invoke('downloads:open-dir')
   },
   clearData: () => ipcRenderer.invoke('clear-data'),
-  account: Object.fromEntries(['state', 'signUp', 'signIn', 'signOut', 'resetPassword', 'resendVerification', 'refreshProfile', 'updateProfile',
-    'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty', 'remoteTabs', 'submitReport', 'purchase', 'refreshCoins', 'listWallets', 'adminUpdateWallet', 'coinLog', 'claimDaily', 'claimMission',
-    'listPurchases', 'requestRefund', 'refundNotices', 'markRefundSeen', 'adminListRefunds', 'adminDecideRefund']
+  account: Object.fromEntries(['state', 'signUp', 'signIn', 'signOut', 'resetPassword', 'resendVerification', 'refreshProfile', 'updateProfile', 'unlockKey', 'resetSyncData', 'changePassword', 'deleteAccount', 'syncNow', 'setKinds', 'dirty', 'remoteTabs', 'submitReport', 'listNotices', 'markNoticeSeen', 'adminNotices', 'sendNotice', 'deleteNotice']
     .map((action) => [action, (arg) => ipcRenderer.invoke('account', action, arg)])),
   extensions: {
     list: () => ipcRenderer.invoke('ext:list'),

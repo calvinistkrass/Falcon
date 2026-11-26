@@ -16,6 +16,11 @@
       "source": "/privacy",
       "destination": "/datenschutz",
       "permanent": true
+    },
+    {
+      "source": "/falcoins",
+      "destination": "/",
+      "permanent": true
     }
   ],
   "headers": [

@@ -265,7 +265,37 @@ const Perf = (() => {
     const limit = state.settings.ramLimit || 0;
     draw($('#memGraph'), mem, Math.max(Math.max(...mem) * 1.25, limit * 1.1) || 1, limit);
     $('#pMemLimit').textContent = limit ? $t('Grenze {n}', { n: fmtMem(limit) }) : '';
+    renderTabList();
   }
+
+  // Task-Manager: die größten Tabs mit Speicher und CPU, schlafen legen oder schließen
+  async function renderTabList() {
+    const box = $('#pTabList');
+    const list = await F.tabMetrics().catch(() => []);
+    const rows = [];
+    for (const m of list) {
+      const tab = state.tabs.find((t) => { try { return t.webview && t.webview.getWebContentsId() === m.id; } catch { return false; } });
+      if (tab) rows.push({ tab, ...m });
+    }
+    rows.sort((a, b) => b.memMB - a.memMB);
+    const asleep = state.tabs.filter((t) => t.sleeping).length;
+    box.replaceChildren(...rows.slice(0, 8).map((r) => h('div', { class: 'perf-tab' },
+      r.tab.favicon ? h('img', { src: r.tab.favicon, alt: '' }) : icon('globe'),
+      h('span', { class: 'perf-tab-title', title: r.tab.url }, Tabs.displayTitle(r.tab), r.tab.frozen ? h('small', {}, ` · ${$t('Pausiert')}`) : null),
+      h('span', { class: 'perf-tab-num', title: r.shared ? $t('Teilt sich den Prozess mit anderen Tabs derselben Website') : '' }, `${fmtMem(r.memMB)}${r.shared ? '*' : ''}`),
+      h('span', { class: 'perf-tab-num cpu' }, `${Math.round(r.cpu)} %`),
+      h('button', { class: 'tb-btn sm', title: $t('Schlafen legen'), disabled: Tabs.isShown(r.tab) || r.tab.audible, onclick: () => { Tabs.sleep(r.tab); renderTabList(); } }, icon('moon')),
+      h('button', { class: 'tb-btn sm', title: $t('Schließen'), onclick: () => { Tabs.close(r.tab.id); renderTabList(); } }, icon('x')))),
+      asleep ? h('p', { class: 'perf-tab-note' }, $t('{n} schlafende Tabs brauchen keinen Speicher.', { n: asleep })) : null);
+  }
+
+  // Automatischer Game Mode: Spiel im Vollbild erkannt (Windows)
+  let autoGame = false;
+  F.on('game-detected', ({ game }) => {
+    if (INCOGNITO || F.detached || state.settings.autoGameMode === false || Updates.required) return;
+    if (game && !state.settings.gameMode) { autoGame = true; setGameMode(true).then(() => toast($t('Spiel erkannt – Game Mode an'), 'gamepad')); }
+    else if (!game && autoGame) { autoGame = false; if (state.settings.gameMode) setGameMode(false); }
+  });
 
   async function tick() {
     const open = Popover.isOpen(pop);

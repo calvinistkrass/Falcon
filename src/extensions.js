@@ -14,6 +14,8 @@ let registry = null; // [{ key, dir, enabled, source, storeId }]
 const loaded = new Map(); // key → Electron-Extension
 
 const ses = () => session.defaultSession;
+// seit Electron 36 liegen die Erweiterungs-Funktionen unter session.extensions
+const exts = () => ses().extensions || ses();
 
 function loadRegistry() {
   if (registry) return registry;
@@ -112,7 +114,7 @@ function describe(entry) {
 
 async function load(entry) {
   try {
-    const ext = await ses().loadExtension(entry.dir, { allowFileAccess: false });
+    const ext = await exts().loadExtension(entry.dir, { allowFileAccess: false });
     loaded.set(entry.key, ext);
     entry.error = null;
     return ext;
@@ -123,7 +125,7 @@ async function load(entry) {
 }
 async function unload(entry) {
   const ext = loaded.get(entry.key);
-  if (ext) { try { ses().removeExtension(ext.id); } catch { /* schon weg */ } }
+  if (ext) { try { exts().removeExtension(ext.id); } catch { /* schon weg */ } }
   loaded.delete(entry.key);
 }
 

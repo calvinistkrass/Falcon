@@ -226,6 +226,6 @@ F.on('win-state', (s) => {
       boot.classList.add('done');
       boot.addEventListener('transitionend', () => boot.remove(), { once: true });
       setTimeout(() => boot.remove(), 800);
-    }, Math.max(0, 900 - shown));
+    }, Math.max(0, 350 - shown)); // seit 2.7.0 kürzer (vorher 900 ms)
   }
 })();
