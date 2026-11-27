@@ -2,6 +2,11 @@
 
 All notable changes to Falcon are documented here.
 
+## [2.7.1] – 2026-11-27 (Beta)
+
+### Added
+- **Email links**: clicking an email address on a website now opens your default email app with a new message to that address (right-click still offers "Copy email address").
+
 ## [2.7.0] – 2026-11-27 (Beta)
 
 > **Beta:** This version brings many changes and hasn't been fully tested yet. If something doesn't work, please report it via the menu → Report a problem.

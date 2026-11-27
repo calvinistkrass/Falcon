@@ -1103,6 +1103,7 @@ function popupTitle(url, openerUrl, pageTitle) {
 function setupPopup(popup, contents, tab) {
   popup.setMenu(null);
   const wc = popup.webContents;
+  wc.on('will-frame-navigate', (e) => { if (/^mailto:/i.test(e.url)) { e.preventDefault(); openMailto(wc, e.url); } });
   const opener = contents.isDestroyed() ? '' : contents.getURL();
   const update = () => { if (!popup.isDestroyed()) popup.setTitle(popupTitle(wc.getURL(), opener, wc.getTitle())); };
   popup.on('page-title-updated', (e) => { e.preventDefault(); update(); });
@@ -1110,6 +1111,7 @@ function setupPopup(popup, contents, tab) {
   update();
   // Popups aus Popups (z. B. Bank-Freigabe im Zahlungsfenster): wieder als Popup, sonst als Tab im Hauptfenster
   wc.setWindowOpenHandler(({ url, disposition, features }) => {
+    if (openMailto(wc, url)) return { action: 'deny' };
     if (isPopup(url, disposition)) return { action: 'allow', overrideBrowserWindowOptions: popupOptions(features) };
     if (/^https?:/i.test(url) && !tab.isDestroyed()) toHost(tab, 'open-tab', { url, background: false });
     return { action: 'deny' };
@@ -1121,6 +1123,10 @@ app.on('web-contents-created', (_e, contents) => {
   // Neue Tabs sofort in den Netzwerk-Limiter aufnehmen
   if (netLimitBytes) setImmediate(() => throttleWebview(contents, netLimitBytes));
   if (contents.getType() !== 'webview') return;
+
+  // E-Mail-Link angeklickt (auch in eingebetteten Frames): Mailprogramm statt Fehlerseite
+  const onNav = (e) => { const url = e.url; if (/^mailto:/i.test(url)) { e.preventDefault(); openMailto(contents, url); } };
+  contents.on('will-frame-navigate', onNav);
 
   // Link unter der Maus: Verbindung schon aufbauen (spart beim Klick DNS, TCP und TLS)
   contents.on('update-target-url', (_ev, url) => { if (url && settings.preconnect !== false) preconnect(contents.session, url); });
@@ -1135,6 +1141,7 @@ app.on('web-contents-created', (_e, contents) => {
     // Echte Popups (window.open mit Größe, z. B. PayPal, 3-D Secure, „Mit Google anmelden“) brauchen window.opener,
     // um „bezahlt“/„angemeldet“ an die Seite zurückzumelden → eigenes kleines Fenster in derselben Sitzung.
     // Normale Links mit target=_blank / Mittelklick → Tab wie bisher.
+    if (openMailto(contents, url)) return { action: 'deny' }; // <a href="mailto:…" target="_blank">
     if (isPopup(url, disposition)) return { action: 'allow', overrideBrowserWindowOptions: popupOptions(features) };
     toHost(contents, 'open-tab', { url, background: disposition === 'background-tab' });
     return { action: 'deny' };
@@ -1266,6 +1273,16 @@ ipcMain.on('ui:hidden', (e, hidden, ms) => {
   clearTimeout(wc.falconBgTimer);
   if (hidden) wc.falconBgTimer = setTimeout(() => { if (!wc.isDestroyed()) wc.send('bg-freeze'); }, Math.min(Math.max(Number(ms) || 120_000, 3000), 3_600_000));
 });
+// E-Mail-Links (mailto:): Linksklick öffnet das Standard-Mailprogramm mit der Adresse. Seiten dürfen das nicht
+// ununterbrochen auslösen – höchstens einmal alle 3 Sekunden pro Seite.
+function openMailto(contents, url) {
+  if (!/^mailto:/i.test(String(url)) || String(url).length > 2000) return false;
+  const now = Date.now();
+  if (now - (contents.falconMailAt || 0) < 3000) return true;
+  contents.falconMailAt = now;
+  shell.openExternal(url).catch(() => {});
+  return true;
+}
 ipcMain.on('net:preconnect', (e, url) => { if (isUi(e)) preconnect(BrowserWindow.fromWebContents(e.sender)?.falconIncognito ? incognitoSession() : session.defaultSession, String(url)); });
 
 ipcMain.handle('open-external', (_e, p) => shell.openPath(p));
